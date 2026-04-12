@@ -35,7 +35,8 @@ docker compose up -d
 | URL | Назначение |
 |-----|------------|
 | http://localhost:8080/ | Собранный Docusaurus |
-| http://localhost:8080/openapi/openapi.yaml | Спецификация OpenAPI (YAML) |
+| http://localhost:8080/openapi/openapi.yaml | Спецификация OpenAPI сервиса (YAML) |
+| http://localhost:8080/openapi/mail-gateway-openapi.yaml | Internal Mail Gateway API (внутренний REST над SMTP) |
 | http://localhost:8080/swagger/ | Swagger UI (читает спецификацию с того же хоста) |
 | http://localhost:8091/ | Structurizr Lite (модель C4 из `structurizr/workspace.dsl`) |
 

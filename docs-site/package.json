@@ -5,7 +5,7 @@
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start",
-    "prebuild": "mkdir -p static/openapi && cp ../openapi/openapi.yaml static/openapi/openapi.yaml",
+    "prebuild": "mkdir -p static/openapi && cp ../openapi/*.yaml static/openapi/",
     "build": "docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",

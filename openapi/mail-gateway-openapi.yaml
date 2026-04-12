@@ -1,0 +1,237 @@
+openapi: 3.1.0
+info:
+  title: Internal Mail Gateway API
+  description: |
+    Тонкий HTTP-слой над SMTP для микросервисов. Исходящая почта уходит на **ваш MTA**
+    **`mail.ukituki.tech`** (docker-mailserver на хосте **pr01**, сеть **dev.april.ukituki.tech**):
+    обычно **SMTP submission `mail.ukituki.tech:587` + STARTTLS** (альтернатива — **465** с implicit TLS),
+    аутентификация ящиком вида `user@ukituki.tech`.
+
+    Этот OpenAPI описывает только **HTTP API шлюза** (как микросервисы дергают отправку).
+    Прямой доступ к почте по протоколам — по-прежнему **`mail.ukituki.tech`** (SMTP/IMAP), см. инфраструктурную документацию проекта.
+
+    **Не путать:** публичный **`https://mail.ukituki.tech`** — это **веб-клиент SnappyMail**, не REST mail-gateway.
+    Базовый URL шлюза — внутренний (Docker/localhost), см. `servers` ниже.
+  version: 1.0.0
+  license:
+    name: UNLICENSED
+
+servers:
+  - url: http://mail-gateway:8080
+    description: |
+      Контейнер/сервис `mail-gateway` в общей Docker-сети на **pr01** (рядом с `mailserver`),
+      вызов из других контейнеров по имени сервиса. Порт **8080** — пример; задайте в compose.
+  - url: http://127.0.0.1:8080
+    description: |
+      Вызов с того же хоста **pr01** (`dev.april.ukituki.tech`), если шлюз проброшен на localhost.
+
+tags:
+  - name: System
+    description: Проверки живости
+  - name: Messages
+    description: Отправка писем
+
+paths:
+  /healthz:
+    get:
+      summary: Liveness
+      operationId: getHealthz
+      tags: [System]
+      security: []
+      responses:
+        '200':
+          description: Процесс жив
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+
+  /readyz:
+    get:
+      summary: Readiness (SMTP / секреты доступны)
+      operationId: getReadyz
+      tags: [System]
+      security: []
+      responses:
+        '200':
+          description: Готов принимать запросы на отправку
+        '503':
+          description: Не готов (например нет соединения с MTA)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/messages:
+    post:
+      summary: Отправить письмо через SMTP
+      operationId: postV1Messages
+      tags: [Messages]
+      description: |
+        Принимает запрос, формирует MIME и передаёт на настроенный SMTP-сервер.
+        Идемпотентность и очередь — на усмотрение реализации (заголовок `Idempotency-Key` опционален).
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+            maxLength: 256
+          description: |
+            Если реализация поддерживает — повтор с тем же ключом не дублирует отправку
+            в пределах окна хранения.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '202':
+          description: Письмо принято к отправке (асинхронная очередь) или передано в MTA
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendMessageAccepted'
+        '200':
+          description: Письмо синхронно передано в MTA (если реализация без очереди)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendMessageResult'
+        '400':
+          description: Некорректное тело или адреса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Нет или неверный ключ API
+        '403':
+          description: Запрещённый отправитель или получатель по политике
+        '502':
+          description: Ошибка при обращении к SMTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Сервис перегружен или MTA недоступен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    InternalApiKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Api-Key
+      description: Общий ключ для сервис-сервис (хранить в Secret).
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Стабильный код ошибки.
+        message:
+          type: string
+        request_id:
+          type: [string, 'null']
+          description: Корреляция с логами шлюза.
+
+    EmailAddress:
+      type: string
+      format: email
+      description: RFC 5322 addr-spec (один адрес).
+
+    SendMessageRequest:
+      type: object
+      required: [to, subject]
+      properties:
+        from:
+          $ref: '#/components/schemas/EmailAddress'
+          description: |
+            Если не задан — используется ящик по умолчанию шлюза (например `noreply@ukituki.tech`).
+            Реализация может запретить произвольный `from` и отвечать 403.
+        to:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        cc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        bcc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        reply_to:
+          $ref: '#/components/schemas/EmailAddress'
+        subject:
+          type: string
+          maxLength: 998
+        text:
+          type: string
+          description: Текстовая часть (plain). Хотя бы одно из `text` или `html` — если политика реализации требует.
+        html:
+          type: string
+          description: HTML-часть (multipart/alternative вместе с `text`, если оба заданы).
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Дополнительные заголовки (List-Unsubscribe, X-Entity-Ref-ID и т.д.). Осторожно с инъекциями.
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+          description: Вложения; кодирование — в реализации (base64 здесь для простоты контракта).
+
+    Attachment:
+      type: object
+      required: [filename, content_base64]
+      properties:
+        filename:
+          type: string
+        content_type:
+          type: string
+          example: application/pdf
+        content_base64:
+          type: string
+          description: Содержимое файла в Base64 (без data URL).
+
+    SendMessageResult:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [sent]
+        smtp_message_id:
+          type: [string, 'null']
+          description: Message-ID от MTA, если доступен после DATA.
+
+    SendMessageAccepted:
+      type: object
+      required: [status, job_id]
+      properties:
+        status:
+          type: string
+          enum: [accepted]
+        job_id:
+          type: string
+          description: Идентификатор задачи в очереди для опроса или логов.
+
+security:
+  - InternalApiKey: []
