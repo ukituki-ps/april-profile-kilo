@@ -1,0 +1,8 @@
+# Правила для `make openapi-lint`; при необходимости ужесточайте по мере зрелости API.
+extends:
+  - recommended
+
+rules:
+  operation-4xx-response: off
+  info-license-url: off
+  info-license-strict: off

@@ -1,0 +1,34 @@
+# Проверки на PR и push: OpenAPI + сборка Docusaurus. Расширяйте при появлении Go/фронтенда приложения.
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint OpenAPI and build docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: docs-site/package-lock.json
+
+      - name: OpenAPI lint
+        run: make openapi-lint
+
+      - name: Docusaurus build
+        run: make docs-build

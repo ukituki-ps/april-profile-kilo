@@ -1,0 +1,35 @@
+# Базовый стек для dev/stage: документация (статика + Structurizr Lite + Swagger UI) за Nginx.
+# Образы приложений (backend/frontend) подключаются позже через profiles и images.env — см. docs/DEPLOYMENT_STRATEGY.md
+
+services:
+  nginx-docs:
+    image: nginx:1.27-alpine
+    ports:
+      - "${DOCS_HTTP_PORT:-8080}:80"
+    volumes:
+      - ./docs-site/build:/usr/share/nginx/html:ro
+      - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./openapi:/usr/share/nginx/html/openapi:ro
+    depends_on:
+      - swagger-ui
+    restart: unless-stopped
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:v5.17.14
+    environment:
+      BASE_URL: /swagger
+      URL: /openapi/openapi.yaml
+    volumes:
+      - ./openapi:/usr/share/nginx/html/openapi:ro
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  structurizr-lite:
+    image: structurizr/lite:2024.03.03
+    ports:
+      - "${STRUCTURIZR_HTTP_PORT:-8091}:8080"
+    volumes:
+      # Lite создаёт/обновляет workspace.json при работе — том не только для чтения
+      - ./structurizr:/usr/local/structurizr
+    restart: unless-stopped

@@ -1,0 +1,36 @@
+# Минимальный CI для bootstrap: валидация инфраструктуры документации и compose.
+# Полный пайплайн деплоя на dev — по docs/DEPLOYMENT_STRATEGY.md (merge в develop, runner на сервере).
+
+name: bootstrap-ci
+
+on:
+  push:
+    branches: [main, develop, 'feature/**', 'fix/**']
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  docs-and-compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: docs-site/package-lock.json
+
+      - name: Install docs-site dependencies
+        working-directory: docs-site
+        run: npm ci
+
+      - name: Build Docusaurus
+        working-directory: docs-site
+        run: npm run build
+
+      - name: Lint OpenAPI
+        run: make openapi-lint
+
+      - name: Docker Compose config
+        run: docker compose config

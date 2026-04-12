@@ -1,0 +1,8 @@
+.env
+images.env
+*.log
+node_modules/
+docs-site/build/
+docs-site/.docusaurus/
+docs-site/static/openapi/openapi.yaml
+structurizr/workspace.json

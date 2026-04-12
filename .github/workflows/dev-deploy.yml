@@ -1,0 +1,38 @@
+# Автодеплой на dev: merge PR в develop → push → этот workflow на self-hosted runner.
+# См. docs/DEPLOYMENT_STRATEGY.md
+
+name: Deploy to dev
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Sync repo and run deploy.sh
+    runs-on: [self-hosted, dev, templay]
+    timeout-minutes: 60
+    steps:
+      - name: Checkout ref and deploy
+        env:
+          APRIL_DEPLOY_ROOT: ${{ vars.APRIL_DEPLOY_ROOT }}
+        run: |
+          set -euo pipefail
+          ROOT="${APRIL_DEPLOY_ROOT:-/opt/april_templay}"
+          echo "Deploy root: ${ROOT}"
+          echo "Commit: ${{ github.sha }}"
+          test -d "${ROOT}/.git"
+          cd "${ROOT}"
+          git fetch origin
+          git checkout "${{ github.sha }}"
+          test -x ./deploy.sh
+          SKIP_GIT_PULL=1 ./deploy.sh

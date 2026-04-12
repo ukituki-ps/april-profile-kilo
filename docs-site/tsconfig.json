@@ -1,0 +1,10 @@
+{
+  // This file is not used in compilation. It is here just for a nice editor experience.
+  "extends": "@docusaurus/tsconfig",
+  "compilerOptions": {
+    "baseUrl": ".",
+    // Do not auto-include every @types/* package (e.g. bonjour from webpack-dev-server); it can fail resolution in the IDE.
+    "types": ["react"]
+  },
+  "exclude": [".docusaurus", "build"]
+}
