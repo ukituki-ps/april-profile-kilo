@@ -2,7 +2,7 @@
 
 Документ для агента и команды: зафиксированные решения и порядок шагов для деплоя на **dev-хост** (`DEV_HOST`). Конкретные значения — в [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md); при копировании шаблона замените их по [`guides/FORK_AND_CUSTOMIZE.md`](./guides/FORK_AND_CUSTOMIZE.md).
 
-Ниже для репозитория-шаблона **april_templay** (замените при форке): `DEV_HOST` = `dev.example.com`, **`DEPLOY_ROOT`** = `/opt/april_templay`.
+Ниже для репозитория-шаблона **april_template** (замените при форке): `DEV_HOST` = `dev.example.com`, **`DEPLOY_ROOT`** = `/opt/april_template`.
 
 ## 1. Репозиторий и триггеры
 
@@ -14,16 +14,16 @@
 
 **Практика для GitHub Actions:** workflow запускается на **`push` в `develop`** (merge PR даёт такой push). Чтобы исключить прямой push в `develop`, на GitHub включается **branch protection** для `develop` (запрет прямых push, обязательный PR). Тогда событие `push` в `develop` по смыслу соответствует «приняли PR».
 
-**Реализация в репозитории:** workflow **Deploy to dev** (файл `.github/workflows/dev-deploy.yml`) на **self-hosted** runner с labels **`dev`** и **`RUNNER_LABEL_EXTRA`** (для april_templay: `templay`) выполняет в каталоге клона (**`DEPLOY_ROOT`**, для april_templay: `/opt/april_templay`) `git fetch`, переход на коммит **`github.sha`**, затем **`SKIP_GIT_PULL=1 ./deploy.sh`**. Путь к клону можно переопределить **repository variable** `APRIL_DEPLOY_ROOT`. Ручной перезапуск того же сценария — **Actions → Deploy to dev → Run workflow** (`workflow_dispatch`).
+**Реализация в репозитории:** workflow **Deploy to dev** (файл `.github/workflows/dev-deploy.yml`) на **self-hosted** runner с labels **`dev`** и **`RUNNER_LABEL_EXTRA`** (для april_template: `template`) выполняет в каталоге клона (**`DEPLOY_ROOT`**, для april_template: `/opt/april_template`) `git fetch`, переход на коммит **`github.sha`**, затем **`SKIP_GIT_PULL=1 ./deploy.sh`**. Путь к клону можно переопределить **repository variable** `APRIL_DEPLOY_ROOT`. Ручной перезапуск того же сценария — **Actions → Deploy to dev → Run workflow** (`workflow_dispatch`).
 
 ## 2. Runner
 
 | Решение | Значение |
 |--------|----------|
-| Размещение | Тот же сервер, что обслуживает `DEV_HOST` (для april_templay: `dev.example.com`) |
+| Размещение | Тот же сервер, что обслуживает `DEV_HOST` (для april_template: `dev.example.com`) |
 | Охват | Один runner на все репозитории |
 | Администрирование | Вручную: обновления и перезапуск `actions.runner` |
-| Labels | `dev`, **`RUNNER_LABEL_EXTRA`** — jobs указывают `runs-on` с этими labels (для april_templay: `dev`, `templay`) |
+| Labels | `dev`, **`RUNNER_LABEL_EXTRA`** — jobs указывают `runs-on` с этими labels (для april_template: `dev`, `template`) |
 
 | Решение | Значение |
 |--------|----------|
@@ -33,7 +33,7 @@
 ## 3. Секреты
 
 - **GitHub Secrets** — всё, что нужно CI (логин в ghcr, при необходимости токены).
-- **На сервере** — `.env` и при необходимости отдельные env-файлы вне репозитория в каталоге **`DEPLOY_ROOT`** (для april_templay: `/opt/april_templay`).
+- **На сервере** — `.env` и при необходимости отдельные env-файлы вне репозитория в каталоге **`DEPLOY_ROOT`** (для april_template: `/opt/april_template`).
 
 Ограничение workflow по путям/файлам: **не используется** — любой merge в `develop` ведёт к полному пайплайну.
 
@@ -49,7 +49,7 @@
 
 | Решение | Значение |
 |--------|----------|
-| Путь на сервере | `DEPLOY_ROOT` (для april_templay: `/opt/april_templay`) |
+| Путь на сервере | `DEPLOY_ROOT` (для april_template: `/opt/april_template`) |
 | Обновление исходников на сервере | **`git pull`** в этом каталоге |
 | Инструмент | **`docker compose` v2** |
 | Файлы | `docker-compose.yml` + overrides |
@@ -106,12 +106,12 @@
 
 ## 11. Операционка
 
-- Ручной redeploy на сервере: из каталога клона (**`DEPLOY_ROOT`**, для april_templay: `/opt/april_templay`) выполнить **`./deploy.sh`** (обёртка над шагами ниже; см. `--help` и переменные `SKIP_*`). Альтернатива — отдельный job в GitHub Actions (`workflow_dispatch`) по согласованию с командой.
+- Ручной redeploy на сервере: из каталога клона (**`DEPLOY_ROOT`**, для april_template: `/opt/april_template`) выполнить **`./deploy.sh`** (обёртка над шагами ниже; см. `--help` и переменные `SKIP_*`). Альтернатива — отдельный job в GitHub Actions (`workflow_dispatch`) по согласованию с командой.
 - Уведомления (Telegram, Slack, email): не используются.
 
 ## 12. Порядок шагов для агента (скелет pipeline)
 
-1. Job на runner с labels `self-hosted`, `dev`, **`RUNNER_LABEL_EXTRA`** (для april_templay: `templay`), ref = commit после merge в `develop`.
+1. Job на runner с labels `self-hosted`, `dev`, **`RUNNER_LABEL_EXTRA`** (для april_template: `template`), ref = commit после merge в `develop`.
 2. Сборка и тесты (как принято в репо).
 3. Сборка образов, push в ghcr.io с тегом по **git sha**.
 4. На сервере: `cd` в **`DEPLOY_ROOT`** → **`./deploy.sh`** (внутри: `git pull`, при необходимости хуки `scripts/db-backup.sh` / `scripts/run-migrations.sh`, `make openapi-lint`, `make docs-build`, `docker compose pull` → `up -d` с учётом `.env` и **`images.env`**). Либо те же шаги вручную: `git pull` → п.5–8.
@@ -134,7 +134,7 @@
 - Проверка OpenAPI: `make openapi-lint` (Redocly, конфиг `redocly.yaml`).
 - Просмотр через Compose: после `make docs-build` — `docker compose up -d`; Nginx раздаёт `docs-site/build`, пути `/openapi/`, `/swagger/`; Structurizr Lite — отдельный порт (см. `.env.example`).
 
-### На dev-хосте (`DEV_HOST`, для april_templay: `dev.example.com`)
+### На dev-хосте (`DEV_HOST`, для april_template: `dev.example.com`)
 
 1. После `git pull` в **`DEPLOY_ROOT`** — **`./deploy.sh`** (включает `make docs-build`; нужны Node.js 18+ и npm на сервере, либо собрать статику в CI и скопировать артефакт — по договорённости) или вручную `make docs-build`.
 2. Поднять/обновить сервисы — шаг `docker compose up -d` внутри **`deploy.sh`** с тем же `docker-compose.yml` (порты и TLS — за reverse proxy/Nginx на хосте или в отдельном контейнере; TLS не хранить в репозитории).

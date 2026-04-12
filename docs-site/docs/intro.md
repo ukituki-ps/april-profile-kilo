@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-# april_templay
+# april_template
 
 Документация репозитория-**шаблона** для микросервисов экосистемы **April** (Go, React, Temporal, Keycloak — см. `docs/AGENT_ARCHITECTURE_CONTEXT.md` в корне репозитория). Этот каталог — каркас: Docusaurus, OpenAPI, Structurizr, CI.
 

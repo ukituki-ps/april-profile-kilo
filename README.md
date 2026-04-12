@@ -1,4 +1,4 @@
-# april_templay
+# april_template
 
 **Шаблон репозитория** для микросервисов экосистемы **April** (документация Docusaurus, OpenAPI, Structurizr, Docker Compose, CI, сценарий деплоя). Прикладной backend/frontend добавляется по мере разработки.
 
@@ -8,7 +8,7 @@
 2. Выполните подстановки по [`docs/guides/FORK_AND_CUSTOMIZE.md`](docs/guides/FORK_AND_CUSTOMIZE.md) и [`docs/guides/PROJECT_DEFAULTS.md`](docs/guides/PROJECT_DEFAULTS.md).
 3. Зафиксируйте стек в [`docs/AGENT_ARCHITECTURE_CONTEXT.md`](docs/AGENT_ARCHITECTURE_CONTEXT.md) и ведите задачи в [`tasks/`](tasks/README.md).
 
-Примеры микросервисов на базе этого шаблона (отдельные репозитории): **aprilWflow**, **aprilNflow**, **aprilHHflow**. На машине разработчика они могут лежать рядом, например `~/april_templay`, `~/aprilWflow`, `~/aprilNflow`, `~/aprilHHflow`.
+Примеры микросервисов на базе этого шаблона (отдельные репозитории): **aprilWflow**, **aprilNflow**, **aprilHHflow**. На машине разработчика они могут лежать рядом, например `~/april_template`, `~/aprilWflow`, `~/aprilNflow`, `~/aprilHHflow`.
 
 ## Быстрый старт
 
