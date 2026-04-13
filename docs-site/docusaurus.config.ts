@@ -106,6 +106,10 @@ const config: Config = {
               label: 'Форк и версии',
               to: '/guides/FORK_AND_CUSTOMIZE',
             },
+            {
+              label: 'Дизайн-система April',
+              to: '/guides/DESIGN_SYSTEM',
+            },
           ],
         },
       ],

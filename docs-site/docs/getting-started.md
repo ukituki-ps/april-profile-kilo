@@ -30,6 +30,8 @@ cd docs-site && npm run serve
 docker compose up -d
 ```
 
+Удобная альтернатива: **`make compose-up`** — собирает Docusaurus и поднимает Compose за один шаг. Если вызывать только `docker compose up` без предварительной сборки, `docs-site/build` может быть пустым.
+
 По умолчанию (см. `.env.example`):
 
 | URL | Назначение |
