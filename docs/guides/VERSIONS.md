@@ -20,6 +20,7 @@ sidebar_position: 3
 | Debian | 13 | целевой хост dev (`docs/AGENT_ARCHITECTURE_CONTEXT.md`) |
 | PostgreSQL | 17 | целевой стек (`docs/AGENT_ARCHITECTURE_CONTEXT.md`) |
 | Docker Compose | v2 | `docs/DEPLOYMENT_STRATEGY.md` |
+| April Design System (`@april/tokens`, `@april/ui`) | по semver в consumer | [DisignApril](https://github.com/ukituki-ps/DisignApril) → `packages/*/package.json`; см. [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) |
 
 ### Backend / frontend приложения
 

@@ -6,6 +6,11 @@ sidebar_position: 2
 
 Краткий чеклист, если этот репозиторий используется как **шаблон** для отдельного микросервиса или копии стенда. Детали значений April — в [`PROJECT_DEFAULTS.md`](./PROJECT_DEFAULTS.md), версии инструментов — в [`VERSIONS.md`](./VERSIONS.md).
 
+## 0. Репозиторий на GitHub
+
+- [ ] При необходимости включите **Use this template** / **Template repository** (Settings → General) — удобнее, чем ручное копирование каталога.
+- [ ] Один репозиторий из шаблона = **один сервис**; внутри репо допустим модульный монолит (см. `docs/AGENT_ARCHITECTURE_CONTEXT.md`).
+
 ## 1. Идентичность и URL
 
 - [ ] **`README.md`**: название продукта, цели, при необходимости домен и ссылки.
@@ -28,13 +33,19 @@ sidebar_position: 2
 
 - [ ] **`.env.example`**, **`images.env.example`**: порты, префиксы; не коммитить реальные секреты.
 - [ ] При нескольких сервисах на одном хосте: уникальные **`DOCS_HTTP_PORT`**, **`STRUCTURIZR_HTTP_PORT`**, чтобы не конфликтовать с соседними compose-стеками.
+- [ ] Локальный **Docker Compose**: без предварительной сборки Docusaurus (`make docs-build` или `make compose-up`) каталог `docs-site/build` может быть пустым — Nginx отдаст пустой/неактуальный сайт. Для готовой статики используйте `make compose-up` или соберите сайт вручную перед `docker compose up`.
 
 ## 5. Документация в сайте
 
 - [ ] **`docs-site/docs/intro.md`** и **`getting-started.md`**: согласовать формулировки с новым именем продукта.
 - [ ] Каталог **`docs/adr`**: при другом продукте обновить индекс и при необходимости шаблон ADR.
 
-## 6. После появления кода
+## 6. Фронтенд и дизайн-система April
+
+- [ ] Подключить **`@april/tokens`** и **`@april/ui`** из вашего npm-registry (или локально через сборку [DisignApril](https://github.com/ukituki-ps/DisignApril)) — см. [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) и при необходимости **`frontend/README.md`** в корне сервиса.
+- [ ] Для приватного scope **`@april/*`**: настроить `.npmrc` / CI credentials по политике организации.
+
+## 7. После появления кода
 
 - [ ] Добавить в **CI** шаги `go test`, `npm test` / lint — расширить job `.github/workflows/ci.yml` при появлении `go.mod` и фронтенда в репозитории.
 - [ ] Зафиксировать версии в [`VERSIONS.md`](./VERSIONS.md) или перенести таблицу ближе к коду (`go.mod`, `package.json`).

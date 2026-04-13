@@ -6,3 +6,5 @@ rules:
   operation-4xx-response: off
   info-license-url: off
   info-license-strict: off
+  # Плейсхолдеры dev.example.com / localhost в шаблоне — до подстановки реального servers.url
+  no-server-example.com: off
