@@ -10,7 +10,7 @@
 - **IAM**: Keycloak (RBAC источник ролей/прав)
 - **DB**: PostgreSQL 17
 - **Queue**: Redis + Asynq
-- **Notifications**: Novu
+- **Notifications**: собственный микросервис AprilNflow (Go + React Flow)
 - **Observability**: Promtail + Loki + Grafana, Prometheus
 - **Нагрузочное тестирование**: k6 (сценарии API, baseline; детали в [`./TESTING_STRATEGY.md`](./TESTING_STRATEGY.md))
 - **Documentation**: Structurizr (C4 Model) + Docusaurus + ADR + OpenAPI

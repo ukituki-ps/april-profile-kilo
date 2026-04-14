@@ -18,7 +18,7 @@ alwaysApply: true
 - **IAM**: Keycloak (RBAC — источник ролей и прав)
 - **БД**: PostgreSQL 17
 - **Очередь**: Redis + Asynq
-- **Уведомления**: Novu
+- **Уведомления**: собственный микросервис AprilNflow (Go + React Flow)
 - **Наблюдаемость**: Promtail + Loki + Grafana, Prometheus
 - **Нагрузочное тестирование**: k6 (детали и уровни — в `docs/TESTING_STRATEGY.md`)
 - **Документация**: Structurizr (C4), Docusaurus, ADR, OpenAPI
