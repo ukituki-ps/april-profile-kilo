@@ -28,7 +28,7 @@
 - …
 
 ## Технические ограничения
-- Стек: Go (REST, monolith), React/TS/Vite, Temporal, Keycloak, PostgreSQL, Redis/Asynq, Novu — только в рамках принятой архитектуры.
+- Стек: Go (REST, monolith), React/TS/Vite, Temporal, Keycloak, PostgreSQL, Redis/Asynq, AprilNflow (собственный сервис уведомлений на Go + React Flow) — только в рамках принятой архитектуры.
 - Не трогать каталоги/файлы: …
 - Миграции БД: (нужны / не нужны; если нужны — Atlas; кратко желаемая схема)
 - Секреты: только через env / `.env.example`; значения секретов не коммитить (см. также [`DEPLOYMENT_STRATEGY.md`](./DEPLOYMENT_STRATEGY.md))
