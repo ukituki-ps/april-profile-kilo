@@ -25,6 +25,8 @@
 
 **CI:** `.github/workflows/ci.yml` — OpenAPI (в т.ч. обратная совместимость через `scripts/check-openapi-compat.sh`), lint OpenAPI, сборка Docusaurus, **frontend** (DS + shell); `.github/workflows/bootstrap-ci.yml` — облегчённый прогон для `feature/*` / `fix/*` (доки + compose + frontend). Деплой на dev — `.github/workflows/dev-deploy.yml` (self-hosted runner, см. `docs/DEPLOYMENT_STRATEGY.md`). Подробнее — [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md).
 
+**Приватный submodule DisignApril:** в GitHub → **Settings → Secrets and variables → Actions** задан секрет **`SUBMODULES_TOKEN`** (PAT с `Contents: Read` на `ukituki-ps/DisignApril`). Workflows передают его в `actions/checkout` для `git submodule`; если секрет не задан, используется `github.token` (достаточно для публичного submodule). Для форков скопируйте секрет или замените submodule на свой источник.
+
 ## Документация
 
 | Документ | Содержание |
