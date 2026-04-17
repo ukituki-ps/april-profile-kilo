@@ -11,7 +11,7 @@
 - **DB**: PostgreSQL 17
 - **Queue**: Redis + Asynq
 - **Notifications**: собственный микросервис AprilNflow (Go + React Flow)
-- **Observability**: Promtail + Loki + Grafana, Prometheus
+- **Observability**: Promtail + Loki + Grafana, Prometheus — в экосистеме April **общий централизованный контур** задаётся **AprilHub** (репозиторий [april-worker](https://github.com/ukituki-ps/april-worker): `infra/observability/`, runbook'и в `docs/`). Репозиторий отдельного микросервиса обеспечивает экспорт метрик и логов по договорённостям Hub, **без копирования полного observability-стека** в свой репозиторий.
 - **Нагрузочное тестирование**: k6 (сценарии API, baseline; детали в [`./TESTING_STRATEGY.md`](./TESTING_STRATEGY.md))
 - **Documentation**: Structurizr (C4 Model) + Docusaurus + ADR + OpenAPI
 - **Infra**: Debian 13, Docker Compose, Nginx reverse proxy
