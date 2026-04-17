@@ -6,3 +6,6 @@ docs-site/build/
 docs-site/.docusaurus/
 docs-site/static/openapi/*.yaml
 structurizr/workspace.json
+.deploy-artifacts/
+.deploy-state/
+.pnpm-store/

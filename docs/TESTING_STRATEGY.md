@@ -4,6 +4,17 @@
 
 > **Связь с кодом:** пользовательские сценарии (задачи, роли, конкретные пути API) и таблицы ниже описывают **целевое** поведение продукта. Пока соответствующей реализации в репозитории нет, используйте их как **требования** к тестам и контрактам; текущий CI — см. [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
 
+## CI в этом шаблоне (после этапа AprilHub / april-worker)
+
+В [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) зафиксированы минимальные обязательные jobs:
+
+1. **`openapi-compatibility`** — `scripts/check-openapi-compat.sh` и [oasdiff](https://github.com/oasdiff/oasdiff): нет ломающих изменений относительно `origin/develop` для `openapi/openapi.yaml` (если ветки или файла на базе ещё нет, проверка пропускается).
+2. **`quality`** — `make openapi-lint` и `make docs-build` (Redocly + Docusaurus).
+
+Для веток `feature/*` и `fix/*` дополнительно можно опираться на [`.github/workflows/bootstrap-ci.yml`](../.github/workflows/bootstrap-ci.yml): сборка доков, lint OpenAPI, `docker compose config` (без oasdiff — быстрее обратная связь на ранних коммитах).
+
+**Расширение контура под продукт:** эталон «полного» quality gate с backend, SPA, smoke и k6 — репозиторий [april-worker](https://github.com/ukituki-ps/april-worker) (AprilHub): см. его [`docs/TESTING_STRATEGY.md`](https://github.com/ukituki-ps/april-worker/blob/develop/docs/TESTING_STRATEGY.md) и [`README.md`](https://github.com/ukituki-ps/april-worker/blob/develop/README.md). При добавлении `go test`, фронтенда или e2e переносите паттерны job’ов оттуда и фиксируйте обязательный набор в этом файле и в README сервиса.
+
 ## Принципы
 
 - **Пирамида тестов**: много быстрых unit, меньше integration, узкий слой E2E на критические пользовательские потоки.
@@ -93,7 +104,8 @@
 
 ## Связь с CI и DoD
 
-- В pipeline ожидаются: **lint**, **unit**, **integration**, **smoke E2E** (минимальный DoD для merge в целевую ветку — по политике репозитория; этот документ — источник по содержанию уровней).
+- **Сейчас в шаблоне** в GitHub Actions: проверка обратной совместимости OpenAPI, lint OpenAPI, сборка Docusaurus — см. раздел «CI в этом шаблоне» выше.
+- **Целевой pipeline** (после появления кода): **lint**, **unit**, **integration**, **smoke E2E** (минимальный DoD для merge в целевую ветку — по политике репозитория; этот документ — источник по содержанию уровней).
 - **Нагрузочное тестирование** — в scope v1: сценарии и порядок запуска описаны в этом файле; baseline и артефакты фиксируются в релизной заметке или согласованном артефакте прогона.
 - Локальный запуск тестов и переменные окружения описываются в общей документации проекта (раздел «как запускать тесты»).
 

@@ -1,6 +1,5 @@
-# Минимальный CI для bootstrap: валидация инфраструктуры документации и compose.
-# Полный пайплайн деплоя на dev — по docs/DEPLOYMENT_STRATEGY.md (merge в develop, runner на сервере).
-
+# Минимальный CI для feature/fix веток: Docusaurus, OpenAPI lint, docker compose config.
+# Полный пайплайн — `.github/workflows/ci.yml` (в т.ч. проверка обратной совместимости OpenAPI).
 name: bootstrap-ci
 
 on:
@@ -12,12 +11,13 @@ on:
 jobs:
   docs-and-compose:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
           cache: npm
           cache-dependency-path: docs-site/package-lock.json
 

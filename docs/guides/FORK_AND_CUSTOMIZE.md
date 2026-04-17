@@ -28,6 +28,8 @@ sidebar_position: 2
 
 - [ ] **GitHub**: branch protection для `develop` / `main`, secrets для registry (если появятся образы).
 - [ ] **Self-hosted runner**: заново зарегистрировать с нужными **labels** или скорректировать workflow под ваши имена.
+- [ ] **OpenAPI и базовая ветка**: job `openapi-compatibility` в `.github/workflows/ci.yml` по умолчанию сравнивает с `origin/develop`. Если основная ветка интеграции — только `main`, замените `BASE_REF` в workflow на `origin/main` и убедитесь, что ветка существует на remote.
+- [ ] **Несколько спецификаций**: при добавлении файлов в `openapi/*.yaml` расширьте `make openapi-lint` и при необходимости задайте `SPEC_PATH` / отдельные шаги для `scripts/check-openapi-compat.sh`.
 
 ## 4. Окружение
 
@@ -47,5 +49,6 @@ sidebar_position: 2
 
 ## 7. После появления кода
 
-- [ ] Добавить в **CI** шаги `go test`, `npm test` / lint — расширить job `.github/workflows/ci.yml` при появлении `go.mod` и фронтенда в репозитории.
+- [ ] Добавить в **CI** шаги `go test`, `npm test` / lint — расширить job `.github/workflows/ci.yml` при появлении `go.mod` и фронтенда в репозитории. Ориентир по полному контуру (smoke, k6, несколько модулей) — репозиторий [april-worker](https://github.com/ukituki-ps/april-worker).
+- [ ] Зафиксировать обязательный quality gate в `docs/TESTING_STRATEGY.md` и в корневом `README.md`.
 - [ ] Зафиксировать версии в [`VERSIONS.md`](./VERSIONS.md) или перенести таблицу ближе к коду (`go.mod`, `package.json`).
