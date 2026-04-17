@@ -2,16 +2,16 @@
 sidebar_position: 1
 ---
 
-# april_template
+# April Profile
 
-Документация репозитория-**шаблона** для микросервисов экосистемы **April** (Go, React, Temporal, Keycloak — см. `docs/AGENT_ARCHITECTURE_CONTEXT.md` в корне репозитория). Один такой репозиторий соответствует **одному сервису**; внутри допустим модульный монолит. Этот каталог — каркас: Docusaurus, OpenAPI, Structurizr, CI.
+Документация микросервиса **AprilProfile** в экосистеме **April** (стек — `docs/AGENT_ARCHITECTURE_CONTEXT.md` в корне репозитория). Репозиторий ведёт документацию, OpenAPI и каркас frontend на дизайн-системе April.
 
 ## Куда смотреть
 
 | Раздел | Содержание |
 |--------|------------|
 | [Быстрый старт](./getting-started.md) | Сборка сайта, OpenAPI, Docker Compose |
-| [Шаблон репо: форк и версии](/guides/FORK_AND_CUSTOMIZE) | Чеклист копирования, версии инструментов |
+| [Форк и кастомизация](/guides/FORK_AND_CUSTOMIZE) | Чеклист под сервис, версии инструментов |
 | [Дизайн-система April](/guides/DESIGN_SYSTEM) | `@april/tokens`, `@april/ui`, ссылка на репозиторий DisignApril |
 | [ADR](/adr/) | Architecture Decision Records |
 | Архитектурный контекст | `docs/AGENT_ARCHITECTURE_CONTEXT.md` |

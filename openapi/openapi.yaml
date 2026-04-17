@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
-  title: Microservice Template API
+  title: April Profile API
   description: |
-    Источник истины для REST API микросервиса на базе шаблона april_template.
-    Спецификация ведётся в репозитории (`openapi/openapi.yaml`); при форке замените `info.title` и `servers`.
+    REST API микросервиса April Profile (профиль пользователя).
+    Спецификация ведётся в репозитории (`openapi/openapi.yaml`); скорректируйте `servers` под свой gateway.
   version: 0.1.0
   license:
     name: UNLICENSED

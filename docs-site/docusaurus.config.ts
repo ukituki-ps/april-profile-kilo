@@ -3,8 +3,8 @@ import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
-  title: 'april_template',
-  tagline: 'Шаблон микросервиса April — документация и контекст',
+  title: 'April Profile',
+  tagline: 'Профиль пользователя — документация и контекст (April)',
   favicon: 'img/favicon.ico',
 
   url: 'https://dev.example.com',
@@ -60,9 +60,9 @@ const config: Config = {
   themeConfig: {
     image: 'img/docusaurus-social-card.jpg',
     navbar: {
-      title: 'april_template',
+      title: 'April Profile',
       logo: {
-        alt: 'april_template',
+        alt: 'April Profile',
         src: 'img/logo.svg',
       },
       items: [

@@ -1,20 +1,19 @@
-# april_template
+# April Profile
 
-**Шаблон репозитория** для микросервисов экосистемы **April** (документация Docusaurus, OpenAPI, Structurizr, Docker Compose, CI, сценарий деплоя). **Дизайн-система April** подключена через git submodule и минимальный shell в **`frontend/`** (см. [`docs/guides/DESIGN_SYSTEM.md`](docs/guides/DESIGN_SYSTEM.md)); backend добавляется по мере разработки.
+**AprilProfile** — микросервис **профиля пользователя** в экосистеме **April** (документация Docusaurus, OpenAPI, Structurizr, Docker Compose, CI, сценарий деплоя). **Дизайн-система April** подключена через git submodule и минимальный shell в **`frontend/`** (см. [`docs/guides/DESIGN_SYSTEM.md`](docs/guides/DESIGN_SYSTEM.md)); прикладной backend добавляется по мере разработки.
 
-Один форк или копия репозитория = **один сервис** в экосистеме; внутри репозитория backend по умолчанию описывается как **модульный монолит** (см. [`docs/AGENT_ARCHITECTURE_CONTEXT.md`](docs/AGENT_ARCHITECTURE_CONTEXT.md)), а не как «один микросервис на каждый пакет».
+Репозиторий создан из шаблона [april_template](https://github.com/ukituki-ps/april_template). Граница: **один репозиторий = один сервис**; внутри допустим **модульный монолит** (см. [`docs/AGENT_ARCHITECTURE_CONTEXT.md`](docs/AGENT_ARCHITECTURE_CONTEXT.md)).
 
 ## Общая инфраструктура (AprilHub)
 
 Микросервисы экосистемы April **подключаются к общему инфраструктурному контуру AprilHub** (наблюдаемость, процессы onboarding на стенды и связанные практики). Каноничное описание и артефакты — в репозитории [april-worker](https://github.com/ukituki-ps/april-worker). В репозитории отдельного сервиса достаточно интеграции (метрики, логи, регистрация targets) по runbook'ам оттуда; **полный стек observability не копируется** в каждый репозиторий без отдельного архитектурного решения. Чеклист — в [`docs/guides/FORK_AND_CUSTOMIZE.md`](docs/guides/FORK_AND_CUSTOMIZE.md#8-общая-инфраструктура-aprilhub).
 
-## Как использовать
+## Разработка
 
-1. Создайте новый репозиторий на GitHub (**Settings → General → Template repository**, если нужен именно шаблон) или скопируйте этот каталог.
-2. Выполните подстановки по [`docs/guides/FORK_AND_CUSTOMIZE.md`](docs/guides/FORK_AND_CUSTOMIZE.md) и [`docs/guides/PROJECT_DEFAULTS.md`](docs/guides/PROJECT_DEFAULTS.md).
-3. Зафиксируйте стек в [`docs/AGENT_ARCHITECTURE_CONTEXT.md`](docs/AGENT_ARCHITECTURE_CONTEXT.md) и ведите задачи в [`tasks/`](tasks/README.md).
+1. Пройти оставшиеся подстановки по [`docs/guides/FORK_AND_CUSTOMIZE.md`](docs/guides/FORK_AND_CUSTOMIZE.md) и [`docs/guides/PROJECT_DEFAULTS.md`](docs/guides/PROJECT_DEFAULTS.md) (хосты, деплой, при необходимости переименование в OpenAPI/Docusaurus).
+2. Вести стек и решения в [`docs/AGENT_ARCHITECTURE_CONTEXT.md`](docs/AGENT_ARCHITECTURE_CONTEXT.md) и задачи в [`tasks/`](tasks/README.md).
 
-Примеры микросервисов на базе этого шаблона (отдельные репозитории): **aprilWflow**, **aprilNflow**, **aprilHHflow**, **april-worker** (AprilHub — расширенный CI: BFF, shell, smoke, k6). На машине разработчика они могут лежать рядом, например `~/april_template`, `~/aprilWflow`, `~/aprilNflow`, `~/aprilHHflow`.
+**Репозиторий:** [github.com/ukituki-ps/april-profile](https://github.com/ukituki-ps/april-profile)
 
 ## Быстрый старт
 

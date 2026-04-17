@@ -10,6 +10,6 @@ describe("App", () => {
         <App />
       </AprilProviders>,
     );
-    expect(screen.getByRole("heading", { name: /April — прикладной shell/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /April Profile/i })).toBeInTheDocument();
   });
 });
