@@ -1,0 +1,13 @@
+:root {
+  --april-neutral-border: #d6dde8;
+  --april-neutral-bg: #ffffff;
+  --april-neutral-bg-alt: #f7f9fc;
+  --april-neutral-text-primary: #1f2937;
+  --april-neutral-text-muted: #667085;
+
+  --april-accent-teal-1: #e6f8f6;
+  --april-accent-teal-8: #0f766e;
+  --april-accent-teal-10: #0b4f4a;
+
+  --april-semantic-danger: #d92d20;
+}

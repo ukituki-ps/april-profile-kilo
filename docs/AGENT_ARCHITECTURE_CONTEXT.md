@@ -5,13 +5,13 @@
 - **Backend**: Go, REST, modular monolith
 - **Workflow Engine**: Temporal (Go SDK, Workflow as Code)
 - **Frontend**: React + TypeScript + Vite
-- **UI Kit**: Mantine; дизайн-система April — пакеты **`@april/tokens`**, **`@april/ui`** ([репозиторий DisignApril](https://github.com/ukituki-ps/DisignApril), см. [`guides/DESIGN_SYSTEM.md`](./guides/DESIGN_SYSTEM.md))
+- **UI Kit**: Mantine; дизайн-система April — пакеты **`@april/tokens`**, **`@april/ui`** ([DisignApril](https://github.com/ukituki-ps/DisignApril) как **git submodule** `design-system/DisignApril`, прикладной shell в **`frontend/`**, см. [`guides/DESIGN_SYSTEM.md`](./guides/DESIGN_SYSTEM.md))
 - **Process Editor**: React Flow (`@xyflow/react`)
 - **IAM**: Keycloak (RBAC источник ролей/прав)
 - **DB**: PostgreSQL 17
 - **Queue**: Redis + Asynq
 - **Notifications**: собственный микросервис AprilNflow (Go + React Flow)
-- **Observability**: Promtail + Loki + Grafana, Prometheus
+- **Observability**: Promtail + Loki + Grafana, Prometheus — в экосистеме April **общий централизованный контур** задаётся **AprilHub** (репозиторий [april-worker](https://github.com/ukituki-ps/april-worker): `infra/observability/`, runbook'и в `docs/`). Репозиторий отдельного микросервиса обеспечивает экспорт метрик и логов по договорённостям Hub, **без копирования полного observability-стека** в свой репозиторий.
 - **Нагрузочное тестирование**: k6 (сценарии API, baseline; детали в [`./TESTING_STRATEGY.md`](./TESTING_STRATEGY.md))
 - **Documentation**: Structurizr (C4 Model) + Docusaurus + ADR + OpenAPI
 - **Infra**: Debian 13, Docker Compose, Nginx reverse proxy

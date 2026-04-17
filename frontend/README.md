@@ -1,16 +1,33 @@
 # Прикладной фронтенд (SPA)
 
-В этом шаблоне **нет** сгенерированного Vite/React-приложения по умолчанию: репозиторий задаёт документацию, OpenAPI и инфраструктуру. Клиентское приложение сервиса добавляют сюда или в отдельный репозиторий — по договорённости команды.
+Минимальный **Vite + React 18** shell на дизайн-системе April: зависимости **`@april/tokens`** и **`@april/ui`** подключены как `file:` к git submodule **`../design-system/DisignApril`** (см. корневой [`.gitmodules`](../.gitmodules)).
 
-## Дизайн-система April
+## Быстрый старт
 
-Подключайте **`@april/tokens`** и **`@april/ui`** из вашего registry (источник и витрина — [DisignApril](https://github.com/ukituki-ps/DisignApril)). Пошаговые соглашения и предупреждение про `UIKit` — в [`docs/guides/DESIGN_SYSTEM.md`](../docs/guides/DESIGN_SYSTEM.md).
+После `git submodule update --init --recursive` в корне репозитория:
 
-Типичный стек SPA в экосистеме April: **React**, **TypeScript**, **Vite**, **Mantine**, тема и провайдеры из `@april/ui`.
+```bash
+cd frontend
+npm ci
+npm run dev
+```
 
-## Локальная разработка без опубликованных пакетов
+Перед `dev`/`build`/`test` автоматически выполняется **`ds:prepare`**: `pnpm install --frozen-lockfile` и `pnpm build` в `design-system/DisignApril` (нужны **corepack** и **pnpm** — `corepack enable` в `scripts/ds-prepare.sh`).
 
-1. Клонируйте [DisignApril](https://github.com/ukituki-ps/DisignApril), выполните `pnpm install` и `pnpm build` в корне монорепозитория.
-2. В каталоге вашего SPA: `pnpm link` к собранным пакетам или укажите в `package.json` зависимости `file:../path/to/DisignApril/packages/ui` (и tokens), затем `pnpm install`.
+## Команды
 
-После публикации `@april/*` в registry замените ссылки на semver-версии.
+| Команда | Назначение |
+| -------- | ---------- |
+| `npm run ds:prepare` | Сборка пакетов DS в submodule |
+| `npm run dev` | Vite dev server (порт 5173) |
+| `npm run build` | Typecheck + production bundle |
+| `npm run lint` | `tsc --noEmit` |
+| `npm test` | Vitest |
+
+## Дубликаты React при `file:`-зависимостях
+
+В [`vite.config.ts`](./vite.config.ts) заданы `resolve.dedupe` и алиасы на `react` / `react-dom` из `frontend/node_modules`, чтобы Mantine и `@april/ui` использовали один экземпляр React (и в тестах Vitest).
+
+## Документация
+
+Полное описание — [`docs/guides/DESIGN_SYSTEM.md`](../docs/guides/DESIGN_SYSTEM.md).

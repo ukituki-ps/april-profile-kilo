@@ -1,5 +1,5 @@
-# Обязательные проверки: обратная совместимость OpenAPI (oasdiff), lint OpenAPI, сборка Docusaurus.
-# Расширяйте при появлении Go/фронтенда приложения — см. docs/TESTING_STRATEGY.md и пример [april-worker](https://github.com/ukituki-ps/april-worker).
+# Обязательные проверки: OpenAPI (oasdiff), lint OpenAPI, Docusaurus, frontend (DS + shell).
+# Расширяйте при появлении backend — см. docs/TESTING_STRATEGY.md и пример [april-worker](https://github.com/ukituki-ps/april-worker).
 name: CI
 
 on:
@@ -58,3 +58,27 @@ jobs:
 
       - name: Docusaurus build
         run: make docs-build
+
+  frontend:
+    name: Frontend (design system + shell)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Enable corepack (pnpm for ds:prepare)
+        run: corepack enable
+
+      - name: Lint, test and build frontend
+        working-directory: frontend
+        run: npm ci && npm run lint && npm run test && npm run build

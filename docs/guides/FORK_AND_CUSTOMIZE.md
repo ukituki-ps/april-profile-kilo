@@ -44,7 +44,8 @@ sidebar_position: 2
 
 ## 6. Фронтенд и дизайн-система April
 
-- [ ] Подключить **`@april/tokens`** и **`@april/ui`** из вашего npm-registry (или локально через сборку [DisignApril](https://github.com/ukituki-ps/DisignApril)) — см. [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) и при необходимости **`frontend/README.md`** в корне сервиса.
+- [ ] После клона выполнить **`git submodule update --init --recursive`**, чтобы подтянуть **`design-system/DisignApril`** (шаблон уже содержит submodule и каталог **`frontend/`** с `file:`-зависимостями на пакеты DS).
+- [ ] Согласовать с командой: при публикации **`@april/*`** в registry можно заменить `file:` в `frontend/package.json` на semver — см. [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md).
 - [ ] Для приватного scope **`@april/*`**: настроить `.npmrc` / CI credentials по политике организации.
 
 ## 7. После появления кода
@@ -52,3 +53,9 @@ sidebar_position: 2
 - [ ] Добавить в **CI** шаги `go test`, `npm test` / lint — расширить job `.github/workflows/ci.yml` при появлении `go.mod` и фронтенда в репозитории. Ориентир по полному контуру (smoke, k6, несколько модулей) — репозиторий [april-worker](https://github.com/ukituki-ps/april-worker).
 - [ ] Зафиксировать обязательный quality gate в `docs/TESTING_STRATEGY.md` и в корневом `README.md`.
 - [ ] Зафиксировать версии в [`VERSIONS.md`](./VERSIONS.md) или перенести таблицу ближе к коду (`go.mod`, `package.json`).
+
+## 8. Общая инфраструктура AprilHub
+
+- [ ] Считать **AprilHub** ([april-worker](https://github.com/ukituki-ps/april-worker)) источником правды по **общему** инфраструктурному контуру экосистемы: observability (Prometheus, Loki, Grafana, Promtail и т.д.), onboarding стендов, типовые runbook'и.
+- [ ] Для своего сервиса: **интеграция** в этот контур (например `GET /metrics`, согласованные лейблы, доставка логов) по документам в april-worker — `infra/observability/`, `docs/runbooks/`, `docs/guides/OBSERVABILITY_INDEX.md`; не дублировать у себя полный каталог `infra/observability`, если команда не приняла исключение.
+- [ ] Зафиксировать в `README` или ADR сервиса, **как** сервис подключён к контуру Hub (если есть особенности).

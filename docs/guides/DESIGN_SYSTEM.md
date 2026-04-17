@@ -4,44 +4,67 @@ sidebar_position: 4
 
 # Дизайн-система April (`@april/tokens`, `@april/ui`)
 
-Исходный код, витрина компонентов и полные соглашения живут в отдельном репозитории:
+Исходники, витрина и полные соглашения — в репозитории **[DisignApril](https://github.com/ukituki-ps/DisignApril)** (pnpm workspace: `packages/tokens`, `packages/ui`, при необходимости `apps/showcase`).
 
-**[github.com/ukituki-ps/DisignApril](https://github.com/ukituki-ps/DisignApril)** (монорепозиторий на **pnpm**: пакеты `packages/tokens`, `packages/ui`, приложение-галерея `apps/showcase`).
+В этом шаблоне дизайн-система **подключена как git submodule** `design-system/DisignApril`, а прикладной **минимальный shell** — в каталоге **`frontend/`** (Vite + React + `AprilProviders` из `@april/ui`). Так все микросервисы на базе шаблона **сразу строятся на одной и той же DS**, без расхождения версий «из головы».
 
-Этот шаблон сервиса **не дублирует** исходники дизайн-системы: в прикладном фронтенде подключаются опубликованные пакеты **`@april/tokens`** и **`@april/ui`** из вашего npm-совместимого registry (или временно — через `pnpm link` / локальный `file:` после сборки в клоне DisignApril).
+## 1. Первый клон
 
-## Пакеты
+```bash
+git clone --recurse-submodules <url>
+# или после обычного clone:
+git submodule update --init --recursive
+```
+
+## 2. Сборка DS и приложения
+
+Из корня репозитория или из `frontend/`:
+
+```bash
+cd frontend
+npm ci
+npm run ds:prepare   # pnpm install + build в design-system/DisignApril
+npm run dev          # разработка
+npm run build        # prebuild вызывает ds:prepare
+```
+
+`ds:prepare` собирает пакеты `@april/tokens` и `@april/ui` в submodule; зависимости в `frontend/package.json` указывают на `file:../design-system/DisignApril/packages/...` (как в AprilHub `hub-shell`).
+
+## 3. Пакеты
 
 | Пакет | Назначение |
 | ----- | ---------- |
-| `@april/tokens` | Токены (цвета, плотность, логотип), CSS-переменные для сервисов без React (`import '@april/tokens/css'`) |
-| `@april/ui` | Тема Mantine, `AprilProviders`, контекст плотности; зависимости включают `@mantine/core`, при необходимости React Flow |
+| `@april/tokens` | Токены (цвета, плотность, логотип), CSS для сервисов без React (`import '@april/tokens/css'`) |
+| `@april/ui` | Тема Mantine, `AprilProviders`, плотность; peer — `@mantine/core`, `@emotion/react`, React 18 |
 
-Подробности по токенам, бренду и паттернам — в **`DESIGN_SYSTEM.md`** в репозитории DisignApril.
+Подробности по токенам и паттернам — в `DESIGN_SYSTEM.md` внутри репозитория DisignApril.
 
-## Продакшен: минимальный shell
-
-Импортируйте стили Mantine, при работе с диаграммами на `@xyflow/react` — стиль React Flow, оберните приложение в провайдеры:
+## 4. Минимальный shell (корень приложения)
 
 ```tsx
 import '@mantine/core/styles.css';
-import '@xyflow/react/dist/style.css'; // если в сервисе есть flow-экраны
 import { AprilProviders } from '@april/ui';
 
 export function App() {
   return (
     <AprilProviders>
-      {/* маршрутизатор и экраны вашего сервиса */}
+      {/* маршрутизатор и экраны сервиса */}
     </AprilProviders>
   );
 }
 ```
 
-## Важно: не тяните витрину в релиз
+При экранах с `@xyflow/react` добавьте `import '@xyflow/react/dist/style.css'`.
 
-Компонент **`UIKit`** и связанные демо-секции в `@april/ui` предназначены для **разработки и ревью**, не для пользовательского бандла. В продакшене не импортируйте `UIKit` — используйте витрину локально (`pnpm dev` в DisignApril) или на внутреннем стенде.
+## 5. Продакшен: пакеты из registry
 
-## Связка с этим репозиторием
+Когда `@april/tokens` и `@april/ui` публикуются в npm-совместимый registry, в форке можно заменить `file:` на semver-версии в `frontend/package.json` и убрать submodule (или оставить submodule только для локальной разработки — по политике команды).
 
-- Каркас сервиса (доки, OpenAPI, CI) — здесь; **визуальный слой** — через зависимости от `@april/*` и собственный каталог приложения (например `frontend/`; в корне репозитория есть `frontend/README.md` с подсказками).
-- Версии пакетов и инструментов DS — в таблице [`VERSIONS.md`](./VERSIONS.md) и в манифестах репозитория DisignApril.
+## 6. Важно: не тяните витрину в релиз
+
+Компонент **`UIKit`** в `@april/ui` — для разработки и ревью. В продакшене не импортируйте `UIKit`; витрина — `pnpm dev` в DisignApril или внутренний стенд.
+
+## 7. Связка с репозиторием
+
+- Подсказки по структуре — файл `frontend/README.md` в корне репозитория.
+- Версии инструментов — [`VERSIONS.md`](./VERSIONS.md).
