@@ -10,8 +10,9 @@
 
 1. **`openapi-compatibility`** — `scripts/check-openapi-compat.sh` и [oasdiff](https://github.com/oasdiff/oasdiff): нет ломающих изменений относительно `origin/develop` для `openapi/openapi.yaml` (если ветки или файла на базе ещё нет, проверка пропускается).
 2. **`quality`** — `make openapi-lint` и `make docs-build` (Redocly + Docusaurus).
+3. **`frontend`** — checkout с **submodules**, затем в `frontend/`: `npm ci`, `npm run lint`, `npm run test`, `npm run build` (перед сборкой выполняется `ds:prepare` для [DisignApril](https://github.com/ukituki-ps/DisignApril) через pnpm).
 
-Для веток `feature/*` и `fix/*` дополнительно можно опираться на [`.github/workflows/bootstrap-ci.yml`](../.github/workflows/bootstrap-ci.yml): сборка доков, lint OpenAPI, `docker compose config` (без oasdiff — быстрее обратная связь на ранних коммитах).
+Для веток `feature/*` и `fix/*` дополнительно можно опираться на [`.github/workflows/bootstrap-ci.yml`](../.github/workflows/bootstrap-ci.yml): сборка доков, lint OpenAPI, `docker compose config`, тот же прогон **frontend** (без oasdiff — быстрее обратная связь на ранних коммитах).
 
 **Расширение контура под продукт:** эталон «полного» quality gate с backend, SPA, smoke и k6 — репозиторий [april-worker](https://github.com/ukituki-ps/april-worker) (AprilHub): см. его [`docs/TESTING_STRATEGY.md`](https://github.com/ukituki-ps/april-worker/blob/develop/docs/TESTING_STRATEGY.md) и [`README.md`](https://github.com/ukituki-ps/april-worker/blob/develop/README.md). При добавлении `go test`, фронтенда или e2e переносите паттерны job’ов оттуда и фиксируйте обязательный набор в этом файле и в README сервиса.
 
@@ -104,7 +105,7 @@
 
 ## Связь с CI и DoD
 
-- **Сейчас в шаблоне** в GitHub Actions: проверка обратной совместимости OpenAPI, lint OpenAPI, сборка Docusaurus — см. раздел «CI в этом шаблоне» выше.
+- **Сейчас в шаблоне** в GitHub Actions: проверка обратной совместимости OpenAPI, lint OpenAPI, сборка Docusaurus, **lint/test/build frontend** (дизайн-система + shell) — см. раздел «CI в этом шаблоне» выше.
 - **Целевой pipeline** (после появления кода): **lint**, **unit**, **integration**, **smoke E2E** (минимальный DoD для merge в целевую ветку — по политике репозитория; этот документ — источник по содержанию уровней).
 - **Нагрузочное тестирование** — в scope v1: сценарии и порядок запуска описаны в этом файле; baseline и артефакты фиксируются в релизной заметке или согласованном артефакте прогона.
 - Локальный запуск тестов и переменные окружения описываются в общей документации проекта (раздел «как запускать тесты»).

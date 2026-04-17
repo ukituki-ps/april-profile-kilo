@@ -44,7 +44,8 @@ sidebar_position: 2
 
 ## 6. Фронтенд и дизайн-система April
 
-- [ ] Подключить **`@april/tokens`** и **`@april/ui`** из вашего npm-registry (или локально через сборку [DisignApril](https://github.com/ukituki-ps/DisignApril)) — см. [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) и при необходимости **`frontend/README.md`** в корне сервиса.
+- [ ] После клона выполнить **`git submodule update --init --recursive`**, чтобы подтянуть **`design-system/DisignApril`** (шаблон уже содержит submodule и каталог **`frontend/`** с `file:`-зависимостями на пакеты DS).
+- [ ] Согласовать с командой: при публикации **`@april/*`** в registry можно заменить `file:` в `frontend/package.json` на semver — см. [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md).
 - [ ] Для приватного scope **`@april/*`**: настроить `.npmrc` / CI credentials по политике организации.
 
 ## 7. После появления кода

@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Версии инструментов и зависимостей
 
-Сводка для команды и агентов; **источник истины** для языков и пакетов — файлы манифестов в репозитории (`docs-site/package.json`, в будущем `go.mod`). Обновляйте эту таблицу при осознанном повышении major-версий.
+Сводка для команды и агентов; **источник истины** для языков и пакетов — файлы манифестов в репозитории (`docs-site/package.json`, `frontend/package.json`, git submodule `design-system/DisignApril`, в будущем `go.mod`). Обновляйте эту таблицу при осознанном повышении major-версий.
 
 | Компонент | Версия / диапазон | Где зафиксировано |
 | --------- | ------------------- | ----------------- |
@@ -20,8 +20,9 @@ sidebar_position: 3
 | Debian | 13 | целевой хост dev (`docs/AGENT_ARCHITECTURE_CONTEXT.md`) |
 | PostgreSQL | 17 | целевой стек (`docs/AGENT_ARCHITECTURE_CONTEXT.md`) |
 | Docker Compose | v2 | `docs/DEPLOYMENT_STRATEGY.md` |
-| April Design System (`@april/tokens`, `@april/ui`) | по semver в consumer | [DisignApril](https://github.com/ukituki-ps/DisignApril) → `packages/*/package.json`; см. [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) |
+| April Design System (`@april/tokens`, `@april/ui`) | submodule + `file:` в `frontend/` или semver в registry | [DisignApril](https://github.com/ukituki-ps/DisignApril) → `packages/*/package.json`; см. [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) |
+| pnpm (для `ds:prepare` в submodule) | как в DisignApril | `corepack enable`; lockfile submodule |
 
 ### Backend / frontend приложения
 
-После появления **Go** и клиентского приложения добавьте сюда строки с версией **Go**, основными библиотеками (Temporal SDK и т.д.) и зафиксируйте их в `VERSIONS.md` или перенесите автоматическую выгрузку из CI.
+После появления **Go** добавьте сюда строки с версией **Go**, основными библиотеками (Temporal SDK и т.д.) и зафиксируйте их в `VERSIONS.md` или перенесите автоматическую выгрузку из CI.

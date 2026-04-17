@@ -1,6 +1,6 @@
 # april_template
 
-**Шаблон репозитория** для микросервисов экосистемы **April** (документация Docusaurus, OpenAPI, Structurizr, Docker Compose, CI, сценарий деплоя). Прикладной backend/frontend добавляется по мере разработки.
+**Шаблон репозитория** для микросервисов экосистемы **April** (документация Docusaurus, OpenAPI, Structurizr, Docker Compose, CI, сценарий деплоя). **Дизайн-система April** подключена через git submodule и минимальный shell в **`frontend/`** (см. [`docs/guides/DESIGN_SYSTEM.md`](docs/guides/DESIGN_SYSTEM.md)); backend добавляется по мере разработки.
 
 Один форк или копия репозитория = **один сервис** в экосистеме; внутри репозитория backend по умолчанию описывается как **модульный монолит** (см. [`docs/AGENT_ARCHITECTURE_CONTEXT.md`](docs/AGENT_ARCHITECTURE_CONTEXT.md)), а не как «один микросервис на каждый пакет».
 
@@ -18,11 +18,12 @@
 
 ## Быстрый старт
 
-1. `cp .env.example .env` при необходимости.
-2. `make docs-build`, `make openapi-lint`.
-3. `make compose-up` после сборки статики — см. [`docs-site/docs/getting-started.md`](docs-site/docs/getting-started.md).
+1. Клон с submodule: `git clone --recurse-submodules <url>` или после clone: `git submodule update --init --recursive`.
+2. `cp .env.example .env` при необходимости.
+3. `make docs-build`, `make openapi-lint`, `make frontend-build` (сборка DisignApril + SPA в `frontend/`).
+4. `make compose-up` после сборки статики — см. [`docs-site/docs/getting-started.md`](docs-site/docs/getting-started.md).
 
-**CI:** `.github/workflows/ci.yml` — OpenAPI (в т.ч. обратная совместимость через `scripts/check-openapi-compat.sh`), lint OpenAPI, сборка Docusaurus; `.github/workflows/bootstrap-ci.yml` — облегчённый прогон для `feature/*` / `fix/*` (доки + compose config). Деплой на dev — `.github/workflows/dev-deploy.yml` (self-hosted runner, см. `docs/DEPLOYMENT_STRATEGY.md`). Подробнее — [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md).
+**CI:** `.github/workflows/ci.yml` — OpenAPI (в т.ч. обратная совместимость через `scripts/check-openapi-compat.sh`), lint OpenAPI, сборка Docusaurus, **frontend** (DS + shell); `.github/workflows/bootstrap-ci.yml` — облегчённый прогон для `feature/*` / `fix/*` (доки + compose + frontend). Деплой на dev — `.github/workflows/dev-deploy.yml` (self-hosted runner, см. `docs/DEPLOYMENT_STRATEGY.md`). Подробнее — [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md).
 
 ## Документация
 
