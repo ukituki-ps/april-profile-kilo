@@ -19,7 +19,7 @@ permissions:
 jobs:
   deploy:
     name: Sync repo and run deploy.sh
-    runs-on: [self-hosted, dev, template]
+    runs-on: [self-hosted, dev, april-profile]
     timeout-minutes: 60
     steps:
       - name: Checkout ref and deploy
@@ -27,7 +27,7 @@ jobs:
           APRIL_DEPLOY_ROOT: ${{ vars.APRIL_DEPLOY_ROOT }}
         run: |
           set -euo pipefail
-          ROOT="${APRIL_DEPLOY_ROOT:-/opt/april_template}"
+          ROOT="${APRIL_DEPLOY_ROOT:-/opt/april-profile}"
           echo "Deploy root: ${ROOT}"
           echo "Commit: ${{ github.sha }}"
           test -d "${ROOT}/.git"
