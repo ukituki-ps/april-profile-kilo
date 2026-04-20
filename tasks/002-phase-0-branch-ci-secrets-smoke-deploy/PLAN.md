@@ -2,7 +2,7 @@
 
 - **Задача:** [`TASK.md`](./TASK.md)
 - **Дата плана:** 2026-04-17
-- **Статус плана:** согласован (обновлено 2026-04-20: зафиксированы чеклисты в `DEPLOYMENT_STRATEGY`, `README`, `ADMIN_DEV_SERVER`; настройки GitHub и smoke на dev — в [`REPORT.md`](./REPORT.md))
+- **Статус плана:** выполнен (2026-04-20: отчёт [`REPORT.md`](./REPORT.md), `PROJECT_DEFAULTS` — фактический стенд; branch protection — исключение GitHub API / UI см. отчёт)
 
 ## Исходные допущения
 - Значения `DEPLOY_ROOT`, `RUNNER_LABEL_EXTRA`, `GITHUB_REPO_SLUG` согласованы в документации в рамках задачи **001**.
