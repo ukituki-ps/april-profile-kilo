@@ -2,7 +2,7 @@
 
 - **Задача:** [`TASK.md`](./TASK.md)
 - **Дата плана:** 2026-04-17
-- **Статус плана:** черновик (уточнять после выполнения [`tasks/001-phase-0-placeholders-oidc-runner-hub-docs`](../001-phase-0-placeholders-oidc-runner-hub-docs/))
+- **Статус плана:** согласован (обновлено 2026-04-20: зафиксированы чеклисты в `DEPLOYMENT_STRATEGY`, `README`, `ADMIN_DEV_SERVER`; настройки GitHub и smoke на dev — в [`REPORT.md`](./REPORT.md))
 
 ## Исходные допущения
 - Значения `DEPLOY_ROOT`, `RUNNER_LABEL_EXTRA`, `GITHUB_REPO_SLUG` согласованы в документации в рамках задачи **001**.

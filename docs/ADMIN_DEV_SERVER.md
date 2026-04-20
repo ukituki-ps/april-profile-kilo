@@ -7,7 +7,8 @@
 1. Создайте SSH-ключ (ed25519): `ssh-keygen -t ed25519 -C "your_email@example.com"`.
 2. Добавьте **public** ключ в GitHub.
 3. Клонируйте репозиторий: `git clone git@github.com:<org>/<repo>.git`.
-4. Ветки: разработка в `feature/*` или `fix/*`, merge в `develop` через PR; при branch protection — не пушить напрямую в `main`/`develop`.
+4. Ветки: разработка в `feature/*` или `fix/*`, merge в `develop` через PR; не пушить напрямую в защищённые ветки (`main`, `develop` — см. [`DEPLOYMENT_STRATEGY.md`](./DEPLOYMENT_STRATEGY.md)).
+5. **Branch protection** для `develop` (и при политике команды — для `main`): пошаговый чеклист в [`DEPLOYMENT_STRATEGY.md`](./DEPLOYMENT_STRATEGY.md) §1a; секрет **`SUBMODULES_TOKEN`** и variable **`APRIL_DEPLOY_ROOT`** — §3.
 
 ## 2. Сервер Debian 13 (`DEV_HOST`)
 
