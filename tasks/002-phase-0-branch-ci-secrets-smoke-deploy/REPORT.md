@@ -4,7 +4,7 @@
 - Задача: Фаза 0 (часть 2) — branch protection, секреты CI, `APRIL_DEPLOY_ROOT`, smoke на dev
 - Ветка: `feature/phase-0-ci-dev-smoke` (ожидается push и PR в `develop`)
 - Коммиты: один коммит на ветке `feature/phase-0-ci-dev-smoke` (SHA — `git rev-parse HEAD` после checkout)
-- PR: не создавался (создаёт исполнитель/владелец репозитория)
+- PR: создать из ветки: https://github.com/ukituki-ps/april-profile/pull/new/feature/phase-0-ci-dev-smoke
 
 ## 2) Что сделано
 
