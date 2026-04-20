@@ -21,7 +21,8 @@
 2. `cp .env.example .env` при необходимости.
 3. `make docs-build`, `make openapi-lint`, `make frontend-build` (сборка DisignApril + SPA в `frontend/`).
 4. Backend (Go): `make go-vet`, `make go-build`; миграции БД — `make migrate-validate`, при поднятой PostgreSQL и `DATABASE_URL` — `make migrate-apply` (Atlas в Docker, см. [`docs/guides/VERSIONS.md`](docs/guides/VERSIONS.md)).
-5. `make compose-up` после сборки статики — см. [`docs-site/docs/getting-started.md`](docs-site/docs/getting-started.md).
+5. **JWT Keycloak (backend):** для `go run ./cmd/april-profile` задайте в окружении `KEYCLOAK_JWKS_URL`, `KEYCLOAK_ISSUER`, `KEYCLOAK_AUDIENCE` (см. [`.env.example`](.env.example) и [`docs/keycloak-stand-coordinates.md`](docs/keycloak-stand-coordinates.md)). Идентификатор тенанта для защищённых маршрутов берётся из claim access token (по умолчанию имя claim — `tenant_id`, см. `KEYCLOAK_TENANT_CLAIM`), не из query или body. Обзор правил — [`docs/auth-jwt-keycloak-adapted.md`](docs/auth-jwt-keycloak-adapted.md).
+6. `make compose-up` после сборки статики — см. [`docs-site/docs/getting-started.md`](docs-site/docs/getting-started.md).
 
 **CI:** `.github/workflows/ci.yml` — OpenAPI (в т.ч. обратная совместимость через `scripts/check-openapi-compat.sh`), lint OpenAPI, сборка Docusaurus, **Go** (`go vet`, `go build`), **Atlas** (`migrate validate`), **frontend** (DS + shell); `.github/workflows/bootstrap-ci.yml` — облегчённый прогон для `feature/*` / `fix/*` (доки + compose + Go + Atlas + frontend). Деплой на dev — `.github/workflows/dev-deploy.yml` (self-hosted runner, см. `docs/DEPLOYMENT_STRATEGY.md`). Подробнее — [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md).
 
