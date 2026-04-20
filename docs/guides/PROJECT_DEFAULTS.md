@@ -13,7 +13,21 @@ sidebar_position: 1
 | `DEPLOY_USER` | `deploy` | Пользователь ОС для SSH и runner |
 | `GITHUB_REPO_SLUG` | `ukituki-ps/april-profile` | Репозиторий в `git@github.com:` |
 | `RUNNER_LABEL_EXTRA` | `april-profile` | Доп. label self-hosted runner (вместе с `self-hosted`, `dev`) |
-| `APRIL_DEPLOY_ROOT` | как `DEPLOY_ROOT` | Имя **repository variable** в GitHub Actions; ожидаемый путь на сервере — **`/opt/april-profile`**, если переменная не задана (см. `.github/workflows/dev-deploy.yml`) |
+| `APRIL_DEPLOY_ROOT` | как `DEPLOY_ROOT` | Имя **repository variable** в GitHub Actions; если переменная **не** задана, workflow использует дефолт из [`.github/workflows/dev-deploy.yml`](../../.github/workflows/dev-deploy.yml) (**`/opt/april-profile`**). |
+
+### Фактический dev-стенд (апрель 2026)
+
+На хосте **192.168.1.42** (Orange Pi, пользователь ОС **`ukituki`**, без выделенного `sudo` под каталог в `/opt`) задано:
+
+| Параметр | Значение |
+| -------- | -------- |
+| Каталог клона / **`APRIL_DEPLOY_ROOT` в GitHub** | `/home/ukituki/april-profile` |
+| Self-hosted runner (второй процесс, репозиторий `april-profile`) | `~/actions-runner-april-profile`, labels `self-hosted`, `dev`, `april-profile` |
+| Порты HTTP (на том же сервере уже заняты **8080** / **8091** под `april-worker`) | в **`~/april-profile/.env`**: `DOCS_HTTP_PORT=8888`, `STRUCTURIZR_HTTP_PORT=8092` |
+
+Публичный **`DEV_HOST`** (`dev.profile.april.ukituki.tech`) при необходимости направляют на этот хост reverse proxy; для smoke по IP: доки **`http://192.168.1.42:8888/`**, Structurizr Lite **`http://192.168.1.42:8092/`**.
+
+При переносе клона в **`/opt/april-profile`** обновите **variable** `APRIL_DEPLOY_ROOT` в GitHub и эту таблицу.
 
 **OIDC / Keycloak (целевые имена для dev, источник RBAC — Keycloak):**
 

@@ -5,7 +5,7 @@
 ## Инициализация
 
 - [ ] **Фаза 0 (часть 1)** — плейсхолдеры, OIDC/gateway/runner, связь с AprilHub в доках — [`tasks/001-phase-0-placeholders-oidc-runner-hub-docs/`](tasks/001-phase-0-placeholders-oidc-runner-hub-docs/) ([`TASK.md`](tasks/001-phase-0-placeholders-oidc-runner-hub-docs/TASK.md)); зависимостей нет (родитель: [`tasks/000-full-service-aprilhub-roadmap/PLAN.md`](tasks/000-full-service-aprilhub-roadmap/PLAN.md) «Фаза 0», блок «Сначала»).
-- [ ] **Фаза 0 (часть 2)** — branch protection, секреты CI (`SUBMODULES_TOKEN` и др.), `APRIL_DEPLOY_ROOT`, smoke на dev — [`tasks/002-phase-0-branch-ci-secrets-smoke-deploy/`](tasks/002-phase-0-branch-ci-secrets-smoke-deploy/) ([`TASK.md`](tasks/002-phase-0-branch-ci-secrets-smoke-deploy/TASK.md), [`PLAN.md`](tasks/002-phase-0-branch-ci-secrets-smoke-deploy/PLAN.md)); **зависит от:** завершения [`001-phase-0-placeholders-oidc-runner-hub-docs`](tasks/001-phase-0-placeholders-oidc-runner-hub-docs/).
+- [x] **Фаза 0 (часть 2)** — branch protection, секреты CI (`SUBMODULES_TOKEN` и др.), `APRIL_DEPLOY_ROOT`, smoke на dev — [`tasks/002-phase-0-branch-ci-secrets-smoke-deploy/`](tasks/002-phase-0-branch-ci-secrets-smoke-deploy/) ([`TASK.md`](tasks/002-phase-0-branch-ci-secrets-smoke-deploy/TASK.md), [`REPORT.md`](tasks/002-phase-0-branch-ci-secrets-smoke-deploy/REPORT.md)); **зависит от:** завершения [`001-phase-0-placeholders-oidc-runner-hub-docs`](tasks/001-phase-0-placeholders-oidc-runner-hub-docs/).
 
 ## Планирование
 
