@@ -20,9 +20,10 @@
 1. Клон с submodule: `git clone --recurse-submodules <url>` или после clone: `git submodule update --init --recursive`.
 2. `cp .env.example .env` при необходимости.
 3. `make docs-build`, `make openapi-lint`, `make frontend-build` (сборка DisignApril + SPA в `frontend/`).
-4. `make compose-up` после сборки статики — см. [`docs-site/docs/getting-started.md`](docs-site/docs/getting-started.md).
+4. Backend (Go): `make go-vet`, `make go-build`; миграции БД — `make migrate-validate`, при поднятой PostgreSQL и `DATABASE_URL` — `make migrate-apply` (Atlas в Docker, см. [`docs/guides/VERSIONS.md`](docs/guides/VERSIONS.md)).
+5. `make compose-up` после сборки статики — см. [`docs-site/docs/getting-started.md`](docs-site/docs/getting-started.md).
 
-**CI:** `.github/workflows/ci.yml` — OpenAPI (в т.ч. обратная совместимость через `scripts/check-openapi-compat.sh`), lint OpenAPI, сборка Docusaurus, **frontend** (DS + shell); `.github/workflows/bootstrap-ci.yml` — облегчённый прогон для `feature/*` / `fix/*` (доки + compose + frontend). Деплой на dev — `.github/workflows/dev-deploy.yml` (self-hosted runner, см. `docs/DEPLOYMENT_STRATEGY.md`). Подробнее — [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md).
+**CI:** `.github/workflows/ci.yml` — OpenAPI (в т.ч. обратная совместимость через `scripts/check-openapi-compat.sh`), lint OpenAPI, сборка Docusaurus, **Go** (`go vet`, `go build`), **Atlas** (`migrate validate`), **frontend** (DS + shell); `.github/workflows/bootstrap-ci.yml` — облегчённый прогон для `feature/*` / `fix/*` (доки + compose + Go + Atlas + frontend). Деплой на dev — `.github/workflows/dev-deploy.yml` (self-hosted runner, см. `docs/DEPLOYMENT_STRATEGY.md`). Подробнее — [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md).
 
 **Процесс и стенд:** merge в `develop` — через PR; **branch protection** и секреты/переменные GitHub — чеклисты в [`docs/DEPLOYMENT_STRATEGY.md`](docs/DEPLOYMENT_STRATEGY.md) (§1a, §3). **Smoke после деплоя** на dev — §9 того же документа (фаза 0: инфраструктура и HTTP-доки; после появления API — health и сценарии из [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md)).
 

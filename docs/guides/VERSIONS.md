@@ -22,7 +22,9 @@ sidebar_position: 3
 | Docker Compose | v2 | `docs/DEPLOYMENT_STRATEGY.md` |
 | April Design System (`@april/tokens`, `@april/ui`) | submodule + `file:` в `frontend/` или semver в registry | [DisignApril](https://github.com/ukituki-ps/DisignApril) → `packages/*/package.json`; см. [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) |
 | pnpm (для `ds:prepare` в submodule) | как в DisignApril | `corepack enable`; lockfile submodule |
+| Go | 1.24.x (см. `go.mod`, CI) | `go.mod` |
+| Atlas CLI (миграции) | образ `arigaio/atlas:0.32.0` | `Makefile` → `ATLAS_IMAGE`, каталог `atlas/migrations/` |
 
 ### Backend / frontend приложения
 
-После появления **Go** добавьте сюда строки с версией **Go**, основными библиотеками (Temporal SDK и т.д.) и зафиксируйте их в `VERSIONS.md` или перенесите автоматическую выгрузку из CI.
+Версии **Go** и образа **Atlas** для миграций — в таблице выше; при добавлении Temporal SDK и др. расширьте строки или зафиксируйте выгрузку из CI.

@@ -40,6 +40,17 @@ jobs:
       - name: Docker Compose config
         run: docker compose config
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.x"
+          cache: true
+
+      - name: Go vet and build
+        run: go vet ./... && go build -o /tmp/april-profile ./cmd/april-profile
+
+      - name: Atlas migrate validate
+        run: docker run --rm -v "$PWD:/work" -w /work arigaio/atlas:0.32.0 migrate validate --dir "file://atlas/migrations"
+
       - name: Enable corepack (pnpm for ds:prepare)
         run: corepack enable
 

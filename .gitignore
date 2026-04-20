@@ -10,3 +10,4 @@ structurizr/workspace.json
 .deploy-artifacts/
 .deploy-state/
 .pnpm-store/
+bin/
