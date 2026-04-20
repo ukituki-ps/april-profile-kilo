@@ -1,6 +1,6 @@
 ## 1) Итого
 
-- Статус: ✅ выполнено (см. §7: **branch protection** не проверяется через API для приватного репозитория без GitHub Pro — подтверждение в UI владельца)
+- Статус: ✅ выполнено (**branch protection:** см. §6.1 — формальное исключение по политике GitHub для private + API; ручная настройка в UI по [`DEPLOYMENT_STRATEGY` §1a](../../docs/DEPLOYMENT_STRATEGY.md))
 - Задача: Фаза 0 (часть 2) — branch protection, секреты CI, `APRIL_DEPLOY_ROOT`, smoke на dev
 - Ветка / merge: изменения в `develop` (в т.ч. PR «Feature/phase 0 ci dev smoke», CI и деплой проверены на `develop`)
 - Коммиты: см. историю `develop`; деплой workflow привязан к SHA ниже
@@ -51,7 +51,7 @@ CI на **`develop`** (последний прогон workflow **CI**): [усп
 
 | Ветка | Статус | Примечание |
 |-------|--------|------------|
-| `develop` | Требуется подтверждение в UI | Чеклист: [`DEPLOYMENT_STRATEGY` §1a](../../docs/DEPLOYMENT_STRATEGY.md). Проверка через `gh api`/REST для **приватного** репозитория без **GitHub Pro** возвращает 403 — автоматически не верифицировано. Владелец: **Settings → Branches** — правило для `develop` (Require PR, при необходимости required checks: `openapi-compatibility`, `quality`, `frontend`). |
+| `develop` | **Исключение (зафиксировано)** | **Владелец решения:** политика GitHub для **приватного** репозитория — REST **`PUT .../branches/develop/protection`** возвращает **403** с текстом «Upgrade to GitHub Pro or make this repository public» (проверено 2026-04-20, `gh api`). Программно включить protection из CLI/API **нельзя** без смены тарифа/видимости репо. **Действие вручную:** [`DEPLOYMENT_STRATEGY` §1a](../../docs/DEPLOYMENT_STRATEGY.md) — **Settings → Branches**, правило для `develop`, Require PR, approvals ≥1, required checks: **`OpenAPI compatibility (no breaking changes)`**, **`Lint OpenAPI and build docs`**, **`Frontend (design system + shell)`**. |
 
 ### 6.2 Секреты и переменные
 
@@ -99,13 +99,13 @@ april-profile-swagger-ui-1       Up   (internal)
 
 ## 7) Риски и ограничения
 
-- **Branch protection:** только ручная проверка в GitHub UI (см. §6.1).
+- **Branch protection:** до включения в UI правило не активно; приёмка по задаче закрыта **исключением** §6.1 (ограничение GitHub API для private без Pro).
 - **Путь деплоя:** на стенде используется **`/home/ukituki/april-profile`**, не `/opt/april-profile` — отражено в [`PROJECT_DEFAULTS`](../../docs/guides/PROJECT_DEFAULTS.md) и в variable.
 - **Два runner’а на одном хосте:** `april-worker` и `april-profile` — разные каталоги `actions-runner` / `actions-runner-april-profile`; после перезагрузки убедиться в автозапуске второго runner’а (`svc.sh`/systemd).
 - **Очередь Deploy to dev:** при зависании старых run — отмена в UI или `gh run cancel`, иначе блокируется группа `deploy-dev`.
 
 ## 8) Что осталось
 
-- [ ] Владелец репозитория: явно включить **branch protection** для `develop` по чеклисту §1a и при необходимости добавить **required status checks**.
-- [ ] Опционально: DNS / reverse proxy на **`DEV_HOST`** → порты **8888** (доки) / **8092** (Structurizr); тогда повторить smoke по HTTPS с каноничного хоста.
+- [ ] **Рекомендуется вручную** (после смены тарифа не требуется для приёмки 002): в UI GitHub включить **branch protection** для `develop` — шаги в [`DEPLOYMENT_STRATEGY` §1a](../../docs/DEPLOYMENT_STRATEGY.md); имена checks — §6.1 выше.
+- [ ] Опционально: DNS / reverse proxy на **`DEV_HOST`** → порты **8888** (доки) / **8092** (Structurizr); smoke по HTTPS с каноничного хоста.
 - [ ] **Follow-up (фаза 1):** smoke с **`/healthz`** / **`/readyz`** по [`docs/TESTING_STRATEGY.md`](../../docs/TESTING_STRATEGY.md).

@@ -35,7 +35,7 @@
 - Расширение CI под `go test` — по мере появления кода ([`docs/TESTING_STRATEGY.md`](../../docs/TESTING_STRATEGY.md)); в этой задаче не добавлять лишних job без необходимости.
 
 ## Критерии готовности (acceptance)
-- [ ] Branch protection для интеграционной ветки (`develop`) включена **или** зафиксирован явный блокер/исключение в `REPORT.md` с владельцем решения. *(чеклист в доке + ручное подтверждение в UI; API не верифицирует private без Pro — см. [`REPORT.md`](./REPORT.md) §6.1, §7)*
+- [x] Branch protection для интеграционной ветки (`develop`) включена **или** зафиксирован явный блокер/исключение в `REPORT.md` с владельцем решения. *(исключение: GitHub REST для private repo возвращает 403 без Pro — см. [`REPORT.md`](./REPORT.md) §6.1; включение в UI — по [`DEPLOYMENT_STRATEGY` §1a](../../docs/DEPLOYMENT_STRATEGY.md))*
 - [x] `SUBMODULES_TOKEN` (и прочие необходимые секреты для текущих workflows) настроены в GitHub; CI на `develop` проходит после merge.
 - [x] `APRIL_DEPLOY_ROOT` в GitHub Variables согласован с документацией и реальным путём на сервере; деплой workflow завершается успешно.
 - [x] Smoke после деплоя **описан** в репо и **выполнен на dev**; результат отражён в [`REPORT.md`](./REPORT.md) (команды, вывод, ограничения «до появления backend»).

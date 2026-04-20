@@ -25,14 +25,19 @@
 - [ ] **Settings → Branches → Add branch protection rule** — pattern: `develop`
 - [ ] **Require a pull request before merging** — включено
 - [ ] (рекомендуется) **Require approvals** — не менее одного согласованного ревьюера
-- [ ] (рекомендуется) **Require status checks to pass before merging** — добавить обязательные jobs из workflow **CI** (`.github/workflows/ci.yml`), например: `openapi-compatibility`, `quality`, `frontend` (уточнить актуальные имена jobs в Actions после первого успешного прогона)
+- [ ] (рекомендуется) **Require status checks to pass before merging** — добавить обязательные проверки из workflow **CI** (`.github/workflows/ci.yml`). Имена jobs в UI GitHub совпадают с полем **`name:`** в YAML (не с ключом job):
+  - `OpenAPI compatibility (no breaking changes)`
+  - `Lint OpenAPI and build docs`
+  - `Frontend (design system + shell)`
 - [ ] Ограничения для администраторов и обход правил — по политике организации (**Do not allow bypassing** / **Include administrators**)
 
 **Ветка `main`** (при политике «релиз только через PR»):
 
 - [ ] Аналогично `develop` или строже — по согласованию с командой
 
-Если branch protection временно невозможна (ограничения org, тариф), зафиксируйте **явное исключение** и владельца решения в отчёте задачи.
+**Приватный репозиторий и API:** для частных репозиториев вызовы REST **`PUT /repos/.../branches/.../protection`** и чтение protection могут возвращать **403** с требованием **GitHub Pro** или публичной видимости — тогда правило создаётся **только в UI** (см. чеклист выше) либо меняется тариф/политика org. Зафиксируйте исключение в отчёте задачи ([`tasks/002-phase-0-branch-ci-secrets-smoke-deploy/REPORT.md`](../tasks/002-phase-0-branch-ci-secrets-smoke-deploy/REPORT.md)).
+
+Если branch protection временно невозможна по другим причинам (ограничения org без Pro), зафиксируйте **явное исключение** и владельца решения в отчёте задачи.
 
 ## 2. Runner
 
