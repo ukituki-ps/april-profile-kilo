@@ -1,5 +1,6 @@
 # Базовый стек для dev/stage: документация (статика + Structurizr Lite + Swagger UI) за Nginx.
 # Образы приложений (backend/frontend) подключаются позже через profiles и images.env — см. docs/DEPLOYMENT_STRATEGY.md
+# Локальная PostgreSQL 17: `docker compose --profile db up -d postgres` (переменные см. `.env.example`).
 
 services:
   nginx-docs:
@@ -33,3 +34,19 @@ services:
       # Lite создаёт/обновляет workspace.json при работе — том не только для чтения
       - ./structurizr:/usr/local/structurizr
     restart: unless-stopped
+
+  postgres:
+    profiles: [db]
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-april}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-april}"
+      POSTGRES_DB: "${POSTGRES_DB:-april_profile}"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
