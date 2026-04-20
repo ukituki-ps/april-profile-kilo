@@ -1,13 +1,14 @@
 import "@mantine/core/styles.css";
-import React from "react";
+import "@xyflow/react/dist/style.css";
 import ReactDOM from "react-dom/client";
 import { AprilProviders } from "@april/ui";
+import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
+  <BrowserRouter>
     <AprilProviders>
       <App />
     </AprilProviders>
-  </React.StrictMode>,
+  </BrowserRouter>,
 );

@@ -4,7 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'April Profile',
-  tagline: 'Профиль пользователя — документация и контекст (April)',
+  tagline: 'AprilProfile — версионируемые профили сущностей, документация и контекст (April)',
   favicon: 'img/favicon.ico',
 
   url: 'https://dev.example.com',

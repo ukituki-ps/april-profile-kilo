@@ -1,6 +1,6 @@
 # April Profile
 
-**AprilProfile** — микросервис **профиля пользователя** в экосистеме **April** (документация Docusaurus, OpenAPI, Structurizr, Docker Compose, CI, сценарий деплоя). **Дизайн-система April** подключена через git submodule и минимальный shell в **`frontend/`** (см. [`docs/guides/DESIGN_SYSTEM.md`](docs/guides/DESIGN_SYSTEM.md)); прикладной backend добавляется по мере разработки.
+**AprilProfile** — микросервис **централизованных версионируемых профилей сущностей** в экосистеме **April** (полиморфная модель: персонал, оргединицы, клиенты, проекты, договоры и др.; см. [`docs/DESIGN_AprilProfile.md`](docs/DESIGN_AprilProfile.md)). Репозиторий ведёт документацию Docusaurus, OpenAPI, Structurizr, Docker Compose, CI и сценарий деплоя. **Дизайн-система April** подключена через git submodule и минимальный shell в **`frontend/`** (см. [`docs/guides/DESIGN_SYSTEM.md`](docs/guides/DESIGN_SYSTEM.md)); прикладной backend добавляется по мере разработки.
 
 Репозиторий создан из шаблона [april_template](https://github.com/ukituki-ps/april_template). Граница: **один репозиторий = один сервис**; внутри допустим **модульный монолит** (см. [`docs/AGENT_ARCHITECTURE_CONTEXT.md`](docs/AGENT_ARCHITECTURE_CONTEXT.md)).
 
@@ -11,7 +11,7 @@
 ## Разработка
 
 1. Пройти оставшиеся подстановки по [`docs/guides/FORK_AND_CUSTOMIZE.md`](docs/guides/FORK_AND_CUSTOMIZE.md) и [`docs/guides/PROJECT_DEFAULTS.md`](docs/guides/PROJECT_DEFAULTS.md) (хосты, деплой, при необходимости переименование в OpenAPI/Docusaurus).
-2. Вести стек и решения в [`docs/AGENT_ARCHITECTURE_CONTEXT.md`](docs/AGENT_ARCHITECTURE_CONTEXT.md) и задачи в [`tasks/`](tasks/README.md).
+2. Вести стек и продукт в [`docs/AGENT_ARCHITECTURE_CONTEXT.md`](docs/AGENT_ARCHITECTURE_CONTEXT.md), дизайн модуля в [`docs/DESIGN_AprilProfile.md`](docs/DESIGN_AprilProfile.md), фронтенд и Hub в [`docs/FRONTEND_STRATEGY.md`](docs/FRONTEND_STRATEGY.md), гибрид UI (Host / Widget / API–BFF) и контракты в [`docs/WIDGET_CONTRACTS.md`](docs/WIDGET_CONTRACTS.md) и [`docs/DECISION_MATRIX_UI_INTEGRATION.md`](docs/DECISION_MATRIX_UI_INTEGRATION.md), ADR в [`docs/adr/`](docs/adr/) и задачи в [`tasks/`](tasks/README.md).
 
 **Репозиторий:** [github.com/ukituki-ps/april-profile](https://github.com/ukituki-ps/april-profile)
 
@@ -30,6 +30,12 @@
 
 | Документ | Содержание |
 | -------- | ---------- |
+| [`structurizr/workspace.dsl`](structurizr/workspace.dsl) | C4 (Structurizr Lite): контекст и контейнеры AprilProfile |
+| [`docs/DESIGN_AprilProfile.md`](docs/DESIGN_AprilProfile.md) | Дизайн модуля: назначение, границы, мультитенантность, модель данных |
+| [`docs/FRONTEND_STRATEGY.md`](docs/FRONTEND_STRATEGY.md) | Фронтенд: три модели интеграции UI, AprilHub, контракты, чеклист |
+| [`docs/ui-integration-governance.md`](docs-site/docs/ui-integration-governance.md) (на сайте: раздел «Гибридная интеграция UI») | Индекс: контракты виджетов, матрица решений, версионирование, чеклисты, observability |
+| [`docs/WIDGET_CONTRACTS.md`](docs/WIDGET_CONTRACTS.md) | HostContext / Widget Props / Events v1 |
+| [`docs/adr/`](docs/adr/) | ADR (в т.ч. 0002–0004: продукт AprilProfile и гибрид UI) |
 | [`docs/guides/FORK_AND_CUSTOMIZE.md`](docs/guides/FORK_AND_CUSTOMIZE.md) | Чеклист при копировании шаблона |
 | [`docs/guides/PROJECT_DEFAULTS.md`](docs/guides/PROJECT_DEFAULTS.md) | Плейсхолдеры хоста, путей, labels |
 | [`docs/AGENT_ARCHITECTURE_CONTEXT.md`](docs/AGENT_ARCHITECTURE_CONTEXT.md) | Стек и границы |

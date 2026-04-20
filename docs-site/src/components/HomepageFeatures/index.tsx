@@ -35,8 +35,8 @@ const FeatureList: FeatureItem[] = [
     Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
-        Structurizr Lite (порт 8091) и каталог ADR в <code>docs/adr/</code>, раздел на сайте{' '}
-        <code>/adr/</code>.
+        C4 — <code>structurizr/workspace.dsl</code> (Structurizr Lite); дизайн —{' '}
+        <code>docs/DESIGN_AprilProfile.md</code>; ADR — <code>docs/adr/</code> / <code>/adr/</code>.
       </>
     ),
   },

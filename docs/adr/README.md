@@ -13,6 +13,9 @@ title: Architecture Decision Records
 | ID | Заголовок | Статус |
 |----|-----------|--------|
 | [0001](0001-record-architecture-decisions.md) | Ведение ADR | принято |
+| [0002](0002-april-profile-scope-and-multitenancy.md) | AprilProfile: назначение, границы, мультитенантность | принято |
+| [0003](0003-april-profile-data-model-policies.md) | AprilProfile: метамодель, версии, authority, события | принято |
+| [0004](0004-hybrid-ui-integration-model.md) | Гибридная интеграция UI: Host / Widget / API–BFF-first | принято |
 
 ## Как добавить запись
 

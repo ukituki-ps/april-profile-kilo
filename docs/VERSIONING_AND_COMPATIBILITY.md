@@ -1,0 +1,52 @@
+# Версионирование и совместимость: host и `@april/*-ui`
+
+> Связанные документы: [`WIDGET_CONTRACTS.md`](./WIDGET_CONTRACTS.md), [`adr/0004-hybrid-ui-integration-model.md`](./adr/0004-hybrid-ui-integration-model.md), [`WIDGET_RELEASE_CHECKLIST.md`](./WIDGET_RELEASE_CHECKLIST.md).  
+> Опубликованная копия: `docs-site/docs/versioning-and-compatibility.md`.
+
+---
+
+## 1. Semver для npm-пакетов
+
+Пакеты **`@april/*-ui`**, **`@april/profile-api-client`** и аналоги следуют **semver 2.0**:
+
+| Изменение | Версия | Примеры |
+|-----------|--------|---------|
+| Совместимые исправления (bugfix), не меняющие контракт | PATCH | 1.2.3 → 1.2.4 |
+| Обратно совместимые возможности (новые optional props, новые события) | MINOR | 1.2.4 → 1.3.0 |
+| Ломающие изменения props/events/HostContext, удаление экспортов | MAJOR | 1.3.0 → 2.0.0 |
+
+**Design System** (`@april/ui`): обновления minor/patch не должны ломать виджеты без явного bump peer dependency; major DS — координация с владельцами виджетов и Hub.
+
+---
+
+## 2. Матрица совместимости (Host × Widget)
+
+Ориентир для ревью перед релизом (конкретные версии фиксируются в lockfile Hub):
+
+| Виджет (major) | Host / Hub (ожидание) |
+|----------------|------------------------|
+| `1.x` | Совместим с контрактом HostContext v1; `@april/ui` в диапазоне, объявленном в peer виджета. |
+| `2.x` | Требует обновлённого host, реализующего изменения контракта v2 (см. changelog и миграцию). |
+
+Правило: **major виджета** допускается только с **документированной миграцией** ([`templates/WIDGET_CHANGELOG_TEMPLATE.md`](./templates/WIDGET_CHANGELOG_TEMPLATE.md)) и обновлением интеграционной спецификации host.
+
+---
+
+## 3. Deprecation
+
+1. Пометить API/props как `@deprecated` в TypeScript и в changelog **минор** релиза.
+2. Минимум **один полный minor-цикл** поддержки (или согласованный срок) до удаления в **major**.
+3. В AprilHub: задача на обновление lockfile до удаления deprecated.
+
+---
+
+## 4. Lockfile и CI
+
+- Hub фиксирует точные версии зависимостей; обновление major виджета — отдельный PR с прогоном e2e/smoke по критичным сценариям.
+- При несовместимости peer dependencies CI должен падать (lint / typecheck).
+
+---
+
+## 5. Обратная совместимость API бэкенда
+
+Изменения **OpenAPI** сервиса — по правилам репозитория (`check-openapi-compat`). Виджеты не подменяют согласование API: при breaking API сначала совместимость на BFF/версии API, затем обновление клиента и виджета.

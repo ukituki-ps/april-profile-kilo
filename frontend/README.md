@@ -30,4 +30,4 @@ npm run dev
 
 ## Документация
 
-Полное описание — [`docs/guides/DESIGN_SYSTEM.md`](../docs/guides/DESIGN_SYSTEM.md).
+Дизайн-система — [`docs/guides/DESIGN_SYSTEM.md`](../docs/guides/DESIGN_SYSTEM.md). Интеграция с AprilHub, админка и встраиваемые компоненты — [`docs/FRONTEND_STRATEGY.md`](../docs/FRONTEND_STRATEGY.md).

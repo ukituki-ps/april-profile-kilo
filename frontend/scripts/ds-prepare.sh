@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DS_DIR="${SCRIPT_DIR}/../../design-system/DisignApril"
 TOKENS_FALLBACK_FILE="${SCRIPT_DIR}/../src/styles/april-tokens-fallback.css"
 TOKENS_FALLBACK_TARGET="${SCRIPT_DIR}/../node_modules/@april/tokens/css"
+SHOWCASE_PUBLIC_DIR="${DS_DIR}/apps/showcase/public"
+FRONTEND_PUBLIC_DIR="${SCRIPT_DIR}/../public"
 
 prepare_tokens_fallback() {
   if [ ! -f "${TOKENS_FALLBACK_FILE}" ]; then
@@ -24,6 +26,28 @@ prepare_tokens_fallback() {
   echo "[ds:prepare] prepared fallback @april/tokens/css"
 }
 
+prepare_showcase_assets() {
+  if [ ! -d "${SHOWCASE_PUBLIC_DIR}" ]; then
+    echo "[ds:prepare] showcase public assets not found, skip"
+    return
+  fi
+
+  mkdir -p "${FRONTEND_PUBLIC_DIR}"
+
+  for asset in logo-icon.svg logo-full.svg logo-wordmark.svg favicon.svg; do
+    if [ -f "${SHOWCASE_PUBLIC_DIR}/${asset}" ]; then
+      cp "${SHOWCASE_PUBLIC_DIR}/${asset}" "${FRONTEND_PUBLIC_DIR}/${asset}"
+    fi
+  done
+
+  # Legacy path expected by LoginSection in @april/ui.
+  if [ -f "${SHOWCASE_PUBLIC_DIR}/logo-icon.svg" ]; then
+    cp "${SHOWCASE_PUBLIC_DIR}/logo-icon.svg" "${FRONTEND_PUBLIC_DIR}/g12875-8.svg"
+  fi
+
+  echo "[ds:prepare] copied showcase SVG assets to frontend/public"
+}
+
 if [ ! -d "${DS_DIR}" ]; then
   echo "[ds:prepare] design system directory not found, skip"
   prepare_tokens_fallback
@@ -35,6 +59,8 @@ if [ ! -f "${DS_DIR}/package.json" ]; then
   prepare_tokens_fallback
   exit 0
 fi
+
+prepare_showcase_assets
 
 if [ -d "${DS_DIR}/node_modules" ] && [ ! -w "${DS_DIR}/node_modules" ]; then
   echo "[ds:prepare] ${DS_DIR}/node_modules is read-only, skip install/build"

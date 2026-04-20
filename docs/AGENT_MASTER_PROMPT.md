@@ -39,3 +39,7 @@
 [ВСТАВЬ ЗАДАЧУ В ФОРМАТЕ docs/AGENT_TASK_TEMPLATE.md]
 --- TASK END ---
 ```
+
+## См. также
+
+- Декомпозиция **фазы** дорожной карты в отдельные папки `tasks/<NNN-slug>/` — [`AGENT_PHASE_TASKS_MASTER_PROMPT.md`](./AGENT_PHASE_TASKS_MASTER_PROMPT.md).

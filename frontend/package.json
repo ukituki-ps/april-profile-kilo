@@ -19,8 +19,10 @@
     "@april/ui": "file:../design-system/DisignApril/packages/ui",
     "@emotion/react": "^11.14.0",
     "@mantine/core": "^7.17.8",
+    "@xyflow/react": "^12.10.2",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.14.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.8.0",
