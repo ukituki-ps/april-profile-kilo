@@ -7,6 +7,7 @@
     "ds:prepare": "sh ./scripts/ds-prepare.sh",
     "predev": "npm run ds:prepare",
     "prebuild": "npm run ds:prepare",
+    "prelint": "npm run ds:prepare",
     "pretest": "npm run ds:prepare",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
