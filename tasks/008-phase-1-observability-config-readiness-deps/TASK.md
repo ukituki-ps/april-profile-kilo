@@ -53,3 +53,10 @@ make docs-build
 
 ## Результат в отчёте
 Список env; формат лога; пример записи; как проверить readiness; follow-up для метрик (фаза 4.1).
+
+## Человекопонятная история в docs-site (обязательно)
+- [ ] Создана страница `docs-site/docs/task-story-008-observability-config-readiness-deps.md`.
+- [ ] В `docs-site/docs/task-stories-overview.md` добавлены пункт и строка статуса по задаче 008.
+- [ ] На простом языке описано: зачем нужны структурированные логи и `request_id`, почему `readyz` должен зависеть от БД/Redis, почему конфиг только через env.
+- [ ] Есть раздел "Как проверить без чтения кода" (включая сценарий с недоступной БД/Redis и ожидаемым `503`).
+- [ ] В конце страницы добавлены ссылки на `tasks/008-phase-1-observability-config-readiness-deps/TASK.md`, `PLAN.md` (если есть), `REPORT.md`.
