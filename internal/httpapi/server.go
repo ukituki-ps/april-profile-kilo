@@ -7,12 +7,15 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/ukituki-ps/april-profile/internal/auth"
 	"github.com/ukituki-ps/april-profile/internal/entitytypes"
+	"github.com/ukituki-ps/april-profile/internal/profiles"
 )
 
 const requestIDHeader = "X-Request-Id"
@@ -39,8 +42,18 @@ type EntityTypeCatalog interface {
 	Publish(ctx context.Context, tenantID, entityTypeID string) (entitytypes.Record, error)
 }
 
+// ProfileService описывает операции CRUD и версионирования профиля.
+type ProfileService interface {
+	Create(ctx context.Context, tenantID string, params profiles.CreateParams) (profiles.Snapshot, error)
+	Update(ctx context.Context, tenantID, entityID string, params profiles.UpdateParams) (profiles.Snapshot, error)
+	GetCurrent(ctx context.Context, tenantID, entityID string) (profiles.Snapshot, error)
+	GetByVersion(ctx context.Context, tenantID, entityID string, version int64) (profiles.Snapshot, error)
+	GetCurrentByExternalRef(ctx context.Context, tenantID string, ref profiles.ExternalRef) (profiles.Snapshot, error)
+	Delete(ctx context.Context, tenantID, entityID string) error
+}
+
 // NewMux регистрирует маршруты. Защищённые обработчики получают tenant_id только из JWT через auth.Validator.
-func NewMux(v *auth.Validator, readiness ReadinessChecker, catalog EntityTypeCatalog, logger *slog.Logger) http.Handler {
+func NewMux(v *auth.Validator, readiness ReadinessChecker, catalog EntityTypeCatalog, profileService ProfileService, logger *slog.Logger) http.Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -52,6 +65,12 @@ func NewMux(v *auth.Validator, readiness ReadinessChecker, catalog EntityTypeCat
 	mux.Handle("POST /v1/entity-types", v.Middleware(http.HandlerFunc(handleCreateEntityTypeDraft(catalog))))
 	mux.Handle("GET /v1/entity-types", v.Middleware(http.HandlerFunc(handleListEntityTypes(catalog))))
 	mux.Handle("POST /v1/entity-types/{entityTypeID}/publish", v.Middleware(http.HandlerFunc(handlePublishEntityType(catalog))))
+	mux.Handle("POST /v1/entities", v.Middleware(http.HandlerFunc(handleCreateEntity(profileService))))
+	mux.Handle("GET /v1/entities/{entityID}", v.Middleware(http.HandlerFunc(handleGetEntityCurrent(profileService))))
+	mux.Handle("PUT /v1/entities/{entityID}", v.Middleware(http.HandlerFunc(handleUpdateEntity(profileService))))
+	mux.Handle("DELETE /v1/entities/{entityID}", v.Middleware(http.HandlerFunc(handleDeleteEntity(profileService))))
+	mux.Handle("GET /v1/entities/{entityID}/versions/{version}", v.Middleware(http.HandlerFunc(handleGetEntityByVersion(profileService))))
+	mux.Handle("GET /v1/external-mappings/{sourceSystem}/{externalID}/entity", v.Middleware(http.HandlerFunc(handleGetEntityByExternal(profileService))))
 	return withRequestLogging(logger, withRequestID(mux))
 }
 
@@ -276,4 +295,185 @@ func handleWhoAmI(w http.ResponseWriter, r *http.Request) {
 		"sub":       sub,
 		"tenant_id": tenant,
 	})
+}
+
+func handleCreateEntity(service ProfileService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if service == nil {
+			writeServiceUnavailable(w, r)
+			return
+		}
+		var req struct {
+			EntityTypeID string                 `json:"entity_type_id"`
+			Document     map[string]any         `json:"document"`
+			ExternalRefs []profiles.ExternalRef `json:"external_refs"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeBadRequest(w, r, "invalid json body")
+			return
+		}
+		result, err := service.Create(r.Context(), auth.TenantIDFromContext(r.Context()), profiles.CreateParams{
+			EntityTypeID: req.EntityTypeID,
+			Document:     req.Document,
+			ExternalRefs: req.ExternalRefs,
+		})
+		if err != nil {
+			writeProfileError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(w).Encode(result)
+	}
+}
+
+func handleUpdateEntity(service ProfileService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if service == nil {
+			writeServiceUnavailable(w, r)
+			return
+		}
+		var req struct {
+			Document     map[string]any         `json:"document"`
+			ExternalRefs []profiles.ExternalRef `json:"external_refs"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeBadRequest(w, r, "invalid json body")
+			return
+		}
+		result, err := service.Update(
+			r.Context(),
+			auth.TenantIDFromContext(r.Context()),
+			r.PathValue("entityID"),
+			profiles.UpdateParams{
+				Document:     req.Document,
+				ExternalRefs: req.ExternalRefs,
+			},
+		)
+		if err != nil {
+			writeProfileError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(result)
+	}
+}
+
+func handleGetEntityCurrent(service ProfileService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if service == nil {
+			writeServiceUnavailable(w, r)
+			return
+		}
+		result, err := service.GetCurrent(r.Context(), auth.TenantIDFromContext(r.Context()), r.PathValue("entityID"))
+		if err != nil {
+			writeProfileError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(result)
+	}
+}
+
+func handleGetEntityByVersion(service ProfileService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if service == nil {
+			writeServiceUnavailable(w, r)
+			return
+		}
+		version, err := strconv.ParseInt(r.PathValue("version"), 10, 64)
+		if err != nil {
+			writeBadRequest(w, r, "version must be positive integer")
+			return
+		}
+		result, err := service.GetByVersion(
+			r.Context(),
+			auth.TenantIDFromContext(r.Context()),
+			r.PathValue("entityID"),
+			version,
+		)
+		if err != nil {
+			writeProfileError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(result)
+	}
+}
+
+func handleGetEntityByExternal(service ProfileService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if service == nil {
+			writeServiceUnavailable(w, r)
+			return
+		}
+		result, err := service.GetCurrentByExternalRef(
+			r.Context(),
+			auth.TenantIDFromContext(r.Context()),
+			profiles.ExternalRef{
+				SourceSystem: r.PathValue("sourceSystem"),
+				ExternalID:   r.PathValue("externalID"),
+			},
+		)
+		if err != nil {
+			writeProfileError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(result)
+	}
+}
+
+func handleDeleteEntity(service ProfileService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if service == nil {
+			writeServiceUnavailable(w, r)
+			return
+		}
+		if err := service.Delete(r.Context(), auth.TenantIDFromContext(r.Context()), r.PathValue("entityID")); err != nil {
+			writeProfileError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func writeBadRequest(w http.ResponseWriter, r *http.Request, message string) {
+	ErrorWithRequestID(w, http.StatusBadRequest, map[string]any{
+		"code":    "invalid_request",
+		"message": message,
+	}, RequestIDFromContext(r.Context()))
+}
+
+func writeServiceUnavailable(w http.ResponseWriter, r *http.Request) {
+	ErrorWithRequestID(w, http.StatusServiceUnavailable, map[string]any{
+		"code":    "profile_service_unavailable",
+		"message": "profile service unavailable",
+	}, RequestIDFromContext(r.Context()))
+}
+
+func writeProfileError(w http.ResponseWriter, r *http.Request, err error) {
+	status := http.StatusBadRequest
+	code := "invalid_request"
+	switch {
+	case errors.Is(err, profiles.ErrNotFound):
+		status = http.StatusNotFound
+		code = "entity_not_found"
+	case errors.Is(err, profiles.ErrVersionNotFound):
+		status = http.StatusNotFound
+		code = "version_not_found"
+	case errors.Is(err, profiles.ErrEntityTypeNotFound):
+		status = http.StatusNotFound
+		code = "entity_type_not_found"
+	case errors.Is(err, profiles.ErrEntityTypeNotPublished):
+		status = http.StatusConflict
+		code = "entity_type_not_published"
+	case errors.Is(err, profiles.ErrExternalMappingConflict):
+		status = http.StatusConflict
+		code = "external_mapping_conflict"
+	}
+	ErrorWithRequestID(w, status, map[string]any{
+		"code":    code,
+		"message": fmt.Sprintf("%v", err),
+	}, RequestIDFromContext(r.Context()))
 }

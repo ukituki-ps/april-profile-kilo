@@ -20,6 +20,7 @@ import (
 
 	"github.com/ukituki-ps/april-profile/internal/auth"
 	"github.com/ukituki-ps/april-profile/internal/entitytypes"
+	"github.com/ukituki-ps/april-profile/internal/profiles"
 )
 
 func TestHealthAndReadiness_arePublicAndReturn200(t *testing.T) {
@@ -37,7 +38,7 @@ func TestHealthAndReadiness_arePublicAndReturn200(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	cases := []struct {
@@ -91,7 +92,7 @@ func TestWhoAmI_requiresJWT(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	res, err := ts.Client().Get(ts.URL + "/v1/auth/whoami")
@@ -159,7 +160,7 @@ func TestWhoAmI_missingTenantClaim_returns403(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
@@ -221,7 +222,7 @@ func TestReadyz_returns503WhenDependenciesUnavailable(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: false, DatabaseOK: false, RedisOK: false},
-	}, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	res, err := ts.Client().Get(ts.URL + "/readyz")
@@ -257,7 +258,7 @@ func TestRequestLogging_includesRequestID(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&logBuf, nil))
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, nil, logger))
+	}, nil, nil, logger))
 	t.Cleanup(ts.Close)
 
 	res, err := ts.Client().Get(ts.URL + "/healthz")
@@ -306,7 +307,7 @@ func TestEntityTypesPublish_invalidDraftSchemaReturns422(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, catalog, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, catalog, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
@@ -341,6 +342,124 @@ type stubCatalog struct {
 	createDraftFn func(ctx context.Context, tenantID string, params entitytypes.CreateDraftParams) (entitytypes.Record, error)
 	listFn        func(ctx context.Context, tenantID string) ([]entitytypes.Record, error)
 	publishFn     func(ctx context.Context, tenantID, entityTypeID string) (entitytypes.Record, error)
+}
+
+func TestEntitiesByVersion_returnsSnapshot(t *testing.T) {
+	t.Parallel()
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kid := "kid-entity-by-version"
+	jwks := mustRSAJWKS(t, &priv.PublicKey, kid)
+	const iss = "http://kc.example/auth/realms/april"
+	const aud = "april-profile-api"
+	v, err := auth.NewValidatorFromJWKSJSON(jwks, iss, aud, "tenant_id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := &stubProfileService{
+		getByVersionFn: func(_ context.Context, _, _ string, version int64) (profiles.Snapshot, error) {
+			return profiles.Snapshot{
+				EntityID:     "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				EntityTypeID: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+				Version:      version,
+				Document:     map[string]any{"name": "Alice"},
+			}, nil
+		},
+	}
+	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
+		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
+	}, nil, service, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	t.Cleanup(ts.Close)
+
+	token := signedToken(t, priv, kid, iss, aud)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, ts.URL+"/v1/entities/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/versions/3", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	res, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(res.Body)
+		t.Fatalf("want 200, got %d: %s", res.StatusCode, body)
+	}
+	body, _ := io.ReadAll(res.Body)
+	if !strings.Contains(string(body), `"version":3`) {
+		t.Fatalf("unexpected body: %s", body)
+	}
+}
+
+func signedToken(t *testing.T, priv *rsa.PrivateKey, kid, iss, aud string) string {
+	t.Helper()
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+		"iss":       iss,
+		"sub":       "user-42",
+		"exp":       time.Now().Add(time.Hour).Unix(),
+		"azp":       aud,
+		"tenant_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+	})
+	token.Header["kid"] = kid
+	raw, err := token.SignedString(priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return raw
+}
+
+type stubProfileService struct {
+	createFn       func(ctx context.Context, tenantID string, params profiles.CreateParams) (profiles.Snapshot, error)
+	updateFn       func(ctx context.Context, tenantID, entityID string, params profiles.UpdateParams) (profiles.Snapshot, error)
+	getCurrentFn   func(ctx context.Context, tenantID, entityID string) (profiles.Snapshot, error)
+	getByVersionFn func(ctx context.Context, tenantID, entityID string, version int64) (profiles.Snapshot, error)
+	getByExtFn     func(ctx context.Context, tenantID string, ref profiles.ExternalRef) (profiles.Snapshot, error)
+	deleteFn       func(ctx context.Context, tenantID, entityID string) error
+}
+
+func (s *stubProfileService) Create(ctx context.Context, tenantID string, params profiles.CreateParams) (profiles.Snapshot, error) {
+	if s.createFn == nil {
+		return profiles.Snapshot{}, nil
+	}
+	return s.createFn(ctx, tenantID, params)
+}
+
+func (s *stubProfileService) Update(ctx context.Context, tenantID, entityID string, params profiles.UpdateParams) (profiles.Snapshot, error) {
+	if s.updateFn == nil {
+		return profiles.Snapshot{}, nil
+	}
+	return s.updateFn(ctx, tenantID, entityID, params)
+}
+
+func (s *stubProfileService) GetCurrent(ctx context.Context, tenantID, entityID string) (profiles.Snapshot, error) {
+	if s.getCurrentFn == nil {
+		return profiles.Snapshot{}, nil
+	}
+	return s.getCurrentFn(ctx, tenantID, entityID)
+}
+
+func (s *stubProfileService) GetByVersion(ctx context.Context, tenantID, entityID string, version int64) (profiles.Snapshot, error) {
+	if s.getByVersionFn == nil {
+		return profiles.Snapshot{}, nil
+	}
+	return s.getByVersionFn(ctx, tenantID, entityID, version)
+}
+
+func (s *stubProfileService) GetCurrentByExternalRef(ctx context.Context, tenantID string, ref profiles.ExternalRef) (profiles.Snapshot, error) {
+	if s.getByExtFn == nil {
+		return profiles.Snapshot{}, nil
+	}
+	return s.getByExtFn(ctx, tenantID, ref)
+}
+
+func (s *stubProfileService) Delete(ctx context.Context, tenantID, entityID string) error {
+	if s.deleteFn == nil {
+		return nil
+	}
+	return s.deleteFn(ctx, tenantID, entityID)
 }
 
 func (s *stubCatalog) CreateDraft(ctx context.Context, tenantID string, params entitytypes.CreateDraftParams) (entitytypes.Record, error) {

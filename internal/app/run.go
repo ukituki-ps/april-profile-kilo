@@ -15,6 +15,7 @@ import (
 	"github.com/ukituki-ps/april-profile/internal/config"
 	"github.com/ukituki-ps/april-profile/internal/entitytypes"
 	"github.com/ukituki-ps/april-profile/internal/httpapi"
+	"github.com/ukituki-ps/april-profile/internal/profiles"
 	"github.com/ukituki-ps/april-profile/internal/version"
 )
 
@@ -55,7 +56,8 @@ func Run(ctx context.Context) error {
 		allowWithoutRedis: cfg.ReadyzAllowWithoutRedis,
 	}
 	catalog := entitytypes.NewCatalog(dbPool)
-	mux := httpapi.NewMux(v, readiness, catalog, slog.Default())
+	profileService := profiles.NewService(dbPool)
+	mux := httpapi.NewMux(v, readiness, catalog, profileService, slog.Default())
 	srv := &http.Server{
 		Addr:              cfg.HTTPListenAddr,
 		Handler:           mux,
