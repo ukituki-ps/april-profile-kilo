@@ -2,7 +2,7 @@
 - Статус: ✅ выполнено
 - Задача: Фаза 1 (часть 3) — `/healthz`, `/readyz` и синхронизация OpenAPI
 - Ветка: `feature/phase-1-health-openapi`
-- Коммиты: `e0d8b03`
+- Коммиты: `e0d8b03`, `657ce9c`, `58cb900`
 - PR: не создавался
 
 ## 2) Что сделано
@@ -18,6 +18,8 @@
 - `internal/httpapi/server_test.go`
 - `openapi/openapi.yaml`
 - `tasks/006-phase-1-health-openapi-system/PLAN.md`
+- `tasks/006-phase-1-health-openapi-system/REPORT.md`
+- `task_list.md`
 
 ## 4) Миграции и данные
 - Миграции Atlas: нет
