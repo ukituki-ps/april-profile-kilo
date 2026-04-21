@@ -93,12 +93,16 @@ func withRequestLogging(logger *slog.Logger, next http.Handler) http.Handler {
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rec, r)
+		requestID := RequestIDFromContext(r.Context())
+		if requestID == "" {
+			requestID = rec.Header().Get(requestIDHeader)
+		}
 		attrs := []any{
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", rec.status,
 			"duration_ms", time.Since(start).Milliseconds(),
-			"request_id", RequestIDFromContext(r.Context()),
+			"request_id", requestID,
 		}
 		if tenantID := auth.TenantIDFromContext(r.Context()); tenantID != "" {
 			attrs = append(attrs, "tenant_id", tenantID)
