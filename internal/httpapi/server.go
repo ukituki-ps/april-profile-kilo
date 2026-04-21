@@ -6,11 +6,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/ukituki-ps/april-profile/internal/auth"
+	"github.com/ukituki-ps/april-profile/internal/entitytypes"
 )
 
 const requestIDHeader = "X-Request-Id"
@@ -30,8 +32,15 @@ type ReadinessResult struct {
 	RedisSkipped bool
 }
 
+// EntityTypeCatalog описывает операции каталога типов сущностей.
+type EntityTypeCatalog interface {
+	CreateDraft(ctx context.Context, tenantID string, params entitytypes.CreateDraftParams) (entitytypes.Record, error)
+	List(ctx context.Context, tenantID string) ([]entitytypes.Record, error)
+	Publish(ctx context.Context, tenantID, entityTypeID string) (entitytypes.Record, error)
+}
+
 // NewMux регистрирует маршруты. Защищённые обработчики получают tenant_id только из JWT через auth.Validator.
-func NewMux(v *auth.Validator, readiness ReadinessChecker, logger *slog.Logger) http.Handler {
+func NewMux(v *auth.Validator, readiness ReadinessChecker, catalog EntityTypeCatalog, logger *slog.Logger) http.Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -40,6 +49,9 @@ func NewMux(v *auth.Validator, readiness ReadinessChecker, logger *slog.Logger) 
 	mux.Handle("GET /readyz", handleReadyz(readiness))
 	mux.HandleFunc("GET /v1/system/ping", handlePing)
 	mux.Handle("GET /v1/auth/whoami", v.Middleware(http.HandlerFunc(handleWhoAmI)))
+	mux.Handle("POST /v1/entity-types", v.Middleware(http.HandlerFunc(handleCreateEntityTypeDraft(catalog))))
+	mux.Handle("GET /v1/entity-types", v.Middleware(http.HandlerFunc(handleListEntityTypes(catalog))))
+	mux.Handle("POST /v1/entity-types/{entityTypeID}/publish", v.Middleware(http.HandlerFunc(handlePublishEntityType(catalog))))
 	return withRequestLogging(logger, withRequestID(mux))
 }
 
@@ -147,6 +159,107 @@ func ErrorWithRequestID(w http.ResponseWriter, status int, payload map[string]an
 	payload["request_id"] = requestID
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func handleCreateEntityTypeDraft(catalog EntityTypeCatalog) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if catalog == nil {
+			ErrorWithRequestID(w, http.StatusServiceUnavailable, map[string]any{
+				"code":    "catalog_unavailable",
+				"message": "entity type catalog unavailable",
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+
+		var req struct {
+			Namespace   string         `json:"namespace"`
+			Code        string         `json:"code"`
+			DraftSchema map[string]any `json:"draft_schema"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			ErrorWithRequestID(w, http.StatusBadRequest, map[string]any{
+				"code":    "invalid_request",
+				"message": "invalid json body",
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+		rec, err := catalog.CreateDraft(r.Context(), auth.TenantIDFromContext(r.Context()), entitytypes.CreateDraftParams{
+			Namespace:   req.Namespace,
+			Code:        req.Code,
+			DraftSchema: req.DraftSchema,
+		})
+		if err != nil {
+			ErrorWithRequestID(w, http.StatusBadRequest, map[string]any{
+				"code":    "invalid_request",
+				"message": err.Error(),
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(w).Encode(rec)
+	}
+}
+
+func handleListEntityTypes(catalog EntityTypeCatalog) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if catalog == nil {
+			ErrorWithRequestID(w, http.StatusServiceUnavailable, map[string]any{
+				"code":    "catalog_unavailable",
+				"message": "entity type catalog unavailable",
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+		items, err := catalog.List(r.Context(), auth.TenantIDFromContext(r.Context()))
+		if err != nil {
+			ErrorWithRequestID(w, http.StatusInternalServerError, map[string]any{
+				"code":    "internal_error",
+				"message": "failed to list entity types",
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(map[string]any{"items": items})
+	}
+}
+
+func handlePublishEntityType(catalog EntityTypeCatalog) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if catalog == nil {
+			ErrorWithRequestID(w, http.StatusServiceUnavailable, map[string]any{
+				"code":    "catalog_unavailable",
+				"message": "entity type catalog unavailable",
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+		rec, err := catalog.Publish(
+			r.Context(),
+			auth.TenantIDFromContext(r.Context()),
+			r.PathValue("entityTypeID"),
+		)
+		if err != nil {
+			status := http.StatusInternalServerError
+			code := "internal_error"
+			switch {
+			case errors.Is(err, entitytypes.ErrNotFound):
+				status = http.StatusNotFound
+				code = "entity_type_not_found"
+			case errors.Is(err, entitytypes.ErrAlreadyPublished):
+				status = http.StatusConflict
+				code = "already_published"
+			case errors.Is(err, entitytypes.ErrInvalidSchema):
+				status = http.StatusUnprocessableEntity
+				code = "invalid_schema"
+			}
+			ErrorWithRequestID(w, status, map[string]any{
+				"code":    code,
+				"message": err.Error(),
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(rec)
+	}
 }
 
 func handlePing(w http.ResponseWriter, r *http.Request) {

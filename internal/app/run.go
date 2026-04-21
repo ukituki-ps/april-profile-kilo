@@ -13,6 +13,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/ukituki-ps/april-profile/internal/auth"
 	"github.com/ukituki-ps/april-profile/internal/config"
+	"github.com/ukituki-ps/april-profile/internal/entitytypes"
 	"github.com/ukituki-ps/april-profile/internal/httpapi"
 	"github.com/ukituki-ps/april-profile/internal/version"
 )
@@ -53,7 +54,8 @@ func Run(ctx context.Context) error {
 		timeout:           cfg.ReadinessTimeout,
 		allowWithoutRedis: cfg.ReadyzAllowWithoutRedis,
 	}
-	mux := httpapi.NewMux(v, readiness, slog.Default())
+	catalog := entitytypes.NewCatalog(dbPool)
+	mux := httpapi.NewMux(v, readiness, catalog, slog.Default())
 	srv := &http.Server{
 		Addr:              cfg.HTTPListenAddr,
 		Handler:           mux,

@@ -19,6 +19,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/ukituki-ps/april-profile/internal/auth"
+	"github.com/ukituki-ps/april-profile/internal/entitytypes"
 )
 
 func TestHealthAndReadiness_arePublicAndReturn200(t *testing.T) {
@@ -36,7 +37,7 @@ func TestHealthAndReadiness_arePublicAndReturn200(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	cases := []struct {
@@ -90,7 +91,7 @@ func TestWhoAmI_requiresJWT(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	res, err := ts.Client().Get(ts.URL + "/v1/auth/whoami")
@@ -158,7 +159,7 @@ func TestWhoAmI_missingTenantClaim_returns403(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
@@ -220,7 +221,7 @@ func TestReadyz_returns503WhenDependenciesUnavailable(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: false, DatabaseOK: false, RedisOK: false},
-	}, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	res, err := ts.Client().Get(ts.URL + "/readyz")
@@ -256,7 +257,7 @@ func TestRequestLogging_includesRequestID(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&logBuf, nil))
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, logger))
+	}, nil, logger))
 	t.Cleanup(ts.Close)
 
 	res, err := ts.Client().Get(ts.URL + "/healthz")
@@ -282,4 +283,83 @@ type staticReadinessChecker struct {
 
 func (s staticReadinessChecker) Check(context.Context) ReadinessResult {
 	return s.result
+}
+
+func TestEntityTypesPublish_invalidDraftSchemaReturns422(t *testing.T) {
+	t.Parallel()
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kid := "kid-publish-invalid-schema"
+	jwks := mustRSAJWKS(t, &priv.PublicKey, kid)
+	const iss = "http://kc.example/auth/realms/april"
+	const aud = "april-profile-api"
+	v, err := auth.NewValidatorFromJWKSJSON(jwks, iss, aud, "tenant_id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog := &stubCatalog{
+		publishFn: func(_ context.Context, _, _ string) (entitytypes.Record, error) {
+			return entitytypes.Record{}, entitytypes.ErrInvalidSchema
+		},
+	}
+	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
+		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
+	}, catalog, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	t.Cleanup(ts.Close)
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+		"iss":       iss,
+		"sub":       "user-42",
+		"exp":       time.Now().Add(time.Hour).Unix(),
+		"azp":       aud,
+		"tenant_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+	})
+	token.Header["kid"] = kid
+	raw, err := token.SignedString(priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, ts.URL+"/v1/entity-types/11111111-1111-1111-1111-111111111111/publish", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+raw)
+	res, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusUnprocessableEntity {
+		body, _ := io.ReadAll(res.Body)
+		t.Fatalf("want 422, got %d: %s", res.StatusCode, body)
+	}
+}
+
+type stubCatalog struct {
+	createDraftFn func(ctx context.Context, tenantID string, params entitytypes.CreateDraftParams) (entitytypes.Record, error)
+	listFn        func(ctx context.Context, tenantID string) ([]entitytypes.Record, error)
+	publishFn     func(ctx context.Context, tenantID, entityTypeID string) (entitytypes.Record, error)
+}
+
+func (s *stubCatalog) CreateDraft(ctx context.Context, tenantID string, params entitytypes.CreateDraftParams) (entitytypes.Record, error) {
+	if s.createDraftFn == nil {
+		return entitytypes.Record{}, nil
+	}
+	return s.createDraftFn(ctx, tenantID, params)
+}
+
+func (s *stubCatalog) List(ctx context.Context, tenantID string) ([]entitytypes.Record, error) {
+	if s.listFn == nil {
+		return []entitytypes.Record{}, nil
+	}
+	return s.listFn(ctx, tenantID)
+}
+
+func (s *stubCatalog) Publish(ctx context.Context, tenantID, entityTypeID string) (entitytypes.Record, error) {
+	if s.publishFn == nil {
+		return entitytypes.Record{}, nil
+	}
+	return s.publishFn(ctx, tenantID, entityTypeID)
 }
