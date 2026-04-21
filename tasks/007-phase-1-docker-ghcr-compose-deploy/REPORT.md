@@ -2,8 +2,8 @@
 - Статус: ✅ выполнено
 - Задача: Фаза 1 (часть 4) — образ в ghcr, compose, деплой на dev по DEPLOYMENT_STRATEGY
 - Ветка: `develop`
-- Коммиты: `4a69bcb`, `8e205b7`, `a370e92`, `7523318`, `2f4dc60`, `92c49aa`, `pending` (fix cross-arch binary in Dockerfile)
-- PR: [#11](https://github.com/ukituki-ps/april-profile/pull/11) (merged), [#12](https://github.com/ukituki-ps/april-profile/pull/12) (merged), [#13](https://github.com/ukituki-ps/april-profile/pull/13) (merged), [#14](https://github.com/ukituki-ps/april-profile/pull/14) (merged), [#15](https://github.com/ukituki-ps/april-profile/pull/15) (merged), [#16](https://github.com/ukituki-ps/april-profile/pull/16) (merged), follow-up PR на корректную сборку бинарника под архитектуру target image
+- Коммиты: `4a69bcb`, `8e205b7`, `a370e92`, `7523318`, `2f4dc60`, `92c49aa`, `0101aeb`
+- PR: [#11](https://github.com/ukituki-ps/april-profile/pull/11) (merged), [#12](https://github.com/ukituki-ps/april-profile/pull/12) (merged), [#13](https://github.com/ukituki-ps/april-profile/pull/13) (merged), [#14](https://github.com/ukituki-ps/april-profile/pull/14) (merged), [#15](https://github.com/ukituki-ps/april-profile/pull/15) (merged), [#16](https://github.com/ukituki-ps/april-profile/pull/16) (merged), [#17](https://github.com/ukituki-ps/april-profile/pull/17) (merged)
 
 ## 2) Что сделано
 - [backend] Добавлен production-oriented `Dockerfile` (multi-stage, финальный образ distroless/nonroot) для `cmd/april-profile`.
@@ -11,6 +11,7 @@
 - [ci/cd] Добавлен workflow `.github/workflows/backend-image-ghcr.yml` (build+push в `ghcr.io` с тегом `${{ github.sha }}`), затем расширен до multi-arch (`linux/amd64,linux/arm64`); обновлён `.github/workflows/dev-deploy.yml` (передаёт `IMAGE_TAG_BACKEND=${{ github.sha }}` в `deploy.sh` и логинится в ghcr перед pull).
 - [docs] Обновлены `docs/DEPLOYMENT_STRATEGY.md` (секрет `GHCR_PUSH_TOKEN`, fallback на `GITHUB_TOKEN`), `.env.example`, `images.env.example`.
 - [docs-site] Добавлена человекопонятная история задачи `docs-site/docs/task-story-007-docker-ghcr-compose-deploy.md` и обновлён индекс `docs-site/docs/task-stories-overview.md`.
+- [dev runtime] На сервере обновлены `KEYCLOAK_ISSUER`, `KEYCLOAK_JWKS_URL`, `KEYCLOAK_AUDIENCE` в `/home/ukituki/april-profile/.env`, backend перезапущен, `healthz` подтверждён.
 
 ## 3) Изменённые файлы
 - `Dockerfile`
@@ -57,13 +58,14 @@ make docs-build
   - после merge PR #14 шаг ожидания сработал корректно, но 5-минутного окна не хватило: image-job завершился через ~5m53s, а deploy прекратил ожидание примерно за 13 секунд до появления тега. Увеличен таймаут ожидания до 10 минут.
   - после merge PR #15 image ожидание и pull прошли, но `docker compose up -d` упал на `Bind for 0.0.0.0:8081 failed: port is already allocated`. Обновлён дефолт `BACKEND_HTTP_PORT` до `18081` (менее конфликтный порт для dev-host).
   - после merge PR #16 контейнер backend создаётся, но уходит в restart с `exec /usr/local/bin/april-profile: exec format error`. Причина: в `Dockerfile` был жёсткий `GOARCH=amd64`, из-за чего arm64 image содержал amd64 бинарник. Исправлено на сборку под `TARGETOS/TARGETARCH`.
-- Rollback: не применялся (релиз не дошёл до `up -d` backend)
+  - после merge PR #17 деплой успешен: `april-profile-backend-1` в статусе `Up`, порт `18081->8080`, `curl http://127.0.0.1:18081/healthz` вернул `200 {"status":"ok"}`.
+- Rollback: не применялся
 
 ## 7) Риски и ограничения
 - Требуются права на `packages:write` для `GITHUB_TOKEN`; при ограничениях org нужно задать `GHCR_PUSH_TOKEN` и использовать его в workflow.
 - Для pull приватного backend-образа на self-hosted runner требуются права `read:packages`; рекомендуется секрет `GHCR_PULL_TOKEN`.
-- Финальная проверка smoke `/healthz` ожидается после прогона deploy с фиксом гонки deploy/image.
+- Для защищённых endpoint нужен внешний Keycloak (из AprilHub) в переменных `KEYCLOAK_*`; дефолт compose `keycloak:8080` для текущего dev-стенда неприменим.
 
 ## 8) Что осталось
 - [x] После merge в `develop` проверен `Backend image (ghcr)`: run успешный, образ по SHA опубликован.
-- [ ] После merge follow-up PR (Dockerfile target arch) проверить успешный `Deploy to dev` и `curl http://127.0.0.1:<BACKEND_HTTP_PORT>/healthz`.
+- [x] После merge follow-up PR (Dockerfile target arch) проверены успешный `Deploy to dev` и `curl http://127.0.0.1:18081/healthz`.
