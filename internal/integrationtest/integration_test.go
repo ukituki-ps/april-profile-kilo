@@ -289,12 +289,16 @@ func TestProfileOutbox_eventContractAndIdempotency(t *testing.T) {
 	var payload []byte
 	var eventID, entityType string
 	var pv int64
+	var rowStatus string
 	if err := pool.QueryRow(ctx, `
-		SELECT event_id::text, entity_type, profile_version, payload
+		SELECT event_id::text, entity_type, profile_version, payload, status
 		FROM profile_outbox
 		WHERE tenant_id = $1 AND entity_id = $2::uuid AND profile_version = 1
-	`, tenantID, created.EntityID).Scan(&eventID, &entityType, &pv, &payload); err != nil {
+	`, tenantID, created.EntityID).Scan(&eventID, &entityType, &pv, &payload, &rowStatus); err != nil {
 		t.Fatalf("load outbox: %v", err)
+	}
+	if rowStatus != "pending" {
+		t.Fatalf("want outbox status pending before Asynq publish, got %q", rowStatus)
 	}
 	if entityType != "hr/employee" || pv != 1 {
 		t.Fatalf("unexpected row: type=%s v=%d", entityType, pv)

@@ -74,7 +74,7 @@ jobs:
           cache: true
 
       - name: Go vet and build
-        run: go vet ./... && go build -o /tmp/april-profile ./cmd/april-profile
+        run: go vet ./... && go build -o /tmp/april-profile ./cmd/april-profile && go build -o /tmp/april-worker ./cmd/april-worker
 
       - name: Atlas migrate validate
         run: docker run --rm -v "$PWD:/work" -w /work arigaio/atlas:0.32.0 migrate validate --dir "file://atlas/migrations"

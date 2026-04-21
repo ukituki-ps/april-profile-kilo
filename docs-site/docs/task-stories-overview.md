@@ -29,6 +29,7 @@ sidebar_position: 20
 - [012 — Authority, конфликты и merge дубликатов](./task-story-012-authority-merge-conflicts)
 - [013 — ABAC: фильтрация выдачи по сегментам полей](./task-story-013-abac-field-filtering)
 - [014 — События профиля: outbox и идемпотентность публикации](./task-story-014-outbox-event-contract)
+- [015 — Asynq: воркер, ping и батч outbox](./task-story-015-asynq-outbox-worker)
 
 ## Быстрый статус
 
@@ -49,3 +50,4 @@ sidebar_position: 20
 | 012 authority + conflicts + merge audit | ✅ | [012](./task-story-012-authority-merge-conflicts) | Очередь конфликтов, ручной resolve, merge дубликатов с аудитом и админ-API |
 | 013 ABAC field filtering on read | ✅ | [013](./task-story-013-abac-field-filtering) | GET профиля: выдача `document` по сегментам и realm-ролям JWT (`ABAC_SEGMENT_ACCESS_JSON`) |
 | 014 outbox + event contract + idempotent publish | ✅ | [014](./task-story-014-outbox-event-contract) | Таблица `profile_outbox`, событие ADR-0003 в транзакции с новой версией профиля |
+| 015 Asynq worker + ping + outbox batch | ✅ | [015](./task-story-015-asynq-outbox-worker) | Фоновый `april-worker`, ping в Redis, батч `pending` → `published` через заглушку Publisher |
