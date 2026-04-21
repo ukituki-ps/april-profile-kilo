@@ -35,4 +35,4 @@ jobs:
           git fetch origin
           git checkout "${{ github.sha }}"
           test -x ./deploy.sh
-          SKIP_GIT_PULL=1 ./deploy.sh
+          IMAGE_TAG_BACKEND="${{ github.sha }}" SKIP_GIT_PULL=1 ./deploy.sh

@@ -2,7 +2,7 @@
 
 - **Задача:** [`TASK.md`](./TASK.md)
 - **Дата плана:** 2026-04-20
-- **Статус плана:** черновик
+- **Статус плана:** согласован
 
 ## Исходные допущения
 - Self-hosted runner с labels из [`docs/guides/PROJECT_DEFAULTS.md`](../../docs/guides/PROJECT_DEFAULTS.md); `APRIL_DEPLOY_ROOT` и `deploy.sh` уже в контуре фазы 0.
@@ -32,3 +32,4 @@
 
 ## Примечания
 - Ручные шаги: создание секретов в GitHub, первичный `docker login` на runner при необходимости.
+- Обновления плана: 2026-04-21 — добавлены `Dockerfile`, backend в compose, workflow публикации в ghcr и отчёт выполнения.
