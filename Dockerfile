@@ -26,4 +26,6 @@ COPY --from=builder /out/april-worker /usr/local/bin/april-worker
 
 EXPOSE 8080
 
-ENTRYPOINT ["/usr/local/bin/april-profile"]
+# Без ENTRYPOINT: в compose сервис `worker` задаёт command на april-worker; иначе CMD
+# подставляется как аргумент к ENTRYPOINT и запускается API вместо воркера.
+CMD ["/usr/local/bin/april-profile"]

@@ -23,9 +23,16 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
 	exit 0
 fi
 
+# Atlas запускается с --network host: хост `postgres` из compose не резолвится — подмена на 127.0.0.1
+# при типичном пробросе порта 5432 (см. .env.example).
+MIGRATE_URL="${MIGRATION_DATABASE_URL:-${DATABASE_URL}}"
+if [[ -z "${MIGRATION_DATABASE_URL:-}" && "${MIGRATE_URL}" == *"@postgres:"* ]]; then
+	MIGRATE_URL="${MIGRATE_URL/@postgres:/@127.0.0.1:}"
+fi
+
 echo "[run-migrations] atlas migrate apply --env local (образ ${ATLAS_IMAGE})" >&2
 exec docker run --rm --network host \
 	-v "${ROOT}:/work" -w /work \
-	-e "DATABASE_URL=${DATABASE_URL}" \
+	-e "DATABASE_URL=${MIGRATE_URL}" \
 	"${ATLAS_IMAGE}" \
 	migrate apply --env local
