@@ -7,7 +7,7 @@ const config: Config = {
   tagline: 'AprilProfile — версионируемые профили сущностей, документация и контекст (April)',
   favicon: 'img/favicon.ico',
 
-  url: 'https://dev.example.com',
+  url: 'https://dev.profile.april.ukituki.tech',
   baseUrl: '/',
 
   onBrokenLinks: 'throw',
@@ -113,7 +113,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `april_template · ${new Date().getFullYear()}`,
+      copyright: `april-profile · ${new Date().getFullYear()}`,
     },
     prism: {
       theme: prismThemes.github,

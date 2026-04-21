@@ -8,7 +8,7 @@ info:
   license:
     name: UNLICENSED
 servers:
-  - url: https://dev.example.com/api
+  - url: https://dev.profile.april.ukituki.tech/api
     description: |
       Подставьте базовый URL за gateway. См. `docs/guides/FORK_AND_CUSTOMIZE.md`.
 paths:
