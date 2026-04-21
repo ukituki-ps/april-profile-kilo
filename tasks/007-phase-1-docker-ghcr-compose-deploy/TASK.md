@@ -57,3 +57,10 @@ make docs-build
 
 ## Результат в отчёте
 Путь к Dockerfile; имя образа в ghcr; как задать тег на сервере; что проверено на dev (curl health); блокеры (секреты, runner).
+
+## Человекопонятная история в docs-site (обязательно)
+- [ ] Создана страница `docs-site/docs/task-story-007-docker-ghcr-compose-deploy.md`.
+- [ ] В `docs-site/docs/task-stories-overview.md` добавлены пункт и строка статуса по задаче 007.
+- [ ] На простом языке описано: что поменялось в Docker/CI/deploy процессе, зачем это нужно команде, как это снижает ручной труд/риски.
+- [ ] Есть раздел "Как проверить без чтения кода" (например: build образа, compose config, smoke `/healthz` на dev).
+- [ ] В конце страницы добавлены ссылки на `tasks/007-phase-1-docker-ghcr-compose-deploy/TASK.md`, `PLAN.md` (если есть), `REPORT.md`.
