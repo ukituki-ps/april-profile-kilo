@@ -7,10 +7,14 @@ ARG TARGETARCH
 ARG GOPROXY=https://proxy.golang.org,direct
 
 COPY go.mod go.sum* ./
-RUN GOPROXY=${GOPROXY} go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    GOPROXY=${GOPROXY} go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -trimpath -ldflags="-s -w" -o /out/april-profile ./cmd/april-profile
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -trimpath -ldflags="-s -w" -o /out/april-profile ./cmd/april-profile
 
 FROM gcr.io/distroless/static-debian12:nonroot
 
