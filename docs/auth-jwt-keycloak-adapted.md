@@ -2,6 +2,8 @@
 
 Документ согласован с **архитектурным контекстом агента**: IAM — Keycloak; backend — Go, REST, modular monolith; frontend — React + TypeScript + Vite, UI Kit Mantine; инфраструктура — Debian, Docker Compose, Nginx.
 
+**Стенд и координаты Keycloak** (базовый URL `<BASE>`, discovery, JWKS, переменные `KEYCLOAK_JWKS_URL` / `KEYCLOAK_ISSUER` / `KEYCLOAK_AUDIENCE`, типичные ошибки `iss`): см. [`keycloak-stand-coordinates.md`](./keycloak-stand-coordinates.md).
+
 ## 1. Цель и архитектурная идея
 
 Используется внешняя Identity Provider модель через **Keycloak** (источник RBAC: роли и права), а не локальная выдача JWT backend-ом.
