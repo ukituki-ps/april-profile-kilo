@@ -50,7 +50,7 @@ func TestAtlasMigrationsAppliedOnPostgresContainer(t *testing.T) {
 	}
 	defer pool.Close()
 
-	for _, table := range []string{"tenants", "entity_types", "entities", "profile_events", "profile_field_conflicts", "admin_audit_log"} {
+	for _, table := range []string{"tenants", "entity_types", "entities", "profile_outbox", "profile_field_conflicts", "admin_audit_log"} {
 		table := table
 		t.Run(table, func(t *testing.T) {
 			var exists bool
@@ -231,6 +231,110 @@ func TestProfilesService_AppendOnlyVersioningAndExternalMappings(t *testing.T) {
 	}
 	if _, err := service.GetCurrent(ctx, tenantID, created.EntityID); err == nil {
 		t.Fatal("expected not found after delete")
+	}
+}
+
+func TestProfileOutbox_eventContractAndIdempotency(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	pgURL, cleanup := startPostgresWithAtlasMigrations(t, ctx)
+	defer cleanup()
+
+	pool, err := pgxpool.New(ctx, pgURL)
+	if err != nil {
+		t.Fatalf("pgxpool new: %v", err)
+	}
+	defer pool.Close()
+
+	tenantID := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	entityTypeID := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	if _, err := pool.Exec(ctx, `INSERT INTO tenants (id) VALUES ($1)`, tenantID); err != nil {
+		t.Fatalf("insert tenant: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO entity_types (
+			id, tenant_id, namespace, code, schema_json, schema_version, status,
+			published_schema_json, published_schema_version, published_at
+		) VALUES (
+			$1, $2, 'hr', 'employee',
+			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
+			1, 'published',
+			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
+			1, now()
+		)
+	`, entityTypeID, tenantID); err != nil {
+		t.Fatalf("insert entity type: %v", err)
+	}
+
+	service := profiles.NewService(pool)
+	created, err := service.Create(ctx, tenantID, profiles.CreateParams{
+		EntityTypeID: entityTypeID,
+		Document:     map[string]any{"name": "Alice"},
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	var n int
+	if err := pool.QueryRow(ctx, `
+		SELECT count(*) FROM profile_outbox WHERE tenant_id = $1 AND entity_id = $2::uuid
+	`, tenantID, created.EntityID).Scan(&n); err != nil {
+		t.Fatalf("count outbox: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("want 1 outbox row after create, got %d", n)
+	}
+
+	var payload []byte
+	var eventID, entityType string
+	var pv int64
+	if err := pool.QueryRow(ctx, `
+		SELECT event_id::text, entity_type, profile_version, payload
+		FROM profile_outbox
+		WHERE tenant_id = $1 AND entity_id = $2::uuid AND profile_version = 1
+	`, tenantID, created.EntityID).Scan(&eventID, &entityType, &pv, &payload); err != nil {
+		t.Fatalf("load outbox: %v", err)
+	}
+	if entityType != "hr/employee" || pv != 1 {
+		t.Fatalf("unexpected row: type=%s v=%d", entityType, pv)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(payload, &doc); err != nil {
+		t.Fatalf("payload json: %v", err)
+	}
+	if doc["event_id"] != eventID || doc["entity_type"] != "hr/employee" {
+		t.Fatalf("payload mismatch: %v", doc)
+	}
+
+	updated, err := service.Update(ctx, tenantID, created.EntityID, profiles.UpdateParams{
+		Document: map[string]any{"name": "Bob"},
+	})
+	if err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if updated.Version != 2 {
+		t.Fatalf("want version 2, got %d", updated.Version)
+	}
+	if err := pool.QueryRow(ctx, `
+		SELECT count(*) FROM profile_outbox WHERE tenant_id = $1 AND entity_id = $2::uuid
+	`, tenantID, created.EntityID).Scan(&n); err != nil {
+		t.Fatalf("count outbox 2: %v", err)
+	}
+	if n != 2 {
+		t.Fatalf("want 2 outbox rows, got %d", n)
+	}
+
+	// Повторная вставка с тем же (tenant, entity, version) не проходит уникальное ограничение.
+	_, err = pool.Exec(ctx, `
+		INSERT INTO profile_outbox (
+			event_id, tenant_id, entity_id, entity_type, profile_version, occurred_at, payload, status
+		) VALUES (
+			gen_random_uuid(), $1, $2::uuid, 'hr/employee', 2, now(), '{}'::jsonb, 'pending'
+		)
+	`, tenantID, created.EntityID)
+	if err == nil {
+		t.Fatal("expected unique violation on duplicate profile_version")
 	}
 }
 

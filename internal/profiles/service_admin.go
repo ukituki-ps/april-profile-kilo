@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -134,7 +135,11 @@ func (s *Service) ResolveFieldConflict(ctx context.Context, tenantID, conflictID
 	`, tenantID, entityID).Scan(&nextVersion); err != nil {
 		return Snapshot{}, err
 	}
+	occurredAt := time.Now().UTC()
 	if err := insertVersion(ctx, tx, tenantID, entityID, nextVersion, newDoc); err != nil {
+		return Snapshot{}, err
+	}
+	if err := insertProfileOutboxRow(ctx, tx, tenantID, entityID, nextVersion, occurredAt); err != nil {
 		return Snapshot{}, err
 	}
 
@@ -278,7 +283,11 @@ func (s *Service) MergeEntityProfiles(ctx context.Context, tenantID, sourceEntit
 	`, tenantID, targetEntityID).Scan(&nextVersion); err != nil {
 		return MergeResult{}, err
 	}
+	occurredAt := time.Now().UTC()
 	if err := insertVersion(ctx, tx, tenantID, targetEntityID, nextVersion, merged); err != nil {
+		return MergeResult{}, err
+	}
+	if err := insertProfileOutboxRow(ctx, tx, tenantID, targetEntityID, nextVersion, occurredAt); err != nil {
 		return MergeResult{}, err
 	}
 
