@@ -13,6 +13,7 @@ sidebar_position: 1
 | [Дизайн модуля AprilProfile](./design-april-profile) | Назначение, границы с OrgFlow/EDC/IAM, модель данных, события |
 | [Стратегия фронтенда](./frontend-strategy) | Три модели UI (Host / Widget / API–BFF), AprilHub, контракты |
 | [Гибридная интеграция UI (индекс)](./ui-integration-governance) | Контракты виджетов, матрица решений, версионирование, чеклисты, observability |
+| [Задачи на пальцах](./task-stories-overview) | Подробные объяснения "что сделали и что получили" по задачам |
 | [Быстрый старт](./getting-started.md) | Сборка сайта, OpenAPI, Docker Compose |
 | [Форк и кастомизация](/guides/FORK_AND_CUSTOMIZE) | Чеклист под сервис, версии инструментов |
 | [Дизайн-система April](/guides/DESIGN_SYSTEM) | `@april/tokens`, `@april/ui`, ссылка на репозиторий DisignApril |

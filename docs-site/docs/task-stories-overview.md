@@ -1,0 +1,33 @@
+---
+sidebar_position: 20
+---
+
+# Задачи на пальцах
+
+Этот раздел нужен как "человеческий журнал прогресса": что именно сделали по каждой задаче, зачем это было нужно бизнесу и как это проверить без чтения кода.
+
+## Как читать раздел
+
+- Для каждой задачи есть отдельная страница с форматом "проблема -> что сделали -> что это дает -> как проверить".
+- Технические детали и точные артефакты остаются в `tasks/<id>/TASK.md`, `PLAN.md`, `REPORT.md`.
+- В этом разделе описываем только то, что реально сделано и проверено.
+
+## Список
+
+- [000 — Дорожная карта сервиса + интеграция AprilHub](./task-story-000-roadmap)
+- [Планирование — дизайн AprilProfile и ADR](./task-story-planning-design-adr)
+- [002 — CI/деплой-база: runner, переменные, smoke dev](./task-story-002-ci-secrets-smoke)
+- [003 — Гибридная UI-модель и governance](./task-story-003-hybrid-ui-governance)
+- [004 — Go-модуль, Atlas и стартовая схема БД](./task-story-004-go-atlas-tenant)
+- [005 — JWT Keycloak и `tenant_id` из доверенного контекста](./task-story-005-keycloak-jwt-tenant)
+
+## Быстрый статус
+
+| Задача | Статус | Где детали | Ключевой эффект |
+|---|---|---|---|
+| 000 roadmap | ✅ | [000](./task-story-000-roadmap) | Зафиксирован порядок фаз и зависимостей |
+| Планирование (дизайн + ADR) | ✅ | [Планирование](./task-story-planning-design-adr) | Архитектурные решения формализованы до кода |
+| 002 CI/dev smoke | ✅ | [002](./task-story-002-ci-secrets-smoke) | Рабочий контур деплоя и инфраструктурного smoke |
+| 003 hybrid UI governance | ✅ | [003](./task-story-003-hybrid-ui-governance) | Единые правила Host/Widget/API-BFF интеграции |
+| 004 Go + Atlas + tenant schema | ✅ | [004](./task-story-004-go-atlas-tenant) | Базовый backend-фундамент и миграции |
+| 005 JWT + trusted tenant context | ✅ | [005](./task-story-005-keycloak-jwt-tenant) | `tenant_id` только из валидного JWT |
