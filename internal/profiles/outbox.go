@@ -11,8 +11,8 @@ import (
 
 // insertProfileOutboxRow добавляет строку outbox в той же транзакции, что и новая версия профиля.
 // Идемпотентность: ON CONFLICT (tenant_id, entity_id, profile_version) DO NOTHING — повтор той же
-// логической версии не создаёт вторую строку. Заглушка публикации: статус published и published_at
-// в той же транзакции (внешняя доставка и Asynq — в последующих задачах).
+// логической версии не создаёт вторую строку. Статус pending: фоновый воркер Asynq вызывает Publisher
+// и переводит строку в published/failed (см. internal/asyncjobs).
 func insertProfileOutboxRow(ctx context.Context, tx pgx.Tx, tenantID, entityID string, profileVersion int64, occurredAt time.Time) error {
 	entityType, err := loadEntityTypeKey(ctx, tx, tenantID, entityID)
 	if err != nil {
@@ -44,7 +44,7 @@ func insertProfileOutboxRow(ctx context.Context, tx pgx.Tx, tenantID, entityID s
 			status,
 			published_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'published', now())
+		VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'pending', NULL)
 		ON CONFLICT (tenant_id, entity_id, profile_version) DO NOTHING
 	`, eventID, tenantID, entityID, entityType, profileVersion, occurredAt.UTC(), payload)
 	if err != nil {

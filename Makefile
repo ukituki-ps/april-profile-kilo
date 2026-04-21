@@ -12,7 +12,7 @@ help:
 	@echo "  make frontend-lint  — tsc --noEmit в frontend/"
 	@echo "  make frontend-test  — vitest в frontend/"
 	@echo "  make go-vet         — go vet ./..."
-	@echo "  make go-build       — сборка ./cmd/april-profile в bin/april-profile"
+	@echo "  make go-build       — сборка ./cmd/april-profile и ./cmd/april-worker в bin/"
 	@echo "  make integration-test — go test -tags=integration ./... (Docker required)"
 	@echo "  make migrate-validate — docker: atlas migrate validate (образ $(ATLAS_IMAGE))"
 	@echo "  make migrate-apply — docker: atlas migrate apply (DATABASE_URL; см. .env.example)"
@@ -39,6 +39,7 @@ go-vet:
 
 go-build:
 	go build -o bin/april-profile ./cmd/april-profile
+	go build -o bin/april-worker ./cmd/april-worker
 
 integration-test:
 	go test -tags=integration ./...

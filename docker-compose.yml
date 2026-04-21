@@ -24,6 +24,28 @@ services:
       - "${BACKEND_HTTP_PORT:-18081}:8080"
     restart: unless-stopped
 
+  # Фоновые задачи Asynq (ping + батч profile_outbox). Поднимается вместе с БД/Redis: `docker compose --profile db up -d`.
+  worker:
+    profiles: [db]
+    image: "${BACKEND_IMAGE_REPO:-ghcr.io/ukituki-ps/april-profile-backend}:${IMAGE_TAG_BACKEND:-local}"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["/usr/local/bin/april-worker"]
+    environment:
+      DATABASE_URL: "${DATABASE_URL:-postgres://april:april@postgres:5432/april_profile?sslmode=disable}"
+      REDIS_ADDR: "${REDIS_ADDR:-redis:6379}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+      REDIS_DB: "${REDIS_DB:-0}"
+      ASYNQ_CONCURRENCY: "${ASYNQ_CONCURRENCY:-4}"
+      OUTBOX_BATCH_SIZE: "${OUTBOX_BATCH_SIZE:-32}"
+      ASYNQ_PING_INTERVAL: "${ASYNQ_PING_INTERVAL:-30s}"
+      ASYNQ_OUTBOX_INTERVAL: "${ASYNQ_OUTBOX_INTERVAL:-15s}"
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
   nginx-docs:
     image: nginx:1.27-alpine
     ports:
