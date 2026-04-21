@@ -2,8 +2,8 @@
 - Статус: ✅ выполнено
 - Задача: Фаза 1 (часть 4) — образ в ghcr, compose, деплой на dev по DEPLOYMENT_STRATEGY
 - Ветка: `develop`
-- Коммиты: `не создавались в этой сессии`
-- PR: не создавался
+- Коммиты: `4a69bcb`, `pending` (fix ghcr pull auth)
+- PR: [#11](https://github.com/ukituki-ps/april-profile/pull/11) (merged), follow-up PR на фикс авторизации pull
 
 ## 2) Что сделано
 - [backend] Добавлен production-oriented `Dockerfile` (multi-stage, финальный образ distroless/nonroot) для `cmd/april-profile`.
@@ -47,16 +47,17 @@ make docs-build
 ```
 
 ## 6) Деплой
-- Среда: нет (фактический деплой на `DEV_HOST` из этой среды не выполнялся)
+- Среда: dev (`DEV_HOST`) — проверка через GitHub Actions логи
 - Согласовано с: [`docs/DEPLOYMENT_STRATEGY.md`](../../docs/DEPLOYMENT_STRATEGY.md)
 - Образы: подготовлена публикация в ghcr по SHA (`ghcr.io/<owner>/april-profile-backend:<git-sha>`)
-- Health / readiness: локально проверена готовность compose-конфига; проверка `/healthz` на dev остаётся владельцу после merge в `develop`
-- Rollback: нет
+- Health / readiness: после merge PR #11 deploy упал до старта backend с `error from registry: unauthorized` на `docker compose pull`; добавлен workflow-фикс с `docker login ghcr.io` в `dev-deploy.yml`
+- Rollback: не применялся (релиз не дошёл до `up -d` backend)
 
 ## 7) Риски и ограничения
 - Требуются права на `packages:write` для `GITHUB_TOKEN`; при ограничениях org нужно задать `GHCR_PUSH_TOKEN` и использовать его в workflow.
-- В этой среде не выполнена фактическая проверка push в ghcr и smoke на удалённом dev runner.
+- Для pull приватного backend-образа на self-hosted runner требуются права `read:packages`; рекомендуется секрет `GHCR_PULL_TOKEN`.
+- Финальная проверка smoke `/healthz` ожидается после прогона deploy с новым фиксом авторизации pull.
 
 ## 8) Что осталось
-- [ ] После merge в `develop` проверить успешный run `Backend image (ghcr)` и наличие тега `ghcr.io/<owner>/april-profile-backend:<sha>`.
-- [ ] На dev-стенде убедиться, что deploy поднял новый SHA и `curl http://127.0.0.1:<BACKEND_HTTP_PORT>/healthz` возвращает `200`.
+- [x] После merge в `develop` проверен `Backend image (ghcr)`: run успешный, образ по SHA опубликован.
+- [ ] После merge follow-up PR проверить успешный `Deploy to dev` и `curl http://127.0.0.1:<BACKEND_HTTP_PORT>/healthz`.
