@@ -152,19 +152,27 @@
 
 ## 11. Операционка
 
-- Ручной redeploy на сервере: из каталога клона (**`DEPLOY_ROOT`**, для AprilProfile: `/opt/april-profile`) выполнить **`./deploy.sh`** (обёртка над шагами ниже; см. `--help` и переменные `SKIP_*`). Альтернатива — отдельный job в GitHub Actions (`workflow_dispatch`) по согласованию с командой.
+- Ручной redeploy на сервере: из каталога клона (**`DEPLOY_ROOT`**, для AprilProfile: `/opt/april-profile`) выполнить **`./deploy.sh`** (обёртка над шагами ниже; см. `--help` и переменные `SKIP_*`). По умолчанию compose-шаг использует `up -d --force-recreate --remove-orphans`, чтобы не оставлять «старые» запуски. Альтернатива — отдельный job в GitHub Actions (`workflow_dispatch`) по согласованию с командой.
 - Уведомления (Telegram, Slack, email): не используются.
+
+### Переменные `deploy.sh` для dev-окружения
+
+- `SKIP_OPENAPI_LINT=1` — пропустить OpenAPI lint (обычно только для аварийного redeploy).
+- `SKIP_DOCS_BUILD=1` — пропустить сборку docs-site (полезно на минимальном сервере без Node.js/npm в PATH).
+- `SKIP_COMPOSE_PULL=1` — пропустить `docker compose pull` (например при временных проблемах авторизации в ghcr или когда нужен быстрый recreate уже скачанного образа).
+- `COMPOSE_FORCE_RECREATE=0` — отключить принудительное пересоздание контейнеров (по умолчанию включено).
+- `COMPOSE_REMOVE_ORPHANS=0` — отключить удаление orphan-контейнеров (по умолчанию включено).
 
 ## 12. Порядок шагов для агента (скелет pipeline)
 
 1. Job на runner с labels `self-hosted`, `dev`, **`RUNNER_LABEL_EXTRA`** (для AprilProfile: `april-profile`), ref = commit после merge в `develop`.
 2. Сборка и тесты (как принято в репо).
 3. Сборка образов, push в ghcr.io с тегом по **git sha**.
-4. На сервере: `cd` в **`DEPLOY_ROOT`** → **`./deploy.sh`** (внутри: `git pull`, при необходимости хуки `scripts/db-backup.sh` / `scripts/run-migrations.sh`, `make openapi-lint`, `make docs-build`, `docker compose pull` → `up -d` с учётом `.env` и **`images.env`**). Либо те же шаги вручную: `git pull` → п.5–8.
+4. На сервере: `cd` в **`DEPLOY_ROOT`** → **`./deploy.sh`** (внутри: `git pull`, при необходимости хуки `scripts/db-backup.sh` / `scripts/run-migrations.sh`, `openapi-lint`, `docs-build`, `docker compose pull` → `up -d --force-recreate --remove-orphans` с учётом `.env` и **`images.env`**; часть шагов может выполняться fallback-режимом через docker). Либо те же шаги вручную: `git pull` → п.5–8.
 5. Обновить **`images.env`** / `.env` под новые SHA образов (часто делает CI перед вызовом деплоя или вручную до/после `git pull`).
 6. **Обязательно** снять дамп БД dev-стенда: **`pg_dump`** (до миграций и поднятия compose) — в скрипте деплоя: исполняемый **`scripts/db-backup.sh`**, если добавлен в репозиторий.
 7. Миграции (отдельная команда **до** `up`) — **`scripts/run-migrations.sh`**, если добавлен.
-8. `docker compose pull` → `docker compose up -d` (с overrides) — входит в **`deploy.sh`**.
+8. `docker compose pull` → `docker compose up -d --force-recreate --remove-orphans` (с overrides) — входит в **`deploy.sh`**.
 9. Health по внутреннему URL/порту → smoke: endpoint → логин → E2E.
 10. Успех: обновить **images.env** как зафиксированный good (если ещё не записан), поставить/сдвинуть **git tag** успешного деплоя, загрузить артефакты (логи, `docker compose ps`, commit).
 11. Провал: откат миграций (по политике) + откат **images.env** на предыдущие SHA из last good + при необходимости `git checkout` на commit по тегу; снова health; fail job при повторном провале.
