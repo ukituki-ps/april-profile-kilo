@@ -2,8 +2,8 @@
 - Статус: ✅ выполнено
 - Задача: Фаза 1 (часть 4) — образ в ghcr, compose, деплой на dev по DEPLOYMENT_STRATEGY
 - Ветка: `develop`
-- Коммиты: `4a69bcb`, `8e205b7`, `a370e92`, `pending` (fix deploy/image race)
-- PR: [#11](https://github.com/ukituki-ps/april-profile/pull/11) (merged), [#12](https://github.com/ukituki-ps/april-profile/pull/12) (merged), [#13](https://github.com/ukituki-ps/april-profile/pull/13) (merged), follow-up PR на ожидание image-тега перед deploy
+- Коммиты: `4a69bcb`, `8e205b7`, `a370e92`, `7523318`, `pending` (increase wait timeout)
+- PR: [#11](https://github.com/ukituki-ps/april-profile/pull/11) (merged), [#12](https://github.com/ukituki-ps/april-profile/pull/12) (merged), [#13](https://github.com/ukituki-ps/april-profile/pull/13) (merged), [#14](https://github.com/ukituki-ps/april-profile/pull/14) (merged), follow-up PR на увеличение таймаута ожидания image
 
 ## 2) Что сделано
 - [backend] Добавлен production-oriented `Dockerfile` (multi-stage, финальный образ distroless/nonroot) для `cmd/april-profile`.
@@ -54,6 +54,7 @@ make docs-build
   - после merge PR #11 deploy упал до старта backend с `error from registry: unauthorized` на `docker compose pull`; добавлен workflow-фикс с `docker login ghcr.io` в `dev-deploy.yml` (PR #12);
   - после merge PR #12 deploy снова упал на `docker compose pull` с `no matching manifest for linux/arm64/v8`; причина — образ публиковался только для `amd64`; добавлен multi-arch build (`linux/amd64,linux/arm64`) в workflow backend image.
   - после merge PR #13 deploy упал с `ghcr.io/...:<sha>: not found`; причина — гонка: `Deploy to dev` стартует раньше окончания `Backend image (ghcr)` для того же SHA. Добавлен шаг ожидания публикации image-тега в ghcr перед `deploy.sh`.
+  - после merge PR #14 шаг ожидания сработал корректно, но 5-минутного окна не хватило: image-job завершился через ~5m53s, а deploy прекратил ожидание примерно за 13 секунд до появления тега. Увеличен таймаут ожидания до 10 минут.
 - Rollback: не применялся (релиз не дошёл до `up -d` backend)
 
 ## 7) Риски и ограничения
