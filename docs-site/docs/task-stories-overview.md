@@ -22,6 +22,7 @@ sidebar_position: 20
 - [005 — JWT Keycloak и `tenant_id` из доверенного контекста](./task-story-005-keycloak-jwt-tenant)
 - [006 — `/healthz`, `/readyz` и синхронизация OpenAPI](./task-story-006-health-openapi)
 - [007 — Docker-образ backend, ghcr и compose-деплой](./task-story-007-docker-ghcr-compose-deploy)
+- [008 — Логи, `request_id`, readiness от БД/Redis и env-конфиг](./task-story-008-observability-config-readiness-deps)
 
 ## Быстрый статус
 
@@ -35,3 +36,4 @@ sidebar_position: 20
 | 005 JWT + trusted tenant context | ✅ | [005](./task-story-005-keycloak-jwt-tenant) | `tenant_id` только из валидного JWT |
 | 006 health + readiness + OpenAPI sync | ✅ | [006](./task-story-006-health-openapi) | Появились публичные `/healthz` и `/readyz`, контракт синхронизирован |
 | 007 docker + ghcr + compose deploy | ✅ | [007](./task-story-007-docker-ghcr-compose-deploy) | Backend собирается в образ и разворачивается по SHA через compose |
+| 008 logs + request_id + dependency readiness | ✅ | [008](./task-story-008-observability-config-readiness-deps) | Логи структурированы, readiness зависит от БД/Redis, env валидируется при старте |

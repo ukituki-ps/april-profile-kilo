@@ -79,8 +79,10 @@ paths:
     get:
       summary: Readiness
       description: |
-        В этом инкременте endpoint возвращает упрощённый сигнал готовности без проверки внешних зависимостей.
-        Полная readiness (PostgreSQL/Redis) будет добавлена в задаче 008.
+        Endpoint отражает готовность внешних зависимостей:
+        - PostgreSQL (`database`)
+        - Redis (`redis`)
+        При недоступности хотя бы одной обязательной зависимости возвращается `503`.
       operationId: getReadyz
       tags: [System]
       security: []
@@ -90,18 +92,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required: [status]
-                properties:
-                  status:
-                    type: string
-                    example: ready
+                $ref: '#/components/schemas/ReadyzResponse'
         '503':
           description: Не готов (зависимости недоступны)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ReadyzResponse'
 
 components:
   securitySchemes:
@@ -134,3 +131,16 @@ components:
         request_id:
           description: Идентификатор запроса для корреляции в логах и трассировке.
           type: [string, 'null']
+    ReadyzResponse:
+      type: object
+      required: [status, database, redis]
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        database:
+          type: string
+          enum: [ok, unavailable]
+        redis:
+          type: string
+          enum: [ok, unavailable, skipped]

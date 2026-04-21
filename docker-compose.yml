@@ -10,6 +10,12 @@ services:
       dockerfile: Dockerfile
     environment:
       HTTP_LISTEN_ADDR: ":8080"
+      DATABASE_URL: "${DATABASE_URL:-postgres://april:april@postgres:5432/april_profile?sslmode=disable}"
+      REDIS_ADDR: "${REDIS_ADDR:-redis:6379}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+      REDIS_DB: "${REDIS_DB:-0}"
+      READINESS_TIMEOUT: "${READINESS_TIMEOUT:-3s}"
+      READYZ_ALLOW_WITHOUT_REDIS: "${READYZ_ALLOW_WITHOUT_REDIS:-false}"
       KEYCLOAK_JWKS_URL: "${KEYCLOAK_JWKS_URL:-http://keycloak:8080/realms/april/protocol/openid-connect/certs}"
       KEYCLOAK_ISSUER: "${KEYCLOAK_ISSUER:-http://keycloak:8080/realms/april}"
       KEYCLOAK_AUDIENCE: "${KEYCLOAK_AUDIENCE:-april-profile-api}"
@@ -61,6 +67,13 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    profiles: [db]
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
     restart: unless-stopped
 
 volumes:
