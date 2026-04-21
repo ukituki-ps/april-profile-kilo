@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
@@ -236,6 +237,42 @@ func TestReadyz_returns503WhenDependenciesUnavailable(t *testing.T) {
 	}
 	if !strings.Contains(string(body), `"status":"not_ready"`) {
 		t.Fatalf("unexpected body: %s", body)
+	}
+}
+
+func TestRequestLogging_includesRequestID(t *testing.T) {
+	t.Parallel()
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jwks := mustRSAJWKS(t, &priv.PublicKey, "kid-log")
+	v, err := auth.NewValidatorFromJWKSJSON(jwks, "http://kc.example/auth/realms/april", "april-profile-api", "tenant_id")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var logBuf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logBuf, nil))
+	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
+		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
+	}, logger))
+	t.Cleanup(ts.Close)
+
+	res, err := ts.Client().Get(ts.URL + "/healthz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("want 200, got %d", res.StatusCode)
+	}
+	requestID := res.Header.Get("X-Request-Id")
+	if requestID == "" {
+		t.Fatal("missing X-Request-Id header")
+	}
+	if !strings.Contains(logBuf.String(), "request_id="+requestID) {
+		t.Fatalf("request_id must be present in logs, got: %s", logBuf.String())
 	}
 }
 
