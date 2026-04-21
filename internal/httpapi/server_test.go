@@ -19,6 +19,54 @@ import (
 	"github.com/ukituki-ps/april-profile/internal/auth"
 )
 
+func TestHealthAndReadiness_arePublicAndReturn200(t *testing.T) {
+	t.Parallel()
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jwks := mustRSAJWKS(t, &priv.PublicKey, "kid-health")
+	const iss = "http://kc.example/auth/realms/april"
+	const aud = "april-profile-api"
+	v, err := auth.NewValidatorFromJWKSJSON(jwks, iss, aud, "tenant_id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(NewMux(v))
+	t.Cleanup(ts.Close)
+
+	cases := []struct {
+		name         string
+		path         string
+		wantContains string
+	}{
+		{name: "healthz", path: "/healthz", wantContains: `"status":"ok"`},
+		{name: "readyz", path: "/readyz", wantContains: `"status":"ready"`},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			res, err := ts.Client().Get(ts.URL + tc.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer res.Body.Close()
+			if res.StatusCode != http.StatusOK {
+				body, _ := io.ReadAll(res.Body)
+				t.Fatalf("status %d body %s", res.StatusCode, body)
+			}
+			body, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(body), tc.wantContains) {
+				t.Fatalf("unexpected body for %s: %s", tc.path, body)
+			}
+		})
+	}
+}
+
 func TestWhoAmI_requiresJWT(t *testing.T) {
 	t.Parallel()
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
