@@ -4,13 +4,17 @@ info:
   description: |
     REST API микросервиса April Profile (профиль пользователя).
     Спецификация ведётся в репозитории (`openapi/openapi.yaml`); скорректируйте `servers` под свой gateway.
-  version: 0.1.0
+  version: 0.2.0
   license:
     name: UNLICENSED
 servers:
   - url: https://dev.profile.april.ukituki.tech/api
     description: |
       Подставьте базовый URL за gateway. См. `docs/guides/FORK_AND_CUSTOMIZE.md`.
+tags:
+  - name: Admin
+    description: |
+      Операции merge дубликатов и очереди конфликтов authority. Требуют realm-роль (см. `KEYCLOAK_ADMIN_REALM_ROLE`).
 paths:
   /v1/system/ping:
     get:
@@ -205,7 +209,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: Тип не опубликован или конфликт external mapping
+          description: Тип не опубликован, конфликт external mapping или все поля заблокированы authority
           content:
             application/json:
               schema:
@@ -290,7 +294,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: Конфликт external mapping
+          description: Конфликт external mapping или все предложенные поля отклонены authority (код `authority_all_blocked`)
           content:
             application/json:
               schema:
@@ -416,6 +420,139 @@ paths:
                 $ref: '#/components/schemas/Error'
         '403':
           description: В токене нет claim с tenant_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/admin/profile-conflicts:
+    get:
+      summary: Список открытых конфликтов authority (admin)
+      description: |
+        Требуется роль realm из `realm_access.roles` (имя задаётся `KEYCLOAK_ADMIN_REALM_ROLE`, по умолчанию ожидается `april-profile-admin`).
+      operationId: listProfileFieldConflicts
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Открытые конфликты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileConflictListResponse'
+        '401':
+          description: Нет или невалидный Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Нет tenant claim или недостаточно прав realm-роли
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/admin/profile-conflicts/{conflictID}/resolve:
+    post:
+      summary: Ручное разрешение конфликта authority
+      description: |
+        Записывает выбранное значение как новую версию профиля с источником `manual` в `_meta.authority`, закрывает конфликт, пишет аудит.
+      operationId: resolveProfileFieldConflict
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: conflictID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveProfileConflictRequest'
+      responses:
+        '200':
+          description: Новая версия профиля после разрешения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileSnapshot'
+        '400':
+          description: Невалидный body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Нет или невалидный Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Конфликт не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/admin/entities/merge:
+    post:
+      summary: Явный merge дубликатов профилей (source → target)
+      description: |
+        Объединяет профили в пределах tenant и одного `entity_type_id`, переносит external mappings, удаляет source, пишет аудит.
+      operationId: mergeEntityProfiles
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MergeEntityProfilesRequest'
+      responses:
+        '200':
+          description: Результат merge (целевой профиль)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MergeEntityProfilesResponse'
+        '400':
+          description: Некорректная пара сущностей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Нет или невалидный Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Сущность не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Коллизия external mapping при merge
           content:
             application/json:
               schema:
@@ -606,6 +743,9 @@ components:
         document:
           type: object
           additionalProperties: true
+        write_source:
+          type: string
+          description: Источник данных для начальной authority-метки полей (по умолчанию api).
         external_refs:
           type: array
           items:
@@ -617,6 +757,10 @@ components:
         document:
           type: object
           additionalProperties: true
+        write_source:
+          type: string
+          description: Логический источник входящего изменения для authority (по умолчанию api).
+          example: hris
         external_refs:
           type: array
           items:
@@ -644,3 +788,90 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ExternalRef'
+    ProfileConflictListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileFieldConflict'
+    ProfileFieldConflict:
+      type: object
+      required:
+        - id
+        - entity_id
+        - status
+        - namespace
+        - field_key
+        - existing_source
+        - incoming_source
+        - reason
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [open, resolved]
+        namespace:
+          type: string
+        field_key:
+          type: string
+        existing_value: {}
+        incoming_value: {}
+        existing_source:
+          type: string
+        incoming_source:
+          type: string
+        reason:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+        resolution_value: {}
+        resolved_by_sub:
+          type: string
+        resolution_notes:
+          type: string
+    ResolveProfileConflictRequest:
+      type: object
+      required: [resolution]
+      properties:
+        resolution:
+          description: Выбранное значение поля (скаляр или объект — как в документе профиля).
+        notes:
+          type: string
+    MergeEntityProfilesRequest:
+      type: object
+      required: [source_entity_id, target_entity_id]
+      properties:
+        source_entity_id:
+          type: string
+          format: uuid
+        target_entity_id:
+          type: string
+          format: uuid
+    MergeEntityProfilesResponse:
+      type: object
+      required: [target_entity_id, target_version, source_entity_id, document]
+      properties:
+        target_entity_id:
+          type: string
+          format: uuid
+        target_version:
+          type: integer
+          format: int64
+        source_entity_id:
+          type: string
+          format: uuid
+        document:
+          type: object
+          additionalProperties: true

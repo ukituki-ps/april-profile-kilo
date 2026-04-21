@@ -38,7 +38,7 @@ func TestHealthAndReadiness_arePublicAndReturn200(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, nil, nil, "", slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	cases := []struct {
@@ -92,7 +92,7 @@ func TestWhoAmI_requiresJWT(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, nil, nil, "", slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	res, err := ts.Client().Get(ts.URL + "/v1/auth/whoami")
@@ -160,7 +160,7 @@ func TestWhoAmI_missingTenantClaim_returns403(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, nil, nil, "", slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
@@ -222,7 +222,7 @@ func TestReadyz_returns503WhenDependenciesUnavailable(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: false, DatabaseOK: false, RedisOK: false},
-	}, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, nil, nil, "", slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	res, err := ts.Client().Get(ts.URL + "/readyz")
@@ -258,7 +258,7 @@ func TestRequestLogging_includesRequestID(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&logBuf, nil))
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, nil, nil, logger))
+	}, nil, nil, nil, "", logger))
 	t.Cleanup(ts.Close)
 
 	res, err := ts.Client().Get(ts.URL + "/healthz")
@@ -307,7 +307,7 @@ func TestEntityTypesPublish_invalidDraftSchemaReturns422(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, catalog, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, catalog, nil, nil, "", slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
@@ -370,7 +370,7 @@ func TestEntitiesByVersion_returnsSnapshot(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, nil, service, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, service, nil, "", slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	token := signedToken(t, priv, kid, iss, aud)

@@ -52,8 +52,16 @@ type ProfileService interface {
 	Delete(ctx context.Context, tenantID, entityID string) error
 }
 
+// ProfileAdmin — админ-операции: конфликты authority и merge дубликатов (роль Keycloak см. RequireRealmRole).
+type ProfileAdmin interface {
+	ListOpenConflicts(ctx context.Context, tenantID string) ([]profiles.FieldConflict, error)
+	ResolveFieldConflict(ctx context.Context, tenantID, conflictID, actorSub string, resolution any, notes string) (profiles.Snapshot, error)
+	MergeEntityProfiles(ctx context.Context, tenantID, sourceEntityID, targetEntityID, actorSub string) (profiles.MergeResult, error)
+}
+
 // NewMux регистрирует маршруты. Защищённые обработчики получают tenant_id только из JWT через auth.Validator.
-func NewMux(v *auth.Validator, readiness ReadinessChecker, catalog EntityTypeCatalog, profileService ProfileService, logger *slog.Logger) http.Handler {
+// adminRealmRole: пустая строка — не требовать realm-роль на /v1/admin/* (только для dev/тестов).
+func NewMux(v *auth.Validator, readiness ReadinessChecker, catalog EntityTypeCatalog, profileService ProfileService, admin ProfileAdmin, adminRealmRole string, logger *slog.Logger) http.Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -71,6 +79,12 @@ func NewMux(v *auth.Validator, readiness ReadinessChecker, catalog EntityTypeCat
 	mux.Handle("DELETE /v1/entities/{entityID}", v.Middleware(http.HandlerFunc(handleDeleteEntity(profileService))))
 	mux.Handle("GET /v1/entities/{entityID}/versions/{version}", v.Middleware(http.HandlerFunc(handleGetEntityByVersion(profileService))))
 	mux.Handle("GET /v1/external-mappings/{sourceSystem}/{externalID}/entity", v.Middleware(http.HandlerFunc(handleGetEntityByExternal(profileService))))
+	adminChain := func(h http.Handler) http.Handler {
+		return v.Middleware(auth.RequireRealmRole(adminRealmRole)(h))
+	}
+	mux.Handle("GET /v1/admin/profile-conflicts", adminChain(http.HandlerFunc(handleListProfileConflicts(admin))))
+	mux.Handle("POST /v1/admin/profile-conflicts/{conflictID}/resolve", adminChain(http.HandlerFunc(handleResolveProfileConflict(admin))))
+	mux.Handle("POST /v1/admin/entities/merge", adminChain(http.HandlerFunc(handleMergeEntities(admin))))
 	return withRequestLogging(logger, withRequestID(mux))
 }
 
@@ -307,6 +321,7 @@ func handleCreateEntity(service ProfileService) http.HandlerFunc {
 			EntityTypeID string                 `json:"entity_type_id"`
 			Document     map[string]any         `json:"document"`
 			ExternalRefs []profiles.ExternalRef `json:"external_refs"`
+			WriteSource  string                 `json:"write_source"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeBadRequest(w, r, "invalid json body")
@@ -316,6 +331,7 @@ func handleCreateEntity(service ProfileService) http.HandlerFunc {
 			EntityTypeID: req.EntityTypeID,
 			Document:     req.Document,
 			ExternalRefs: req.ExternalRefs,
+			WriteSource:  req.WriteSource,
 		})
 		if err != nil {
 			writeProfileError(w, r, err)
@@ -336,6 +352,7 @@ func handleUpdateEntity(service ProfileService) http.HandlerFunc {
 		var req struct {
 			Document     map[string]any         `json:"document"`
 			ExternalRefs []profiles.ExternalRef `json:"external_refs"`
+			WriteSource  string                 `json:"write_source"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeBadRequest(w, r, "invalid json body")
@@ -348,6 +365,7 @@ func handleUpdateEntity(service ProfileService) http.HandlerFunc {
 			profiles.UpdateParams{
 				Document:     req.Document,
 				ExternalRefs: req.ExternalRefs,
+				WriteSource:  req.WriteSource,
 			},
 		)
 		if err != nil {
@@ -471,6 +489,112 @@ func writeProfileError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, profiles.ErrExternalMappingConflict):
 		status = http.StatusConflict
 		code = "external_mapping_conflict"
+	case errors.Is(err, profiles.ErrAuthorityAllBlocked):
+		status = http.StatusConflict
+		code = "authority_all_blocked"
+	}
+	ErrorWithRequestID(w, status, map[string]any{
+		"code":    code,
+		"message": fmt.Sprintf("%v", err),
+	}, RequestIDFromContext(r.Context()))
+}
+
+func handleListProfileConflicts(admin ProfileAdmin) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if admin == nil {
+			writeServiceUnavailable(w, r)
+			return
+		}
+		items, err := admin.ListOpenConflicts(r.Context(), auth.TenantIDFromContext(r.Context()))
+		if err != nil {
+			ErrorWithRequestID(w, http.StatusInternalServerError, map[string]any{
+				"code": "internal_error", "message": err.Error(),
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(map[string]any{"items": items})
+	}
+}
+
+func handleResolveProfileConflict(admin ProfileAdmin) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if admin == nil {
+			writeServiceUnavailable(w, r)
+			return
+		}
+		var req struct {
+			Resolution any    `json:"resolution"`
+			Notes      string `json:"notes"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeBadRequest(w, r, "invalid json body")
+			return
+		}
+		snap, err := admin.ResolveFieldConflict(
+			r.Context(),
+			auth.TenantIDFromContext(r.Context()),
+			r.PathValue("conflictID"),
+			auth.SubjectFromContext(r.Context()),
+			req.Resolution,
+			req.Notes,
+		)
+		if err != nil {
+			writeAdminProfileError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(snap)
+	}
+}
+
+func handleMergeEntities(admin ProfileAdmin) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if admin == nil {
+			writeServiceUnavailable(w, r)
+			return
+		}
+		var req struct {
+			SourceEntityID string `json:"source_entity_id"`
+			TargetEntityID string `json:"target_entity_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeBadRequest(w, r, "invalid json body")
+			return
+		}
+		res, err := admin.MergeEntityProfiles(
+			r.Context(),
+			auth.TenantIDFromContext(r.Context()),
+			req.SourceEntityID,
+			req.TargetEntityID,
+			auth.SubjectFromContext(r.Context()),
+		)
+		if err != nil {
+			writeAdminProfileError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(res)
+	}
+}
+
+func writeAdminProfileError(w http.ResponseWriter, r *http.Request, err error) {
+	status := http.StatusBadRequest
+	code := "invalid_request"
+	switch {
+	case errors.Is(err, profiles.ErrNotFound):
+		status = http.StatusNotFound
+		code = "entity_not_found"
+	case errors.Is(err, profiles.ErrConflictNotFound):
+		status = http.StatusNotFound
+		code = "conflict_not_found"
+	case errors.Is(err, profiles.ErrMergeInvalid):
+		status = http.StatusBadRequest
+		code = "merge_invalid"
+	case errors.Is(err, profiles.ErrMergeExternalCollision):
+		status = http.StatusConflict
+		code = "merge_external_collision"
 	}
 	ErrorWithRequestID(w, status, map[string]any{
 		"code":    code,

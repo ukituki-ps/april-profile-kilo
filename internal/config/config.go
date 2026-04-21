@@ -17,6 +17,8 @@ type Config struct {
 	KeycloakIssuer      string
 	KeycloakAudience    string
 	KeycloakTenantClaim string
+	// KeycloakAdminRealmRole — роль realm для админ-операций merge/conflict (пусто = не требовать роль).
+	KeycloakAdminRealmRole string
 
 	DatabaseURL             string
 	RedisAddr               string
@@ -47,6 +49,7 @@ func Load() (Config, error) {
 		KeycloakIssuer:          strings.TrimSpace(os.Getenv("KEYCLOAK_ISSUER")),
 		KeycloakAudience:        strings.TrimSpace(os.Getenv("KEYCLOAK_AUDIENCE")),
 		KeycloakTenantClaim:     strings.TrimSpace(os.Getenv("KEYCLOAK_TENANT_CLAIM")),
+		KeycloakAdminRealmRole:  strings.TrimSpace(os.Getenv("KEYCLOAK_ADMIN_REALM_ROLE")),
 		DatabaseURL:             strings.TrimSpace(os.Getenv("DATABASE_URL")),
 		RedisAddr:               strings.TrimSpace(os.Getenv("REDIS_ADDR")),
 		RedisPassword:           os.Getenv("REDIS_PASSWORD"),

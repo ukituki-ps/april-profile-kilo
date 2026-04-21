@@ -67,15 +67,15 @@ func TestValidateBearer_JWKS(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sub, tenant, err := v.ValidateBearer(context.Background(), "Bearer "+raw)
+	p, err := v.ValidateBearer(context.Background(), "Bearer "+raw)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sub != "subject-1" || tenant != "11111111-1111-1111-1111-111111111111" {
-		t.Fatalf("unexpected sub/tenant: %q %q", sub, tenant)
+	if p.Subject != "subject-1" || p.TenantID != "11111111-1111-1111-1111-111111111111" {
+		t.Fatalf("unexpected sub/tenant: %q %q", p.Subject, p.TenantID)
 	}
 
-	_, _, err = v.ValidateBearer(context.Background(), "Bearer garbage")
+	_, err = v.ValidateBearer(context.Background(), "Bearer garbage")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -91,7 +91,7 @@ func TestValidateBearer_JWKS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _, err = v.ValidateBearer(context.Background(), "Bearer "+raw2)
+	_, err = v.ValidateBearer(context.Background(), "Bearer "+raw2)
 	if err == nil || !errors.Is(err, ErrMissingTenantClaim) {
 		t.Fatalf("want ErrMissingTenantClaim, got %v", err)
 	}
