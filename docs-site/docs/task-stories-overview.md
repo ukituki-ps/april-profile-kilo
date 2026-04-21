@@ -20,6 +20,7 @@ sidebar_position: 20
 - [003 — Гибридная UI-модель и governance](./task-story-003-hybrid-ui-governance)
 - [004 — Go-модуль, Atlas и стартовая схема БД](./task-story-004-go-atlas-tenant)
 - [005 — JWT Keycloak и `tenant_id` из доверенного контекста](./task-story-005-keycloak-jwt-tenant)
+- [006 — `/healthz`, `/readyz` и синхронизация OpenAPI](./task-story-006-health-openapi)
 
 ## Быстрый статус
 
@@ -31,3 +32,4 @@ sidebar_position: 20
 | 003 hybrid UI governance | ✅ | [003](./task-story-003-hybrid-ui-governance) | Единые правила Host/Widget/API-BFF интеграции |
 | 004 Go + Atlas + tenant schema | ✅ | [004](./task-story-004-go-atlas-tenant) | Базовый backend-фундамент и миграции |
 | 005 JWT + trusted tenant context | ✅ | [005](./task-story-005-keycloak-jwt-tenant) | `tenant_id` только из валидного JWT |
+| 006 health + readiness + OpenAPI sync | ✅ | [006](./task-story-006-health-openapi) | Появились публичные `/healthz` и `/readyz`, контракт синхронизирован |
