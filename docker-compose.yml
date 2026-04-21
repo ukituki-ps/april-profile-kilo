@@ -1,8 +1,23 @@
-# Базовый стек для dev/stage: документация (статика + Structurizr Lite + Swagger UI) за Nginx.
-# Образы приложений (backend/frontend) подключаются позже через profiles и images.env — см. docs/DEPLOYMENT_STRATEGY.md
+# Базовый стек для dev/stage: backend + документация (статика + Structurizr Lite + Swagger UI) за Nginx.
+# Теги образов задаются через .env / images.env (SHA) — см. docs/DEPLOYMENT_STRATEGY.md
 # Локальная PostgreSQL 17: `docker compose --profile db up -d postgres` (переменные см. `.env.example`).
 
 services:
+  backend:
+    image: "${BACKEND_IMAGE_REPO:-ghcr.io/ukituki-ps/april-profile-backend}:${IMAGE_TAG_BACKEND:-local}"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      HTTP_LISTEN_ADDR: ":8080"
+      KEYCLOAK_JWKS_URL: "${KEYCLOAK_JWKS_URL:-http://keycloak:8080/realms/april/protocol/openid-connect/certs}"
+      KEYCLOAK_ISSUER: "${KEYCLOAK_ISSUER:-http://keycloak:8080/realms/april}"
+      KEYCLOAK_AUDIENCE: "${KEYCLOAK_AUDIENCE:-april-profile-api}"
+      KEYCLOAK_TENANT_CLAIM: "${KEYCLOAK_TENANT_CLAIM:-tenant_id}"
+    ports:
+      - "${BACKEND_HTTP_PORT:-8081}:8080"
+    restart: unless-stopped
+
   nginx-docs:
     image: nginx:1.27-alpine
     ports:

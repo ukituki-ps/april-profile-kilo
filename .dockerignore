@@ -1,0 +1,13 @@
+.git
+.github
+.cursor
+node_modules
+docs-site/node_modules
+frontend/node_modules
+design-system/DisignApril/node_modules
+docs-site/build
+frontend/dist
+.deploy-artifacts
+.deploy-state
+bin
+tasks

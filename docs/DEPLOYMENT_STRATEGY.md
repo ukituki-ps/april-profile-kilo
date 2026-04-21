@@ -65,8 +65,7 @@
 |-----|------------|------------|
 | `SUBMODULES_TOKEN` | **Settings → Secrets and variables → Actions → Secrets** | PAT с доступом **Contents: Read** к приватному submodule **DisignApril** (`ukituki-ps/DisignApril`), если submodule недоступен через `GITHUB_TOKEN`. В [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) (job `frontend`) и [`.github/workflows/bootstrap-ci.yml`](../.github/workflows/bootstrap-ci.yml) задан fallback на `github.token`, если секрет пуст — при публичном submodule или достаточных правах токена секрет можно не задавать. |
 | `APRIL_DEPLOY_ROOT` | **Settings → Variables → Actions** | Абсолютный путь к git-клону на dev-хосте; должен совпадать с **`DEPLOY_ROOT`** в [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md) (для AprilProfile: `/opt/april-profile`). Если переменная не задана, workflow использует значение по умолчанию из `dev-deploy.yml`. |
-
-**После появления публикации образов в ghcr.io** добавьте в этот список секреты для `docker login ghcr.io` (или эквивалент в workflow), имена — по фактической реализации job сборки/push; до появления таких jobs дополнительные секреты для registry не обязательны.
+| `GHCR_PUSH_TOKEN` *(опционально)* | **Settings → Secrets and variables → Actions → Secrets** | PAT для `docker login ghcr.io` (минимум `packages:write`, при необходимости `read:packages`). В [`.github/workflows/backend-image-ghcr.yml`](../.github/workflows/backend-image-ghcr.yml) по умолчанию используется `secrets.GITHUB_TOKEN`; если прав этого токена недостаточно (org policy), замените пароль логина на `secrets.GHCR_PUSH_TOKEN`. |
 
 Ограничение workflow по путям/файлам: **не используется** — любой merge в `develop` ведёт к полному пайплайну.
 
