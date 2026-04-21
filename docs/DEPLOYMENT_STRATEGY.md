@@ -87,6 +87,8 @@
 | Инструмент | **`docker compose` v2** |
 | Файлы | `docker-compose.yml` + overrides |
 
+**Профиль `db` (PostgreSQL, Redis, `worker`):** в `docker-compose.yml` эти сервисы помечены `profiles: [db]` и **не запускаются** при обычном `docker compose up`, пока профиль не включён. Для dev-деплоя с БД в том же compose задайте в **серверном `.env`** в корне деплоя строку **`COMPOSE_PROFILES=db`** (переменная [поддерживается](https://docs.docker.com/compose/how-tos/profiles/) Compose v2 и подхватывается из `.env` рядом с `docker-compose.yml`). Тогда `deploy.sh` поднимет и БД, и Redis, и воркер Asynq. Если Postgres вынесен наружу — профиль `db` не включайте; укажите **`DATABASE_URL`** на внешний инстанс.
+
 ### Версии образов и источник истины
 
 - **Теги образов (SHA)** задаются через **`.env`** и/или отдельный **`images.env`** на сервере. Compose-файлы в git ссылаются на переменные (например `IMAGE_TAG_BACKEND=${BACKEND_SHA}`), а конкретные значения подставляются из этих файлов.
