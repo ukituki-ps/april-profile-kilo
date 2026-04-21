@@ -78,12 +78,24 @@ paths:
   /readyz:
     get:
       summary: Readiness
+      description: |
+        В этом инкременте endpoint возвращает упрощённый сигнал готовности без проверки внешних зависимостей.
+        Полная readiness (PostgreSQL/Redis) будет добавлена в задаче 008.
       operationId: getReadyz
       tags: [System]
       security: []
       responses:
         '200':
           description: Готов принимать трафик
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: ready
         '503':
           description: Не готов (зависимости недоступны)
           content:
