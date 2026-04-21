@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"github.com/ukituki-ps/april-profile/internal/auth"
 	"github.com/ukituki-ps/april-profile/internal/config"
 	"github.com/ukituki-ps/april-profile/internal/httpapi"
@@ -27,7 +29,31 @@ func Run(ctx context.Context) error {
 		return fmt.Errorf("jwt validator: %w", err)
 	}
 
-	mux := httpapi.NewMux(v)
+	dbPool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("pgxpool: %w", err)
+	}
+	defer dbPool.Close()
+
+	var redisClient *redis.Client
+	if cfg.RedisAddr != "" {
+		redisClient = redis.NewClient(&redis.Options{
+			Addr:     cfg.RedisAddr,
+			Password: cfg.RedisPassword,
+			DB:       cfg.RedisDB,
+		})
+		defer func() {
+			_ = redisClient.Close()
+		}()
+	}
+
+	readiness := &readinessChecker{
+		dbPool:            dbPool,
+		redisClient:       redisClient,
+		timeout:           cfg.ReadinessTimeout,
+		allowWithoutRedis: cfg.ReadyzAllowWithoutRedis,
+	}
+	mux := httpapi.NewMux(v, readiness, slog.Default())
 	srv := &http.Server{
 		Addr:              cfg.HTTPListenAddr,
 		Handler:           mux,
@@ -61,4 +87,31 @@ func Run(ctx context.Context) error {
 		}
 		return nil
 	}
+}
+
+type readinessChecker struct {
+	dbPool            *pgxpool.Pool
+	redisClient       *redis.Client
+	timeout           time.Duration
+	allowWithoutRedis bool
+}
+
+func (c *readinessChecker) Check(ctx context.Context) httpapi.ReadinessResult {
+	out := httpapi.ReadinessResult{}
+	deadlineCtx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+
+	if err := c.dbPool.Ping(deadlineCtx); err == nil {
+		out.DatabaseOK = true
+	}
+	if c.redisClient == nil && c.allowWithoutRedis {
+		out.RedisSkipped = true
+		out.RedisOK = true
+	} else if c.redisClient != nil {
+		if err := c.redisClient.Ping(deadlineCtx).Err(); err == nil {
+			out.RedisOK = true
+		}
+	}
+	out.Ready = out.DatabaseOK && out.RedisOK
+	return out
 }

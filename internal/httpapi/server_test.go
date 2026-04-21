@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -32,7 +33,9 @@ func TestHealthAndReadiness_arePublicAndReturn200(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts := httptest.NewServer(NewMux(v))
+	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
+		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
+	}, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	cases := []struct {
@@ -63,6 +66,9 @@ func TestHealthAndReadiness_arePublicAndReturn200(t *testing.T) {
 			if !strings.Contains(string(body), tc.wantContains) {
 				t.Fatalf("unexpected body for %s: %s", tc.path, body)
 			}
+			if reqID := res.Header.Get("X-Request-Id"); reqID == "" {
+				t.Fatalf("missing X-Request-Id header")
+			}
 		})
 	}
 }
@@ -81,7 +87,9 @@ func TestWhoAmI_requiresJWT(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts := httptest.NewServer(NewMux(v))
+	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
+		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
+	}, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	res, err := ts.Client().Get(ts.URL + "/v1/auth/whoami")
@@ -147,7 +155,9 @@ func TestWhoAmI_missingTenantClaim_returns403(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts := httptest.NewServer(NewMux(v))
+	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
+		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
+	}, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
@@ -194,4 +204,45 @@ func mustRSAJWKS(t *testing.T, pub *rsa.PublicKey, kid string) []byte {
 		t.Fatal(err)
 	}
 	return out
+}
+
+func TestReadyz_returns503WhenDependenciesUnavailable(t *testing.T) {
+	t.Parallel()
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jwks := mustRSAJWKS(t, &priv.PublicKey, "kid-readyz")
+	v, err := auth.NewValidatorFromJWKSJSON(jwks, "http://kc.example/auth/realms/april", "april-profile-api", "tenant_id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
+		result: ReadinessResult{Ready: false, DatabaseOK: false, RedisOK: false},
+	}, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	t.Cleanup(ts.Close)
+
+	res, err := ts.Client().Get(ts.URL + "/readyz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("want 503, got %d", res.StatusCode)
+	}
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), `"status":"not_ready"`) {
+		t.Fatalf("unexpected body: %s", body)
+	}
+}
+
+type staticReadinessChecker struct {
+	result ReadinessResult
+}
+
+func (s staticReadinessChecker) Check(context.Context) ReadinessResult {
+	return s.result
 }
