@@ -99,7 +99,11 @@ func (s *Service) Create(ctx context.Context, tenantID string, params CreatePara
 	}
 
 	docWithAuth := initialDocumentWithAuthority(document, params.WriteSource)
+	occurredAt := time.Now().UTC()
 	if err := insertVersion(ctx, tx, tenantID, entityID, 1, docWithAuth); err != nil {
+		return Snapshot{}, err
+	}
+	if err := insertProfileOutboxRow(ctx, tx, tenantID, entityID, 1, occurredAt); err != nil {
 		return Snapshot{}, err
 	}
 	if err := syncExternalRefs(ctx, tx, tenantID, entityID, params.ExternalRefs, true); err != nil {
@@ -182,7 +186,11 @@ func (s *Service) Update(ctx context.Context, tenantID, entityID string, params 
 	if !docChanged && refsChanged {
 		outDoc = currentMap
 	}
+	occurredAt := time.Now().UTC()
 	if err := insertVersion(ctx, tx, tenantID, entityID, nextVersion, outDoc); err != nil {
+		return Snapshot{}, err
+	}
+	if err := insertProfileOutboxRow(ctx, tx, tenantID, entityID, nextVersion, occurredAt); err != nil {
 		return Snapshot{}, err
 	}
 	if err := syncExternalRefs(ctx, tx, tenantID, entityID, params.ExternalRefs, true); err != nil {
