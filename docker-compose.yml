@@ -1,6 +1,6 @@
 # Базовый стек для dev/stage: backend + документация (статика + Structurizr Lite + Swagger UI) за Nginx.
 # Теги образов задаются через .env / images.env (SHA) — см. docs/DEPLOYMENT_STRATEGY.md
-# Локальная PostgreSQL 17: `docker compose --profile db up -d postgres` (переменные см. `.env.example`).
+# Локальная PostgreSQL 17: в `.env` задать COMPOSE_PROFILES=db или `docker compose --profile db up -d` (см. `.env.example`).
 
 services:
   backend:

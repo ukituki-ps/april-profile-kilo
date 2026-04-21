@@ -20,6 +20,8 @@ EOF
 
 Переменные окружения:
   DEPLOY_ROOT          каталог репозитория (по умолчанию — каталог deploy.sh)
+  COMPOSE_PROFILES     в серверном .env рядом с compose: например db — поднять postgres/redis/worker
+                       (см. .env.example и docs/DEPLOYMENT_STRATEGY.md §5)
   SKIP_GIT_PULL=1      не выполнять git pull
   SKIP_OPENAPI_LINT=1  не выполнять make openapi-lint
   SKIP_DOCS_BUILD=1    не выполнять сборку docs-site
