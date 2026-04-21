@@ -58,6 +58,120 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /v1/entity-types:
+    get:
+      summary: Список типов сущностей tenant
+      operationId: listEntityTypes
+      tags: [EntityTypes]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Каталог типов сущностей текущего tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityTypeListResponse'
+        '401':
+          description: Нет или невалидный Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: В токене нет claim с tenant_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Создать черновик типа сущности
+      operationId: createEntityTypeDraft
+      tags: [EntityTypes]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEntityTypeDraftRequest'
+      responses:
+        '201':
+          description: Черновик типа создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityType'
+        '400':
+          description: Невалидный body или пустые поля namespace/code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Нет или невалидный Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: В токене нет claim с tenant_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/entity-types/{entityTypeID}/publish:
+    post:
+      summary: Опубликовать черновик типа сущности
+      operationId: publishEntityTypeDraft
+      tags: [EntityTypes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: entityTypeID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Тип успешно опубликован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityType'
+        '404':
+          description: Тип не найден в текущем tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Повторная публикация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Черновик не проходит структурную валидацию/invariants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Нет или невалидный Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: В токене нет claim с tenant_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /healthz:
     get:
       summary: Liveness
@@ -144,3 +258,75 @@ components:
         redis:
           type: string
           enum: [ok, unavailable, skipped]
+    CreateEntityTypeDraftRequest:
+      type: object
+      required: [namespace, code, draft_schema]
+      properties:
+        namespace:
+          type: string
+          example: hr
+        code:
+          type: string
+          example: employee
+        draft_schema:
+          type: object
+          additionalProperties: true
+          example:
+            type: object
+            properties:
+              first_name:
+                type: string
+              last_name:
+                type: string
+            required: [first_name, last_name]
+    EntityType:
+      type: object
+      required:
+        - id
+        - namespace
+        - code
+        - status
+        - draft_schema
+        - draft_schema_version
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        namespace:
+          type: string
+        code:
+          type: string
+        status:
+          type: string
+          enum: [draft, published]
+        draft_schema:
+          type: object
+          additionalProperties: true
+        draft_schema_version:
+          type: integer
+        published_schema:
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: 'null'
+        published_schema_version:
+          oneOf:
+            - type: integer
+            - type: 'null'
+        published_at:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+    EntityTypeListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityType'

@@ -28,6 +28,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/ukituki-ps/april-profile/internal/auth"
+	"github.com/ukituki-ps/april-profile/internal/entitytypes"
 	"github.com/ukituki-ps/april-profile/internal/httpapi"
 )
 
@@ -95,7 +96,12 @@ func TestReadyzWithRealPostgresAndRedis(t *testing.T) {
 		timeout:     3 * time.Second,
 	}
 
-	srv := httptest.NewServer(httpapi.NewMux(validator, checker, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	srv := httptest.NewServer(httpapi.NewMux(
+		validator,
+		checker,
+		entitytypes.NewCatalog(dbPool),
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	))
 	defer srv.Close()
 
 	res, err := srv.Client().Get(srv.URL + "/healthz")
