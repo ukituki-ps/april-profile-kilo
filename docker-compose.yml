@@ -31,7 +31,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["/usr/local/bin/april-worker"]
+    # Явный процесс воркера (совместимо и со старым образом с ENTRYPOINT на API).
+    entrypoint: ["/usr/local/bin/april-worker"]
     environment:
       DATABASE_URL: "${DATABASE_URL:-postgres://april:april@postgres:5432/april_profile?sslmode=disable}"
       REDIS_ADDR: "${REDIS_ADDR:-redis:6379}"
