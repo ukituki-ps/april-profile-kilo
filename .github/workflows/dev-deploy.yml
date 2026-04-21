@@ -35,12 +35,12 @@ jobs:
           set -euo pipefail
           IMAGE_REF="ghcr.io/${{ github.repository_owner }}/april-profile-backend:${{ github.sha }}"
           echo "Waiting for image: ${IMAGE_REF}"
-          for attempt in $(seq 1 30); do
+          for attempt in $(seq 1 60); do
             if docker buildx imagetools inspect "${IMAGE_REF}" >/dev/null 2>&1; then
               echo "Image is available in registry."
               exit 0
             fi
-            echo "Attempt ${attempt}/30: image not found yet, retry in 10s..."
+            echo "Attempt ${attempt}/60: image not found yet, retry in 10s..."
             sleep 10
           done
           echo "Timeout: image tag was not found in ghcr: ${IMAGE_REF}" >&2
