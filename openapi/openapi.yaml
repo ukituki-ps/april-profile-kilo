@@ -12,6 +12,52 @@ servers:
     description: |
       Подставьте базовый URL за gateway. См. `docs/guides/FORK_AND_CUSTOMIZE.md`.
 paths:
+  /v1/system/ping:
+    get:
+      summary: Публичная проверка API (без JWT)
+      operationId: getSystemPing
+      tags: [System]
+      security: []
+      responses:
+        '200':
+          description: Сервис отвечает
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /v1/auth/whoami:
+    get:
+      summary: Идентичность и tenant из JWT (Keycloak)
+      description: |
+        `tenant_id` берётся только из согласованного claim access token (см. README / задачу 005), не из query/body.
+      operationId: getAuthWhoAmI
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Текущий субъект и tenant из токена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhoAmI'
+        '401':
+          description: Нет или невалидный Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: В токене нет claim с tenant_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /healthz:
     get:
       summary: Liveness
@@ -46,7 +92,23 @@ paths:
                 $ref: '#/components/schemas/Error'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token Keycloak (проверка JWKS, iss, aud|azp).
   schemas:
+    WhoAmI:
+      type: object
+      required: [sub, tenant_id]
+      properties:
+        sub:
+          type: string
+          description: Subject из JWT (`sub`).
+        tenant_id:
+          type: string
+          description: Идентификатор тенанта из доверенного claim (по умолчанию `tenant_id`).
     Error:
       type: object
       required: [code, message]
