@@ -65,4 +65,4 @@ jobs:
           git clean -fd
           git checkout "${{ github.sha }}"
           test -x ./deploy.sh
-          IMAGE_TAG_BACKEND="${{ github.sha }}" SKIP_GIT_PULL=1 ./deploy.sh
+          IMAGE_TAG_BACKEND="${{ github.sha }}" SKIP_GIT_PULL=1 SKIP_DOCS_BUILD=1 ./deploy.sh
