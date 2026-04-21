@@ -46,7 +46,7 @@ make docs-build
 
 ## Официальные артефакты
 
-- Постановка: [`tasks/012-phase-2-authority-merge-conflicts/TASK.md`](../../tasks/012-phase-2-authority-merge-conflicts/TASK.md)
-- План: [`tasks/012-phase-2-authority-merge-conflicts/PLAN.md`](../../tasks/012-phase-2-authority-merge-conflicts/PLAN.md)
-- Отчёт: [`tasks/012-phase-2-authority-merge-conflicts/REPORT.md`](../../tasks/012-phase-2-authority-merge-conflicts/REPORT.md)
-- Дорожная карта (родитель): [`tasks/000-full-service-aprilhub-roadmap/PLAN.md`](../../tasks/000-full-service-aprilhub-roadmap/PLAN.md)
+- Постановка: `tasks/012-phase-2-authority-merge-conflicts/TASK.md`
+- План: `tasks/012-phase-2-authority-merge-conflicts/PLAN.md`
+- Отчёт: `tasks/012-phase-2-authority-merge-conflicts/REPORT.md`
+- Дорожная карта (родитель): `tasks/000-full-service-aprilhub-roadmap/PLAN.md`
