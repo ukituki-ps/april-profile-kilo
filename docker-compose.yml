@@ -15,7 +15,7 @@ services:
       KEYCLOAK_AUDIENCE: "${KEYCLOAK_AUDIENCE:-april-profile-api}"
       KEYCLOAK_TENANT_CLAIM: "${KEYCLOAK_TENANT_CLAIM:-tenant_id}"
     ports:
-      - "${BACKEND_HTTP_PORT:-8081}:8080"
+      - "${BACKEND_HTTP_PORT:-18081}:8080"
     restart: unless-stopped
 
   nginx-docs:

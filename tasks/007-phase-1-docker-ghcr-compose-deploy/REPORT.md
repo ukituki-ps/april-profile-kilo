@@ -2,8 +2,8 @@
 - Статус: ✅ выполнено
 - Задача: Фаза 1 (часть 4) — образ в ghcr, compose, деплой на dev по DEPLOYMENT_STRATEGY
 - Ветка: `develop`
-- Коммиты: `4a69bcb`, `8e205b7`, `a370e92`, `7523318`, `pending` (increase wait timeout)
-- PR: [#11](https://github.com/ukituki-ps/april-profile/pull/11) (merged), [#12](https://github.com/ukituki-ps/april-profile/pull/12) (merged), [#13](https://github.com/ukituki-ps/april-profile/pull/13) (merged), [#14](https://github.com/ukituki-ps/april-profile/pull/14) (merged), follow-up PR на увеличение таймаута ожидания image
+- Коммиты: `4a69bcb`, `8e205b7`, `a370e92`, `7523318`, `2f4dc60`, `pending` (fix backend host port conflict)
+- PR: [#11](https://github.com/ukituki-ps/april-profile/pull/11) (merged), [#12](https://github.com/ukituki-ps/april-profile/pull/12) (merged), [#13](https://github.com/ukituki-ps/april-profile/pull/13) (merged), [#14](https://github.com/ukituki-ps/april-profile/pull/14) (merged), [#15](https://github.com/ukituki-ps/april-profile/pull/15) (merged), follow-up PR на конфликт host-порта backend
 
 ## 2) Что сделано
 - [backend] Добавлен production-oriented `Dockerfile` (multi-stage, финальный образ distroless/nonroot) для `cmd/april-profile`.
@@ -55,6 +55,7 @@ make docs-build
   - после merge PR #12 deploy снова упал на `docker compose pull` с `no matching manifest for linux/arm64/v8`; причина — образ публиковался только для `amd64`; добавлен multi-arch build (`linux/amd64,linux/arm64`) в workflow backend image.
   - после merge PR #13 deploy упал с `ghcr.io/...:<sha>: not found`; причина — гонка: `Deploy to dev` стартует раньше окончания `Backend image (ghcr)` для того же SHA. Добавлен шаг ожидания публикации image-тега в ghcr перед `deploy.sh`.
   - после merge PR #14 шаг ожидания сработал корректно, но 5-минутного окна не хватило: image-job завершился через ~5m53s, а deploy прекратил ожидание примерно за 13 секунд до появления тега. Увеличен таймаут ожидания до 10 минут.
+  - после merge PR #15 image ожидание и pull прошли, но `docker compose up -d` упал на `Bind for 0.0.0.0:8081 failed: port is already allocated`. Обновлён дефолт `BACKEND_HTTP_PORT` до `18081` (менее конфликтный порт для dev-host).
 - Rollback: не применялся (релиз не дошёл до `up -d` backend)
 
 ## 7) Риски и ограничения
@@ -64,4 +65,4 @@ make docs-build
 
 ## 8) Что осталось
 - [x] После merge в `develop` проверен `Backend image (ghcr)`: run успешный, образ по SHA опубликован.
-- [ ] После merge follow-up PR (wait ghcr image tag) проверить успешный `Deploy to dev` и `curl http://127.0.0.1:<BACKEND_HTTP_PORT>/healthz`.
+- [ ] После merge follow-up PR (backend host port conflict) проверить успешный `Deploy to dev` и `curl http://127.0.0.1:<BACKEND_HTTP_PORT>/healthz`.
