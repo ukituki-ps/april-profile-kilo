@@ -2,8 +2,8 @@
 - Статус: ✅ выполнено
 - Задача: Фаза 1 (часть 4) — образ в ghcr, compose, деплой на dev по DEPLOYMENT_STRATEGY
 - Ветка: `develop`
-- Коммиты: `4a69bcb`, `8e205b7`, `pending` (fix multi-arch image)
-- PR: [#11](https://github.com/ukituki-ps/april-profile/pull/11) (merged), [#12](https://github.com/ukituki-ps/april-profile/pull/12) (merged), follow-up PR на multi-arch
+- Коммиты: `4a69bcb`, `8e205b7`, `a370e92`, `pending` (fix deploy/image race)
+- PR: [#11](https://github.com/ukituki-ps/april-profile/pull/11) (merged), [#12](https://github.com/ukituki-ps/april-profile/pull/12) (merged), [#13](https://github.com/ukituki-ps/april-profile/pull/13) (merged), follow-up PR на ожидание image-тега перед deploy
 
 ## 2) Что сделано
 - [backend] Добавлен production-oriented `Dockerfile` (multi-stage, финальный образ distroless/nonroot) для `cmd/april-profile`.
@@ -53,13 +53,14 @@ make docs-build
 - Health / readiness: 
   - после merge PR #11 deploy упал до старта backend с `error from registry: unauthorized` на `docker compose pull`; добавлен workflow-фикс с `docker login ghcr.io` в `dev-deploy.yml` (PR #12);
   - после merge PR #12 deploy снова упал на `docker compose pull` с `no matching manifest for linux/arm64/v8`; причина — образ публиковался только для `amd64`; добавлен multi-arch build (`linux/amd64,linux/arm64`) в workflow backend image.
+  - после merge PR #13 deploy упал с `ghcr.io/...:<sha>: not found`; причина — гонка: `Deploy to dev` стартует раньше окончания `Backend image (ghcr)` для того же SHA. Добавлен шаг ожидания публикации image-тега в ghcr перед `deploy.sh`.
 - Rollback: не применялся (релиз не дошёл до `up -d` backend)
 
 ## 7) Риски и ограничения
 - Требуются права на `packages:write` для `GITHUB_TOKEN`; при ограничениях org нужно задать `GHCR_PUSH_TOKEN` и использовать его в workflow.
 - Для pull приватного backend-образа на self-hosted runner требуются права `read:packages`; рекомендуется секрет `GHCR_PULL_TOKEN`.
-- Финальная проверка smoke `/healthz` ожидается после прогона deploy с новым multi-arch образом.
+- Финальная проверка smoke `/healthz` ожидается после прогона deploy с фиксом гонки deploy/image.
 
 ## 8) Что осталось
 - [x] После merge в `develop` проверен `Backend image (ghcr)`: run успешный, образ по SHA опубликован.
-- [ ] После merge follow-up PR (multi-arch) проверить успешный `Deploy to dev` и `curl http://127.0.0.1:<BACKEND_HTTP_PORT>/healthz`.
+- [ ] После merge follow-up PR (wait ghcr image tag) проверить успешный `Deploy to dev` и `curl http://127.0.0.1:<BACKEND_HTTP_PORT>/healthz`.

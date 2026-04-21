@@ -30,6 +30,22 @@ jobs:
           set -euo pipefail
           echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      - name: Wait for backend image tag in ghcr
+        run: |
+          set -euo pipefail
+          IMAGE_REF="ghcr.io/${{ github.repository_owner }}/april-profile-backend:${{ github.sha }}"
+          echo "Waiting for image: ${IMAGE_REF}"
+          for attempt in $(seq 1 30); do
+            if docker buildx imagetools inspect "${IMAGE_REF}" >/dev/null 2>&1; then
+              echo "Image is available in registry."
+              exit 0
+            fi
+            echo "Attempt ${attempt}/30: image not found yet, retry in 10s..."
+            sleep 10
+          done
+          echo "Timeout: image tag was not found in ghcr: ${IMAGE_REF}" >&2
+          exit 1
+
       - name: Checkout ref and deploy
         env:
           APRIL_DEPLOY_ROOT: ${{ vars.APRIL_DEPLOY_ROOT }}
