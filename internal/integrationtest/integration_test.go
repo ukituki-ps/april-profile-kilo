@@ -30,6 +30,7 @@ import (
 	"github.com/ukituki-ps/april-profile/internal/auth"
 	"github.com/ukituki-ps/april-profile/internal/entitytypes"
 	"github.com/ukituki-ps/april-profile/internal/httpapi"
+	"github.com/ukituki-ps/april-profile/internal/profiles"
 )
 
 const atlasImage = "arigaio/atlas:0.32.0"
@@ -100,6 +101,7 @@ func TestReadyzWithRealPostgresAndRedis(t *testing.T) {
 		validator,
 		checker,
 		entitytypes.NewCatalog(dbPool),
+		profiles.NewService(dbPool),
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
 	))
 	defer srv.Close()
@@ -122,6 +124,107 @@ func TestReadyzWithRealPostgresAndRedis(t *testing.T) {
 	if resReady.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resReady.Body)
 		t.Fatalf("readyz expected 200, got %d body=%s", resReady.StatusCode, string(body))
+	}
+}
+
+func TestProfilesService_AppendOnlyVersioningAndExternalMappings(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	pgURL, cleanup := startPostgresWithAtlasMigrations(t, ctx)
+	defer cleanup()
+
+	pool, err := pgxpool.New(ctx, pgURL)
+	if err != nil {
+		t.Fatalf("pgxpool new: %v", err)
+	}
+	defer pool.Close()
+
+	tenantID := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	entityTypeID := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO tenants (id) VALUES ($1)
+	`, tenantID); err != nil {
+		t.Fatalf("insert tenant: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO entity_types (
+			id,
+			tenant_id,
+			namespace,
+			code,
+			schema_json,
+			schema_version,
+			status,
+			published_schema_json,
+			published_schema_version,
+			published_at
+		) VALUES (
+			$1, $2, 'hr', 'employee',
+			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
+			1,
+			'published',
+			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
+			1,
+			now()
+		)
+	`, entityTypeID, tenantID); err != nil {
+		t.Fatalf("insert entity type: %v", err)
+	}
+
+	service := profiles.NewService(pool)
+	created, err := service.Create(ctx, tenantID, profiles.CreateParams{
+		EntityTypeID: entityTypeID,
+		Document:     map[string]any{"name": "Alice", "email": "alice@april.local"},
+		ExternalRefs: []profiles.ExternalRef{
+			{SourceSystem: "hris", ExternalID: "E-100"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("create profile: %v", err)
+	}
+	if created.Version != 1 {
+		t.Fatalf("want version 1, got %d", created.Version)
+	}
+
+	updated, err := service.Update(ctx, tenantID, created.EntityID, profiles.UpdateParams{
+		Document: map[string]any{"name": "Alice Cooper", "email": "alice@april.local"},
+		ExternalRefs: []profiles.ExternalRef{
+			{SourceSystem: "hris", ExternalID: "E-100"},
+			{SourceSystem: "ad", ExternalID: "alice.ad"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("update profile: %v", err)
+	}
+	if updated.Version != 2 {
+		t.Fatalf("want version 2, got %d", updated.Version)
+	}
+
+	v1, err := service.GetByVersion(ctx, tenantID, created.EntityID, 1)
+	if err != nil {
+		t.Fatalf("get version 1: %v", err)
+	}
+	if got := v1.Document["name"]; got != "Alice" {
+		t.Fatalf("want v1 name Alice, got %v", got)
+	}
+
+	byExternal, err := service.GetCurrentByExternalRef(ctx, tenantID, profiles.ExternalRef{
+		SourceSystem: "ad",
+		ExternalID:   "alice.ad",
+	})
+	if err != nil {
+		t.Fatalf("get by external: %v", err)
+	}
+	if byExternal.EntityID != created.EntityID {
+		t.Fatalf("unexpected entity by external: %s", byExternal.EntityID)
+	}
+
+	if err := service.Delete(ctx, tenantID, created.EntityID); err != nil {
+		t.Fatalf("delete profile: %v", err)
+	}
+	if _, err := service.GetCurrent(ctx, tenantID, created.EntityID); err == nil {
+		t.Fatal("expected not found after delete")
 	}
 }
 

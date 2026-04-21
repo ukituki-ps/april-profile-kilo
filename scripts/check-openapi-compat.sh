@@ -11,8 +11,21 @@ SPEC_PATH="${SPEC_PATH:-openapi/openapi.yaml}"
 BRANCH="${BASE_REF#origin/}"
 BASE_SPEC="/tmp/base-openapi-spec.yaml"
 
-if ! command -v oasdiff >/dev/null 2>&1; then
-  echo "[openapi-compat] oasdiff is required but not installed"
+OASDIFF_BIN="$(command -v oasdiff || true)"
+if [[ -z "$OASDIFF_BIN" ]]; then
+  # Local go install often puts binaries to ~/go/bin, which may be absent in non-interactive PATH.
+  if [[ -x "${HOME}/go/bin/oasdiff" ]]; then
+    OASDIFF_BIN="${HOME}/go/bin/oasdiff"
+  fi
+fi
+if [[ -z "$OASDIFF_BIN" ]] && command -v go >/dev/null 2>&1; then
+  GOBIN_VALUE="$(go env GOBIN 2>/dev/null || true)"
+  if [[ -n "$GOBIN_VALUE" && -x "${GOBIN_VALUE}/oasdiff" ]]; then
+    OASDIFF_BIN="${GOBIN_VALUE}/oasdiff"
+  fi
+fi
+if [[ -z "$OASDIFF_BIN" ]]; then
+  echo "[openapi-compat] oasdiff is required but not installed (tried PATH, \$HOME/go/bin, go env GOBIN)"
   exit 1
 fi
 
@@ -30,6 +43,6 @@ fi
 git show "${BASE_REF}:${SPEC_PATH}" > "$BASE_SPEC"
 
 echo "[openapi-compat] running breaking-change check against ${BASE_REF}"
-oasdiff breaking --fail-on ERR "$BASE_SPEC" "$SPEC_PATH"
+"$OASDIFF_BIN" breaking --fail-on ERR "$BASE_SPEC" "$SPEC_PATH"
 
 echo "[openapi-compat] no breaking changes detected"

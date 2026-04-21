@@ -172,6 +172,254 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /v1/entities:
+    post:
+      summary: Создать профиль сущности (version=1)
+      operationId: createEntityProfile
+      tags: [Profiles]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEntityRequest'
+      responses:
+        '201':
+          description: Профиль создан, первая версия сохранена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileSnapshot'
+        '400':
+          description: Невалидный payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Тип сущности не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Тип не опубликован или конфликт external mapping
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Нет или невалидный Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: В токене нет claim с tenant_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/entities/{entityID}:
+    get:
+      summary: Получить текущую версию профиля
+      operationId: getEntityCurrentProfile
+      tags: [Profiles]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EntityID'
+      responses:
+        '200':
+          description: Текущая версия профиля
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileSnapshot'
+        '404':
+          description: Сущность не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Нет или невалидный Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: В токене нет claim с tenant_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Обновить профиль (append-only новая версия)
+      operationId: updateEntityProfile
+      tags: [Profiles]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EntityID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEntityRequest'
+      responses:
+        '200':
+          description: Создана новая версия профиля
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileSnapshot'
+        '400':
+          description: Невалидный payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Сущность не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Конфликт external mapping
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Нет или невалидный Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: В токене нет claim с tenant_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Удалить сущность и её версии
+      operationId: deleteEntityProfile
+      tags: [Profiles]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EntityID'
+      responses:
+        '204':
+          description: Сущность удалена
+        '404':
+          description: Сущность не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Нет или невалидный Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: В токене нет claim с tenant_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/entities/{entityID}/versions/{version}:
+    get:
+      summary: Получить конкретную версию профиля
+      operationId: getEntityProfileByVersion
+      tags: [Profiles]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EntityID'
+        - in: path
+          name: version
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Конкретная версия профиля
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileSnapshot'
+        '404':
+          description: Версия или сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Нет или невалидный Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: В токене нет claim с tenant_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/external-mappings/{sourceSystem}/{externalID}/entity:
+    get:
+      summary: Получить текущий профиль по внешнему ключу
+      operationId: getEntityCurrentByExternal
+      tags: [Profiles]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: sourceSystem
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: externalID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Текущий профиль для внешнего ключа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileSnapshot'
+        '404':
+          description: Маппинг не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Нет или невалидный Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: В токене нет claim с tenant_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /healthz:
     get:
       summary: Liveness
@@ -215,6 +463,14 @@ paths:
                 $ref: '#/components/schemas/ReadyzResponse'
 
 components:
+  parameters:
+    EntityID:
+      in: path
+      name: entityID
+      required: true
+      schema:
+        type: string
+        format: uuid
   securitySchemes:
     bearerAuth:
       type: http
@@ -330,3 +586,61 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EntityType'
+    ExternalRef:
+      type: object
+      required: [source_system, external_id]
+      properties:
+        source_system:
+          type: string
+          example: hris
+        external_id:
+          type: string
+          example: EMP-100
+    CreateEntityRequest:
+      type: object
+      required: [entity_type_id, document]
+      properties:
+        entity_type_id:
+          type: string
+          format: uuid
+        document:
+          type: object
+          additionalProperties: true
+        external_refs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalRef'
+    UpdateEntityRequest:
+      type: object
+      required: [document]
+      properties:
+        document:
+          type: object
+          additionalProperties: true
+        external_refs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalRef'
+    ProfileSnapshot:
+      type: object
+      required: [entity_id, entity_type_id, version, document, created_at, external_refs]
+      properties:
+        entity_id:
+          type: string
+          format: uuid
+        entity_type_id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          format: int64
+        document:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        external_refs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalRef'
