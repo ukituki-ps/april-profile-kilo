@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"github.com/ukituki-ps/april-profile/internal/abac"
 	"github.com/ukituki-ps/april-profile/internal/auth"
 	"github.com/ukituki-ps/april-profile/internal/config"
 	"github.com/ukituki-ps/april-profile/internal/entitytypes"
@@ -57,7 +58,11 @@ func Run(ctx context.Context) error {
 	}
 	catalog := entitytypes.NewCatalog(dbPool)
 	profileService := profiles.NewService(dbPool)
-	mux := httpapi.NewMux(v, readiness, catalog, profileService, profileService, cfg.KeycloakAdminRealmRole, slog.Default())
+	abacPolicy, err := abac.ParsePolicy(cfg.ABACSegmentAccessJSON)
+	if err != nil {
+		return fmt.Errorf("abac policy: %w", err)
+	}
+	mux := httpapi.NewMux(v, readiness, catalog, profileService, profileService, cfg.KeycloakAdminRealmRole, abacPolicy, slog.Default())
 	srv := &http.Server{
 		Addr:              cfg.HTTPListenAddr,
 		Handler:           mux,

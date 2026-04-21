@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/testcontainers/testcontainers-go"
@@ -27,6 +28,7 @@ import (
 	tcredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/ukituki-ps/april-profile/internal/abac"
 	"github.com/ukituki-ps/april-profile/internal/auth"
 	"github.com/ukituki-ps/april-profile/internal/entitytypes"
 	"github.com/ukituki-ps/april-profile/internal/httpapi"
@@ -105,6 +107,7 @@ func TestReadyzWithRealPostgresAndRedis(t *testing.T) {
 		ps,
 		ps,
 		"",
+		nil,
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
 	))
 	defer srv.Close()
@@ -229,6 +232,177 @@ func TestProfilesService_AppendOnlyVersioningAndExternalMappings(t *testing.T) {
 	if _, err := service.GetCurrent(ctx, tenantID, created.EntityID); err == nil {
 		t.Fatal("expected not found after delete")
 	}
+}
+
+// alwaysHealthyReadiness — для HTTP-тестов без отдельного Redis в контейнере.
+type alwaysHealthyReadiness struct{}
+
+func (alwaysHealthyReadiness) Check(context.Context) httpapi.ReadinessResult {
+	return httpapi.ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true}
+}
+
+func TestABAC_GetCurrent_filtersNamespacesByJWTRealmRoles(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	pgURL, cleanup := startPostgresWithAtlasMigrations(t, ctx)
+	defer cleanup()
+
+	pool, err := pgxpool.New(ctx, pgURL)
+	if err != nil {
+		t.Fatalf("pgxpool new: %v", err)
+	}
+	defer pool.Close()
+
+	tenantID := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	entityTypeID := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	if _, err := pool.Exec(ctx, `INSERT INTO tenants (id) VALUES ($1)`, tenantID); err != nil {
+		t.Fatalf("insert tenant: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO entity_types (
+			id, tenant_id, namespace, code, schema_json, schema_version, status,
+			published_schema_json, published_schema_version, published_at
+		) VALUES (
+			$1, $2, 'hr', 'employee',
+			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
+			1, 'published',
+			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
+			1, now()
+		)
+	`, entityTypeID, tenantID); err != nil {
+		t.Fatalf("insert entity type: %v", err)
+	}
+
+	svc := profiles.NewService(pool)
+	created, err := svc.Create(ctx, tenantID, profiles.CreateParams{
+		EntityTypeID: entityTypeID,
+		Document: map[string]any{
+			"name":     "N",
+			"hr":       map[string]any{"title": "T"},
+			"security": map[string]any{"lvl": 3},
+		},
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	v, priv, kid := newValidatorWithSigner(t)
+	const iss = "http://kc.example/auth/realms/april"
+	const aud = "april-profile-api"
+	policy, err := abac.ParsePolicy(`{"default":["reader"],"hr":["reader"],"security":["sec-role"]}`)
+	if err != nil || policy == nil {
+		t.Fatalf("policy: %v", err)
+	}
+	srv := httptest.NewServer(httpapi.NewMux(
+		v,
+		alwaysHealthyReadiness{},
+		entitytypes.NewCatalog(pool),
+		svc,
+		svc,
+		"",
+		policy,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	))
+	defer srv.Close()
+
+	tokenReader := integrationSignedToken(t, priv, kid, iss, aud, tenantID, []string{"reader"})
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/v1/entities/"+created.EntityID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+tokenReader)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d body %s", res.StatusCode, string(body))
+	}
+	var got map[string]any
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatal(err)
+	}
+	doc, _ := got["document"].(map[string]any)
+	if doc["security"] != nil {
+		t.Fatalf("security leak: %v", doc)
+	}
+
+	tokenSec := integrationSignedToken(t, priv, kid, iss, aud, tenantID, []string{"sec-role"})
+	req2, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/v1/entities/"+created.EntityID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req2.Header.Set("Authorization", "Bearer "+tokenSec)
+	res2, err := http.DefaultClient.Do(req2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res2.Body.Close()
+	body2, _ := io.ReadAll(res2.Body)
+	if res2.StatusCode != http.StatusOK {
+		t.Fatalf("status %d body %s", res2.StatusCode, string(body2))
+	}
+	var got2 map[string]any
+	if err := json.Unmarshal(body2, &got2); err != nil {
+		t.Fatal(err)
+	}
+	doc2, _ := got2["document"].(map[string]any)
+	if doc2["security"] == nil {
+		t.Fatal("expected security for sec-role token")
+	}
+	if doc2["name"] != nil {
+		t.Fatalf("default hidden without reader: %v", doc2)
+	}
+}
+
+func newValidatorWithSigner(t *testing.T) (v *auth.Validator, priv *rsa.PrivateKey, kid string) {
+	t.Helper()
+	kid = "integration-abac-kid"
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa: %v", err)
+	}
+	jwks := mustRSAJWKS(t, &priv.PublicKey, kid)
+	validator, err := auth.NewValidatorFromJWKSJSON(
+		jwks,
+		"http://kc.example/auth/realms/april",
+		"april-profile-api",
+		"tenant_id",
+	)
+	if err != nil {
+		t.Fatalf("validator: %v", err)
+	}
+	return validator, priv, kid
+}
+
+func integrationSignedToken(t *testing.T, priv *rsa.PrivateKey, kid, iss, aud, tenantID string, roles []string) string {
+	t.Helper()
+	arr := make([]any, len(roles))
+	for i := range roles {
+		arr[i] = roles[i]
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+		"iss":       iss,
+		"sub":       "integration-user",
+		"exp":       time.Now().Add(time.Hour).Unix(),
+		"azp":       aud,
+		"tenant_id": tenantID,
+		"realm_access": map[string]any{
+			"roles": arr,
+		},
+	})
+	token.Header["kid"] = kid
+	raw, err := token.SignedString(priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return raw
 }
 
 type integrationReadinessChecker struct {

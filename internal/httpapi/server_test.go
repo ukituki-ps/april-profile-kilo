@@ -18,6 +18,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
+	"github.com/ukituki-ps/april-profile/internal/abac"
 	"github.com/ukituki-ps/april-profile/internal/auth"
 	"github.com/ukituki-ps/april-profile/internal/entitytypes"
 	"github.com/ukituki-ps/april-profile/internal/profiles"
@@ -38,7 +39,7 @@ func TestHealthAndReadiness_arePublicAndReturn200(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, nil, nil, nil, "", slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, nil, nil, "", nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	cases := []struct {
@@ -92,7 +93,7 @@ func TestWhoAmI_requiresJWT(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, nil, nil, nil, "", slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, nil, nil, "", nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	res, err := ts.Client().Get(ts.URL + "/v1/auth/whoami")
@@ -160,7 +161,7 @@ func TestWhoAmI_missingTenantClaim_returns403(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, nil, nil, nil, "", slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, nil, nil, "", nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
@@ -222,7 +223,7 @@ func TestReadyz_returns503WhenDependenciesUnavailable(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: false, DatabaseOK: false, RedisOK: false},
-	}, nil, nil, nil, "", slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, nil, nil, "", nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	res, err := ts.Client().Get(ts.URL + "/readyz")
@@ -258,7 +259,7 @@ func TestRequestLogging_includesRequestID(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&logBuf, nil))
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, nil, nil, nil, "", logger))
+	}, nil, nil, nil, "", nil, logger))
 	t.Cleanup(ts.Close)
 
 	res, err := ts.Client().Get(ts.URL + "/healthz")
@@ -307,7 +308,7 @@ func TestEntityTypesPublish_invalidDraftSchemaReturns422(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, catalog, nil, nil, "", slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, catalog, nil, nil, "", nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
@@ -344,6 +345,115 @@ type stubCatalog struct {
 	publishFn     func(ctx context.Context, tenantID, entityTypeID string) (entitytypes.Record, error)
 }
 
+func TestEntitiesByVersion_ABAC_filtersDocumentByRealmRoles(t *testing.T) {
+	t.Parallel()
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kid := "kid-abac-version"
+	jwks := mustRSAJWKS(t, &priv.PublicKey, kid)
+	const iss = "http://kc.example/auth/realms/april"
+	const aud = "april-profile-api"
+	v, err := auth.NewValidatorFromJWKSJSON(jwks, iss, aud, "tenant_id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	policy, err := abac.ParsePolicy(`{"default":["reader"],"hr":["reader"],"security":["sec"]}`)
+	if err != nil || policy == nil {
+		t.Fatalf("policy: %v", err)
+	}
+	service := &stubProfileService{
+		getByVersionFn: func(_ context.Context, _, _ string, version int64) (profiles.Snapshot, error) {
+			return profiles.Snapshot{
+				EntityID:     "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				EntityTypeID: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+				Version:      version,
+				Document: map[string]any{
+					"name": "Alice",
+					"hr":   map[string]any{"title": "Eng"},
+					"security": map[string]any{
+						"lvl": 1,
+					},
+				},
+			}, nil
+		},
+	}
+	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
+		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
+	}, nil, service, nil, "", policy, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	t.Cleanup(ts.Close)
+
+	tokenReader := signedTokenWithRoles(t, priv, kid, iss, aud, []string{"reader"})
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, ts.URL+"/v1/entities/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/versions/1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+tokenReader)
+	res, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("json: %v body=%s", err, string(body))
+	}
+	doc, _ := payload["document"].(map[string]any)
+	if doc["security"] != nil {
+		t.Fatalf("security must be stripped for reader, doc=%v", doc)
+	}
+	if doc["name"] == nil || doc["hr"] == nil {
+		t.Fatalf("expected default+hr, doc=%v", doc)
+	}
+
+	tokenSec := signedTokenWithRoles(t, priv, kid, iss, aud, []string{"sec"})
+	req2, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, ts.URL+"/v1/entities/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/versions/1", nil)
+	req2.Header.Set("Authorization", "Bearer "+tokenSec)
+	res2, err := ts.Client().Do(req2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res2.Body.Close()
+	body2, _ := io.ReadAll(res2.Body)
+	var payload2 map[string]any
+	if err := json.Unmarshal(body2, &payload2); err != nil {
+		t.Fatalf("json: %v", err)
+	}
+	doc2, _ := payload2["document"].(map[string]any)
+	if doc2["security"] == nil {
+		t.Fatal("security visible for sec role")
+	}
+	if doc2["name"] != nil {
+		t.Fatalf("default segment must be hidden without reader role, got %#v", doc2)
+	}
+}
+
+func signedTokenWithRoles(t *testing.T, priv *rsa.PrivateKey, kid, iss, aud string, roles []string) string {
+	t.Helper()
+	arr := make([]any, len(roles))
+	for i := range roles {
+		arr[i] = roles[i]
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+		"iss":       iss,
+		"sub":       "user-42",
+		"exp":       time.Now().Add(time.Hour).Unix(),
+		"azp":       aud,
+		"tenant_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+		"realm_access": map[string]any{
+			"roles": arr,
+		},
+	})
+	token.Header["kid"] = kid
+	raw, err := token.SignedString(priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return raw
+}
+
 func TestEntitiesByVersion_returnsSnapshot(t *testing.T) {
 	t.Parallel()
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -370,7 +480,7 @@ func TestEntitiesByVersion_returnsSnapshot(t *testing.T) {
 	}
 	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
 		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
-	}, nil, service, nil, "", slog.New(slog.NewTextHandler(io.Discard, nil))))
+	}, nil, service, nil, "", nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
 	token := signedToken(t, priv, kid, iss, aud)

@@ -19,6 +19,9 @@ type Config struct {
 	KeycloakTenantClaim string
 	// KeycloakAdminRealmRole — роль realm для админ-операций merge/conflict (пусто = не требовать роль).
 	KeycloakAdminRealmRole string
+	// ABACSegmentAccessJSON — JSON «сегмент полей» -> список realm-ролей Keycloak (пусто = фильтрация выключена).
+	// Разбор и применение: internal/abac, переменная окружения ABAC_SEGMENT_ACCESS_JSON.
+	ABACSegmentAccessJSON string
 
 	DatabaseURL             string
 	RedisAddr               string
@@ -50,6 +53,7 @@ func Load() (Config, error) {
 		KeycloakAudience:        strings.TrimSpace(os.Getenv("KEYCLOAK_AUDIENCE")),
 		KeycloakTenantClaim:     strings.TrimSpace(os.Getenv("KEYCLOAK_TENANT_CLAIM")),
 		KeycloakAdminRealmRole:  strings.TrimSpace(os.Getenv("KEYCLOAK_ADMIN_REALM_ROLE")),
+		ABACSegmentAccessJSON:   strings.TrimSpace(os.Getenv("ABAC_SEGMENT_ACCESS_JSON")),
 		DatabaseURL:             strings.TrimSpace(os.Getenv("DATABASE_URL")),
 		RedisAddr:               strings.TrimSpace(os.Getenv("REDIS_ADDR")),
 		RedisPassword:           os.Getenv("REDIS_PASSWORD"),
