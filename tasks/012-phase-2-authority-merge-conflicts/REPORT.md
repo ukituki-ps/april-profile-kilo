@@ -2,7 +2,7 @@
 - Статус: ✅ выполнено
 - Задача: Фаза 2 (часть 3) — authority/merge, очередь конфликтов и аудит merge дубликатов
 - Ветка: `feature/phase-2-authority-merge-conflicts`
-- Коммиты: `0e9cc32`, `9cb71b4`, `59aac50`
+- Коммиты: основной `0e9cc32` (см. `git log feature/phase-2-authority-merge-conflicts`)
 - PR: не создавался
 
 ## 2) Что сделано
