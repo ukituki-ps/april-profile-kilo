@@ -1,7 +1,7 @@
 # Образ Atlas CLI (миграции); см. docs/guides/VERSIONS.md
 ATLAS_IMAGE ?= arigaio/atlas:0.32.0
 
-.PHONY: help docs-build docs-serve openapi-lint compose-config compose-up compose-down structurizr-url deploy frontend-build frontend-lint frontend-test go-vet go-build migrate-validate migrate-apply
+.PHONY: help docs-build docs-serve openapi-lint compose-config compose-up compose-down structurizr-url deploy frontend-build frontend-lint frontend-test go-vet go-build integration-test migrate-validate migrate-apply
 
 help:
 	@echo "April bootstrap — цели:"
@@ -13,6 +13,7 @@ help:
 	@echo "  make frontend-test  — vitest в frontend/"
 	@echo "  make go-vet         — go vet ./..."
 	@echo "  make go-build       — сборка ./cmd/april-profile в bin/april-profile"
+	@echo "  make integration-test — go test -tags=integration ./... (Docker required)"
 	@echo "  make migrate-validate — docker: atlas migrate validate (образ $(ATLAS_IMAGE))"
 	@echo "  make migrate-apply — docker: atlas migrate apply (DATABASE_URL; см. .env.example)"
 	@echo "  make compose-config — docker compose config"
@@ -38,6 +39,9 @@ go-vet:
 
 go-build:
 	go build -o bin/april-profile ./cmd/april-profile
+
+integration-test:
+	go test -tags=integration ./...
 
 migrate-validate:
 	docker run --rm -v "$(CURDIR):/work" -w /work $(ATLAS_IMAGE) migrate validate --dir "file://atlas/migrations"
