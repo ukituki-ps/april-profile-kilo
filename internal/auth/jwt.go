@@ -45,37 +45,72 @@ func NewValidatorFromJWKSJSON(jwksJSON []byte, issuer, audience, tenantClaim str
 	return &Validator{keyfunc: kf, issuer: issuer, aud: audience, tenant: tenantClaim}, nil
 }
 
-// ValidateBearer извлекает Bearer-токен, проверяет подпись и claims; возвращает sub и tenant_id из доверенного claim.
-func (v *Validator) ValidateBearer(ctx context.Context, authorizationHeader string) (sub string, tenantID string, err error) {
+// ValidateBearer извлекает Bearer-токен, проверяет подпись и claims; возвращает Principal (sub, tenant_id, realm roles).
+func (v *Validator) ValidateBearer(ctx context.Context, authorizationHeader string) (Principal, error) {
 	raw, ok := bearerToken(authorizationHeader)
 	if !ok {
-		return "", "", ErrMissingBearer
+		return Principal{}, ErrMissingBearer
 	}
 	claims := jwt.MapClaims{}
 	parser := jwt.NewParser(
 		jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Name}),
 		jwt.WithExpirationRequired(),
 	)
-	_, err = parser.ParseWithClaims(raw, &claims, v.keyfunc.KeyfuncCtx(ctx))
+	_, err := parser.ParseWithClaims(raw, &claims, v.keyfunc.KeyfuncCtx(ctx))
 	if err != nil {
-		return "", "", fmt.Errorf("%w: %w", ErrInvalidToken, err)
+		return Principal{}, fmt.Errorf("%w: %w", ErrInvalidToken, err)
 	}
 	iss, _ := claims["iss"].(string)
 	if iss != v.issuer {
-		return "", "", fmt.Errorf("%w: issuer", ErrInvalidToken)
+		return Principal{}, fmt.Errorf("%w: issuer", ErrInvalidToken)
 	}
 	if !audienceMatches(claims, v.aud) {
-		return "", "", fmt.Errorf("%w: audience/azp", ErrInvalidToken)
+		return Principal{}, fmt.Errorf("%w: audience/azp", ErrInvalidToken)
 	}
-	sub, _ = claims["sub"].(string)
+	sub, _ := claims["sub"].(string)
 	if sub == "" {
-		return "", "", fmt.Errorf("%w: sub", ErrInvalidToken)
+		return Principal{}, fmt.Errorf("%w: sub", ErrInvalidToken)
 	}
-	tenantID, err = stringClaim(claims, v.tenant)
+	tenantID, err := stringClaim(claims, v.tenant)
 	if err != nil || tenantID == "" {
-		return "", "", ErrMissingTenantClaim
+		return Principal{}, ErrMissingTenantClaim
 	}
-	return sub, tenantID, nil
+	return Principal{
+		Subject:    sub,
+		TenantID:   tenantID,
+		RealmRoles: extractRealmRoles(claims),
+	}, nil
+}
+
+func extractRealmRoles(claims jwt.MapClaims) []string {
+	raw, ok := claims["realm_access"]
+	if !ok {
+		return nil
+	}
+	m, ok := raw.(map[string]any)
+	if !ok {
+		return nil
+	}
+	rolesRaw, ok := m["roles"]
+	if !ok {
+		return nil
+	}
+	arr, ok := rolesRaw.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(arr))
+	for _, x := range arr {
+		s, ok := x.(string)
+		if !ok {
+			continue
+		}
+		s = strings.TrimSpace(s)
+		if s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 var (

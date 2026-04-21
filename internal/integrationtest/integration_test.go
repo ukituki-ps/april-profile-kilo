@@ -48,7 +48,7 @@ func TestAtlasMigrationsAppliedOnPostgresContainer(t *testing.T) {
 	}
 	defer pool.Close()
 
-	for _, table := range []string{"tenants", "entity_types", "entities", "profile_events"} {
+	for _, table := range []string{"tenants", "entity_types", "entities", "profile_events", "profile_field_conflicts", "admin_audit_log"} {
 		table := table
 		t.Run(table, func(t *testing.T) {
 			var exists bool
@@ -97,11 +97,14 @@ func TestReadyzWithRealPostgresAndRedis(t *testing.T) {
 		timeout:     3 * time.Second,
 	}
 
+	ps := profiles.NewService(dbPool)
 	srv := httptest.NewServer(httpapi.NewMux(
 		validator,
 		checker,
 		entitytypes.NewCatalog(dbPool),
-		profiles.NewService(dbPool),
+		ps,
+		ps,
+		"",
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
 	))
 	defer srv.Close()

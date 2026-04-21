@@ -57,7 +57,7 @@ func Run(ctx context.Context) error {
 	}
 	catalog := entitytypes.NewCatalog(dbPool)
 	profileService := profiles.NewService(dbPool)
-	mux := httpapi.NewMux(v, readiness, catalog, profileService, slog.Default())
+	mux := httpapi.NewMux(v, readiness, catalog, profileService, profileService, cfg.KeycloakAdminRealmRole, slog.Default())
 	srv := &http.Server{
 		Addr:              cfg.HTTPListenAddr,
 		Handler:           mux,

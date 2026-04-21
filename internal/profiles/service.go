@@ -20,6 +20,10 @@ var (
 	ErrEntityTypeNotPublished  = errors.New("entity type not published")
 	ErrVersionNotFound         = errors.New("profile version not found")
 	ErrExternalMappingConflict = errors.New("external mapping conflict")
+	ErrAuthorityAllBlocked     = errors.New("authority: all proposed field updates blocked by conflicts")
+	ErrConflictNotFound        = errors.New("conflict not found")
+	ErrMergeInvalid            = errors.New("merge: invalid entity pair")
+	ErrMergeExternalCollision  = errors.New("merge: external mapping collision between profiles")
 )
 
 type ExternalRef struct {
@@ -40,11 +44,15 @@ type CreateParams struct {
 	EntityTypeID string
 	Document     map[string]any
 	ExternalRefs []ExternalRef
+	// WriteSource — логический источник данных для authority (по умолчанию api).
+	WriteSource string
 }
 
 type UpdateParams struct {
 	Document     map[string]any
 	ExternalRefs []ExternalRef
+	// WriteSource — источник входящего изменения (по умолчанию api).
+	WriteSource string
 }
 
 type Service struct {
@@ -90,7 +98,8 @@ func (s *Service) Create(ctx context.Context, tenantID string, params CreatePara
 		return Snapshot{}, fmt.Errorf("create entity: %w", err)
 	}
 
-	if err := insertVersion(ctx, tx, tenantID, entityID, 1, document); err != nil {
+	docWithAuth := initialDocumentWithAuthority(document, params.WriteSource)
+	if err := insertVersion(ctx, tx, tenantID, entityID, 1, docWithAuth); err != nil {
 		return Snapshot{}, err
 	}
 	if err := syncExternalRefs(ctx, tx, tenantID, entityID, params.ExternalRefs, true); err != nil {
@@ -125,6 +134,42 @@ func (s *Service) Update(ctx context.Context, tenantID, entityID string, params 
 	if err := lockEntity(ctx, tx, tenantID, entityID); err != nil {
 		return Snapshot{}, err
 	}
+	var currentDoc []byte
+	if err := tx.QueryRow(ctx, `
+		SELECT document
+		FROM profile_versions
+		WHERE tenant_id = $1 AND entity_id = $2
+		ORDER BY version DESC
+		LIMIT 1
+	`, tenantID, entityID).Scan(&currentDoc); err != nil {
+		return Snapshot{}, fmt.Errorf("load current document: %w", err)
+	}
+	var currentMap map[string]any
+	if err := json.Unmarshal(currentDoc, &currentMap); err != nil {
+		return Snapshot{}, fmt.Errorf("decode current document: %w", err)
+	}
+
+	mergedDoc, candidates, docChanged := applyAuthorityToDocuments(currentMap, document, params.WriteSource)
+	refsChanged, err := externalRefsChanged(ctx, tx, tenantID, entityID, params.ExternalRefs)
+	if err != nil {
+		return Snapshot{}, err
+	}
+
+	if len(candidates) > 0 {
+		if err := insertConflictCandidates(ctx, tx, tenantID, entityID, candidates); err != nil {
+			return Snapshot{}, err
+		}
+	}
+	if !docChanged && !refsChanged {
+		if err := tx.Commit(ctx); err != nil {
+			return Snapshot{}, fmt.Errorf("commit update: %w", err)
+		}
+		if len(candidates) > 0 {
+			return Snapshot{}, ErrAuthorityAllBlocked
+		}
+		return s.GetCurrent(ctx, tenantID, entityID)
+	}
+
 	var nextVersion int64
 	if err := tx.QueryRow(ctx, `
 		SELECT COALESCE(MAX(version), 0) + 1
@@ -133,7 +178,11 @@ func (s *Service) Update(ctx context.Context, tenantID, entityID string, params 
 	`, tenantID, entityID).Scan(&nextVersion); err != nil {
 		return Snapshot{}, fmt.Errorf("calculate next version: %w", err)
 	}
-	if err := insertVersion(ctx, tx, tenantID, entityID, nextVersion, document); err != nil {
+	outDoc := mergedDoc
+	if !docChanged && refsChanged {
+		outDoc = currentMap
+	}
+	if err := insertVersion(ctx, tx, tenantID, entityID, nextVersion, outDoc); err != nil {
 		return Snapshot{}, err
 	}
 	if err := syncExternalRefs(ctx, tx, tenantID, entityID, params.ExternalRefs, true); err != nil {

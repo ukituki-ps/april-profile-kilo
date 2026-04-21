@@ -5,16 +5,37 @@ import (
 	"net/http"
 )
 
-// Middleware проверяет Bearer JWT и помещает sub и tenant_id в контекст запроса.
+// Middleware проверяет Bearer JWT и помещает Principal в контекст запроса.
 func (v *Validator) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		sub, tenantID, err := v.ValidateBearer(r.Context(), r.Header.Get("Authorization"))
+		p, err := v.ValidateBearer(r.Context(), r.Header.Get("Authorization"))
 		if err != nil {
 			writeAuthError(w, err)
 			return
 		}
-		next.ServeHTTP(w, r.WithContext(ContextWithTenant(r.Context(), sub, tenantID)))
+		next.ServeHTTP(w, r.WithContext(ContextWithPrincipal(r.Context(), p)))
 	})
+}
+
+// RequireRealmRole требует наличия роли realm в JWT (после Middleware).
+func RequireRealmRole(role string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if role == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+			for _, got := range RealmRolesFromContext(r.Context()) {
+				if got == role {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusForbidden)
+			_, _ = w.Write([]byte(`{"code":"forbidden","message":"insufficient realm role"}`))
+		})
+	}
 }
 
 func writeAuthError(w http.ResponseWriter, err error) {
