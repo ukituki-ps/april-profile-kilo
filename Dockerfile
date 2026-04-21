@@ -1,12 +1,13 @@
-FROM golang:1.24-bookworm AS builder
+FROM golang:1.25-bookworm AS builder
 
 WORKDIR /src
 
 ARG TARGETOS
 ARG TARGETARCH
+ARG GOPROXY=https://proxy.golang.org,direct
 
 COPY go.mod go.sum* ./
-RUN go mod download
+RUN GOPROXY=${GOPROXY} go mod download
 
 COPY . .
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -trimpath -ldflags="-s -w" -o /out/april-profile ./cmd/april-profile
