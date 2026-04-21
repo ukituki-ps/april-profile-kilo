@@ -27,6 +27,7 @@ sidebar_position: 20
 - [010 — Каталог типов сущностей и OpenAPI-контракт](./task-story-010-entity-types-openapi)
 - [011 — CRUD сущностей и append-only версии профиля](./task-story-011-entity-crud-versioning)
 - [012 — Authority, конфликты и merge дубликатов](./task-story-012-authority-merge-conflicts)
+- [013 — ABAC: фильтрация выдачи по сегментам полей](./task-story-013-abac-field-filtering)
 
 ## Быстрый статус
 
@@ -45,3 +46,4 @@ sidebar_position: 20
 | 010 entity types catalog + OpenAPI | ✅ | [010](./task-story-010-entity-types-openapi) | Появился каталог типов с `draft/published` и публикацией схем |
 | 011 entity CRUD + append-only versioning | ✅ | [011](./task-story-011-entity-crud-versioning) | Реализован базовый CRUD профилей с history current/by-version и external mappings |
 | 012 authority + conflicts + merge audit | ✅ | [012](./task-story-012-authority-merge-conflicts) | Очередь конфликтов, ручной resolve, merge дубликатов с аудитом и админ-API |
+| 013 ABAC field filtering on read | ✅ | [013](./task-story-013-abac-field-filtering) | GET профиля: выдача `document` по сегментам и realm-ролям JWT (`ABAC_SEGMENT_ACCESS_JSON`) |

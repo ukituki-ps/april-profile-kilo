@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ukituki-ps/april-profile/internal/abac"
 	"github.com/ukituki-ps/april-profile/internal/auth"
 	"github.com/ukituki-ps/april-profile/internal/entitytypes"
 	"github.com/ukituki-ps/april-profile/internal/profiles"
@@ -61,7 +62,8 @@ type ProfileAdmin interface {
 
 // NewMux регистрирует маршруты. Защищённые обработчики получают tenant_id только из JWT через auth.Validator.
 // adminRealmRole: пустая строка — не требовать realm-роль на /v1/admin/* (только для dev/тестов).
-func NewMux(v *auth.Validator, readiness ReadinessChecker, catalog EntityTypeCatalog, profileService ProfileService, admin ProfileAdmin, adminRealmRole string, logger *slog.Logger) http.Handler {
+// abacPolicy: при Active() GET профиля фильтрует document по сегментам и realm-ролям из JWT; nil — без фильтрации.
+func NewMux(v *auth.Validator, readiness ReadinessChecker, catalog EntityTypeCatalog, profileService ProfileService, admin ProfileAdmin, adminRealmRole string, abacPolicy *abac.Policy, logger *slog.Logger) http.Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -74,11 +76,11 @@ func NewMux(v *auth.Validator, readiness ReadinessChecker, catalog EntityTypeCat
 	mux.Handle("GET /v1/entity-types", v.Middleware(http.HandlerFunc(handleListEntityTypes(catalog))))
 	mux.Handle("POST /v1/entity-types/{entityTypeID}/publish", v.Middleware(http.HandlerFunc(handlePublishEntityType(catalog))))
 	mux.Handle("POST /v1/entities", v.Middleware(http.HandlerFunc(handleCreateEntity(profileService))))
-	mux.Handle("GET /v1/entities/{entityID}", v.Middleware(http.HandlerFunc(handleGetEntityCurrent(profileService))))
+	mux.Handle("GET /v1/entities/{entityID}", v.Middleware(http.HandlerFunc(handleGetEntityCurrent(profileService, abacPolicy))))
 	mux.Handle("PUT /v1/entities/{entityID}", v.Middleware(http.HandlerFunc(handleUpdateEntity(profileService))))
 	mux.Handle("DELETE /v1/entities/{entityID}", v.Middleware(http.HandlerFunc(handleDeleteEntity(profileService))))
-	mux.Handle("GET /v1/entities/{entityID}/versions/{version}", v.Middleware(http.HandlerFunc(handleGetEntityByVersion(profileService))))
-	mux.Handle("GET /v1/external-mappings/{sourceSystem}/{externalID}/entity", v.Middleware(http.HandlerFunc(handleGetEntityByExternal(profileService))))
+	mux.Handle("GET /v1/entities/{entityID}/versions/{version}", v.Middleware(http.HandlerFunc(handleGetEntityByVersion(profileService, abacPolicy))))
+	mux.Handle("GET /v1/external-mappings/{sourceSystem}/{externalID}/entity", v.Middleware(http.HandlerFunc(handleGetEntityByExternal(profileService, abacPolicy))))
 	adminChain := func(h http.Handler) http.Handler {
 		return v.Middleware(auth.RequireRealmRole(adminRealmRole)(h))
 	}
@@ -377,7 +379,7 @@ func handleUpdateEntity(service ProfileService) http.HandlerFunc {
 	}
 }
 
-func handleGetEntityCurrent(service ProfileService) http.HandlerFunc {
+func handleGetEntityCurrent(service ProfileService, abacPolicy *abac.Policy) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if service == nil {
 			writeServiceUnavailable(w, r)
@@ -388,12 +390,13 @@ func handleGetEntityCurrent(service ProfileService) http.HandlerFunc {
 			writeProfileError(w, r, err)
 			return
 		}
+		result = filterProfileReadIfNeeded(r, abacPolicy, result)
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		_ = json.NewEncoder(w).Encode(result)
 	}
 }
 
-func handleGetEntityByVersion(service ProfileService) http.HandlerFunc {
+func handleGetEntityByVersion(service ProfileService, abacPolicy *abac.Policy) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if service == nil {
 			writeServiceUnavailable(w, r)
@@ -414,12 +417,13 @@ func handleGetEntityByVersion(service ProfileService) http.HandlerFunc {
 			writeProfileError(w, r, err)
 			return
 		}
+		result = filterProfileReadIfNeeded(r, abacPolicy, result)
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		_ = json.NewEncoder(w).Encode(result)
 	}
 }
 
-func handleGetEntityByExternal(service ProfileService) http.HandlerFunc {
+func handleGetEntityByExternal(service ProfileService, abacPolicy *abac.Policy) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if service == nil {
 			writeServiceUnavailable(w, r)
@@ -437,6 +441,7 @@ func handleGetEntityByExternal(service ProfileService) http.HandlerFunc {
 			writeProfileError(w, r, err)
 			return
 		}
+		result = filterProfileReadIfNeeded(r, abacPolicy, result)
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		_ = json.NewEncoder(w).Encode(result)
 	}
@@ -454,6 +459,14 @@ func handleDeleteEntity(service ProfileService) http.HandlerFunc {
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}
+}
+
+func filterProfileReadIfNeeded(r *http.Request, policy *abac.Policy, snap profiles.Snapshot) profiles.Snapshot {
+	if policy == nil || !policy.Active() {
+		return snap
+	}
+	roles := auth.RealmRolesFromContext(r.Context())
+	return policy.FilterSnapshot(snap, roles)
 }
 
 func writeBadRequest(w http.ResponseWriter, r *http.Request, message string) {

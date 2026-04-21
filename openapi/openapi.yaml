@@ -229,6 +229,9 @@ paths:
   /v1/entities/{entityID}:
     get:
       summary: Получить текущую версию профиля
+      description: |
+        При активной серверной политике ABAC (`ABAC_SEGMENT_ACCESS_JSON`) тело `document` фильтруется
+        по сегментам полей и realm-ролям из JWT (`realm_access.roles`); см. описание `ProfileSnapshot`.
       operationId: getEntityCurrentProfile
       tags: [Profiles]
       security:
@@ -343,6 +346,8 @@ paths:
   /v1/entities/{entityID}/versions/{version}:
     get:
       summary: Получить конкретную версию профиля
+      description: |
+        Как и `GET /v1/entities/{entityID}` — при ABAC выдача `document` может быть усечена по ролям.
       operationId: getEntityProfileByVersion
       tags: [Profiles]
       security:
@@ -384,6 +389,8 @@ paths:
   /v1/external-mappings/{sourceSystem}/{externalID}/entity:
     get:
       summary: Получить текущий профиль по внешнему ключу
+      description: |
+        Как и остальные GET профиля — при ABAC `document` фильтруется по realm-ролям JWT.
       operationId: getEntityCurrentByExternal
       tags: [Profiles]
       security:
@@ -767,6 +774,13 @@ components:
             $ref: '#/components/schemas/ExternalRef'
     ProfileSnapshot:
       type: object
+      description: |
+        Снимок профиля. Для **GET**-ответов при включённой политике ABAC на сервере поле `document`
+        может не содержать часть namespace-объектов и корневых полей: видимость задаётся конфигурацией
+        сопоставления сегментов полей realm-ролям Keycloak (переменная окружения `ABAC_SEGMENT_ACCESS_JSON`).
+        Сегмент `default` — корневые скалярные поля документа; именованные вложенные объекты — сегменты
+        с именем ключа верхнего уровня. В `_meta.authority` остаются только пути, относящиеся к разрешённым сегментам.
+        **POST/PUT** возвращают полный документ без ABAC-фильтрации выдачи.
       required: [entity_id, entity_type_id, version, document, created_at, external_refs]
       properties:
         entity_id:
