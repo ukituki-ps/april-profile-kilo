@@ -22,8 +22,12 @@ EOF
   DEPLOY_ROOT          каталог репозитория (по умолчанию — каталог deploy.sh)
   SKIP_GIT_PULL=1      не выполнять git pull
   SKIP_OPENAPI_LINT=1  не выполнять make openapi-lint
+  SKIP_DOCS_BUILD=1    не выполнять сборку docs-site
   SKIP_DB_BACKUP=1     не вызывать scripts/db-backup.sh (если есть)
   SKIP_MIGRATIONS=1    не вызывать scripts/run-migrations.sh (если есть)
+  SKIP_COMPOSE_PULL=1  не выполнять docker compose pull
+  COMPOSE_FORCE_RECREATE=0  не пересоздавать контейнеры принудительно
+  COMPOSE_REMOVE_ORPHANS=0  не удалять orphan-контейнеры
 
 Опциональные хуки (если исполняемы):
   scripts/db-backup.sh      дамп БД до миграций/up (см. DEPLOYMENT_STRATEGY.md)
@@ -62,12 +66,26 @@ run_openapi_lint() {
     log "пропуск openapi-lint (SKIP_OPENAPI_LINT=1)"
     return 0
   fi
-  if ! command -v make >/dev/null 2>&1; then
-    log "make не найден — пропуск openapi-lint"
-    return 0
+
+  if command -v make >/dev/null 2>&1 && command -v npx >/dev/null 2>&1; then
+    log "make openapi-lint"
+    make openapi-lint
+    return
   fi
-  log "make openapi-lint"
-  make openapi-lint
+
+  if command -v docker >/dev/null 2>&1; then
+    log "fallback openapi-lint через node:22-bookworm-slim (npx @redocly/cli)"
+    docker run --rm \
+      --name "april-profile-openapi-lint-$$" \
+      -v "${ROOT}:/repo" \
+      -w /repo \
+      node:22-bookworm-slim \
+      sh -c "npx --yes @redocly/cli@1.25.0 lint openapi/openapi.yaml openapi/mail-gateway-openapi.yaml --config redocly.yaml"
+    return
+  fi
+
+  log "ошибка: для openapi-lint нужен make+npx или docker"
+  exit 1
 }
 
 run_hook() {
@@ -91,7 +109,12 @@ run_hook() {
 }
 
 run_docs_build() {
-  if command -v make >/dev/null 2>&1; then
+  if [[ "${SKIP_DOCS_BUILD:-}" == "1" ]]; then
+    log "пропуск docs-build (SKIP_DOCS_BUILD=1)"
+    return 0
+  fi
+
+  if command -v make >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
     log "make docs-build"
     make docs-build
     return
@@ -104,6 +127,7 @@ run_docs_build() {
   if command -v docker >/dev/null 2>&1; then
     log "make и npm не найдены — сборка docs-site через образ node:22-bookworm-slim (как на минимальном сервере без Node в PATH)"
     docker run --rm \
+      --name "april-profile-docs-build-$$" \
       -v "${ROOT}:/repo" \
       -w /repo/docs-site \
       node:22-bookworm-slim \
@@ -115,12 +139,24 @@ run_docs_build() {
 }
 
 run_compose() {
+  local compose_up_flags=(-d)
+  if [[ "${COMPOSE_FORCE_RECREATE:-1}" == "1" ]]; then
+    compose_up_flags+=(--force-recreate)
+  fi
+  if [[ "${COMPOSE_REMOVE_ORPHANS:-1}" == "1" ]]; then
+    compose_up_flags+=(--remove-orphans)
+  fi
+
   log "docker compose config (проверка)"
   "${compose_files[@]}" config >/dev/null
-  log "docker compose pull"
-  "${compose_files[@]}" pull
-  log "docker compose up -d"
-  "${compose_files[@]}" up -d
+  if [[ "${SKIP_COMPOSE_PULL:-}" == "1" ]]; then
+    log "пропуск docker compose pull (SKIP_COMPOSE_PULL=1)"
+  else
+    log "docker compose pull"
+    "${compose_files[@]}" pull
+  fi
+  log "docker compose up ${compose_up_flags[*]}"
+  "${compose_files[@]}" up "${compose_up_flags[@]}"
   log "docker compose ps"
   "${compose_files[@]}" ps
 }
