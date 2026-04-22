@@ -47,6 +47,7 @@
 | [`docs/guides/DESIGN_SYSTEM.md`](docs/guides/DESIGN_SYSTEM.md) | Дизайн-система April (`@april/tokens`, `@april/ui`) |
 | [`openapi/openapi.yaml`](openapi/openapi.yaml) | OpenAPI 3.1 |
 | [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md) | Уровни тестов и связь с CI |
+| [`docs/OBSERVABILITY.md`](docs/OBSERVABILITY.md) | `GET /metrics`, имена метрик, JSON-логи и корреляция с AprilHub |
 
 ## Лицензия
 

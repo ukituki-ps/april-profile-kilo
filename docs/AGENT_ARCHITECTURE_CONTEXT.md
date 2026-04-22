@@ -11,7 +11,7 @@
 - **DB**: PostgreSQL 17
 - **Queue**: Redis + Asynq
 - **Notifications**: собственный микросервис AprilNflow (Go + React Flow)
-- **Observability**: Promtail + Loki + Grafana, Prometheus — в экосистеме April **общий централизованный контур** задаётся **AprilHub** (репозиторий [april-worker](https://github.com/ukituki-ps/april-worker): `infra/observability/`, runbook'и в `docs/`). Репозиторий отдельного микросервиса обеспечивает экспорт метрик и логов по договорённостям Hub, **без копирования полного observability-стека** в свой репозиторий.
+- **Observability**: Promtail + Loki + Grafana, Prometheus — в экосистеме April **общий централизованный контур** задаётся **AprilHub** (репозиторий [april-worker](https://github.com/ukituki-ps/april-worker): `infra/observability/`, runbook'и в `docs/`). Точка входа в контракты и пути к конфигам — [`OBSERVABILITY_INDEX.md` в april-worker](https://github.com/ukituki-ps/april-worker/blob/develop/docs/guides/OBSERVABILITY_INDEX.md). Сервис в april-profile экспортирует `GET /metrics` (Prometheus) и пишет JSON в stdout по тем же правилам, что ожидает стек Hub (см. задачу [`018-phase-4-prometheus-metrics-logs-correlation`](../tasks/018-phase-4-prometheus-metrics-logs-correlation/TASK.md)); **полный observability-стек в этот репозиторий не копируется**.
 - **Нагрузочное тестирование**: k6 (сценарии API, baseline; детали в [`./TESTING_STRATEGY.md`](./TESTING_STRATEGY.md))
 - **Documentation**: Structurizr (C4 Model) + Docusaurus + ADR + OpenAPI
 - **Infra**: Debian 13, Docker Compose, Nginx reverse proxy

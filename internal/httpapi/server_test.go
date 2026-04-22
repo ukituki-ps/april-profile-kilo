@@ -274,8 +274,85 @@ func TestRequestLogging_includesRequestID(t *testing.T) {
 	if requestID == "" {
 		t.Fatal("missing X-Request-Id header")
 	}
-	if !strings.Contains(logBuf.String(), "request_id="+requestID) {
-		t.Fatalf("request_id must be present in logs, got: %s", logBuf.String())
+	if !strings.Contains(logBuf.String(), "requestId="+requestID) {
+		t.Fatalf("requestId must be present in logs, got: %s", logBuf.String())
+	}
+	if !strings.Contains(logBuf.String(), "correlationId=") {
+		t.Fatalf("correlationId must be present in logs, got: %s", logBuf.String())
+	}
+}
+
+func TestMetrics_returnsPrometheusText(t *testing.T) {
+	t.Parallel()
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jwks := mustRSAJWKS(t, &priv.PublicKey, "kid-metrics")
+	v, err := auth.NewValidatorFromJWKSJSON(jwks, "http://kc.example/auth/realms/april", "april-profile-api", "tenant_id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
+		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
+	}, nil, nil, nil, "", nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	t.Cleanup(ts.Close)
+
+	res, err := ts.Client().Get(ts.URL + "/metrics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d body %s", res.StatusCode, body)
+	}
+	ct := res.Header.Get("Content-Type")
+	if !strings.HasPrefix(ct, "text/plain") {
+		t.Fatalf("unexpected Content-Type: %q", ct)
+	}
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(body)
+	if !strings.Contains(s, "april_profile_http_requests_total") {
+		t.Fatalf("expected april_profile_http_requests_total in body, got head: %.200q", s)
+	}
+	if !strings.Contains(s, "go_goroutines") {
+		t.Fatalf("expected go_goroutines from Go collector, got head: %.200q", s)
+	}
+}
+
+func TestCorrelationId_header_roundTrip(t *testing.T) {
+	t.Parallel()
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jwks := mustRSAJWKS(t, &priv.PublicKey, "kid-corr")
+	v, err := auth.NewValidatorFromJWKSJSON(jwks, "http://kc.example/auth/realms/april", "april-profile-api", "tenant_id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
+		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
+	}, nil, nil, nil, "", nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	t.Cleanup(ts.Close)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, ts.URL+"/healthz", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const wantCorr = "corr-from-client-9f2a"
+	req.Header.Set("X-Correlation-Id", wantCorr)
+	res, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if got := res.Header.Get("X-Correlation-Id"); got != wantCorr {
+		t.Fatalf("X-Correlation-Id: want %q got %q", wantCorr, got)
 	}
 }
 

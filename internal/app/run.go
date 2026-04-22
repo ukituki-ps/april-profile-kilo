@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,6 +23,9 @@ import (
 
 // Run запускает HTTP-сервер до отмены контекста (SIGINT/SIGTERM).
 func Run(ctx context.Context) error {
+	// JSON в stdout — контракт Promtail/Loki в контуре AprilHub (см. docs/OBSERVABILITY.md).
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
+
 	cfg, err := config.Load()
 	if err != nil {
 		return err
