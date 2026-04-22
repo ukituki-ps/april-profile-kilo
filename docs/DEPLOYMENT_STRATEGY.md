@@ -189,7 +189,7 @@
 
 ### Локально и в CI
 
-- На **pull request** и **push** в `main` / `develop`: workflow **CI** (`.github/workflows/ci.yml`) на GitHub-hosted runner выполняет `make openapi-lint` и `make docs-build` (без деплоя).
+- На **pull request** и **push** в `main` / `develop`: workflow **CI** (`.github/workflows/ci.yml`) выполняется на **self-hosted** runner с labels `dev`, `april-profile` и выполняет `make openapi-lint` и `make docs-build` (без деплоя). Workflow `bootstrap-ci` и `Backend image (ghcr)` используют те же labels.
 - Сборка сайта: из корня репозитория `make docs-build` (внутри: `npm ci` + `npm run build` в `docs-site/`).
 - Проверка OpenAPI: `make openapi-lint` (Redocly, конфиг `redocly.yaml`).
 - Просмотр через Compose: после `make docs-build` — `docker compose up -d`; Nginx раздаёт `docs-site/build`, пути `/openapi/`, `/swagger/`; Structurizr Lite — отдельный порт (см. `.env.example`).
