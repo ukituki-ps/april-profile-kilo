@@ -46,6 +46,12 @@ func Run(ctx context.Context) error {
 		RDB:             rdb,
 		Publisher:       asyncjobs.StubPublisher{},
 		OutboxBatchSize: cfg.OutboxBatchSize,
+		SourceClient:    asyncjobs.NoopSourceClient{},
+		SyncBatchSize:   cfg.SyncBatchSize,
+	}
+	h.LagMetrics, err = asyncjobs.NewSyncLagMetrics(nil)
+	if err != nil {
+		return fmt.Errorf("init sync lag metrics: %w", err)
 	}
 	mux := asynq.NewServeMux()
 	h.Register(mux)
@@ -53,8 +59,9 @@ func Run(ctx context.Context) error {
 	srv := asynq.NewServer(redisOpt, asynq.Config{
 		Concurrency: cfg.AsynqConcurrency,
 		Queues: map[string]int{
-			asyncjobs.QueueOutbox:   6,
+			asyncjobs.QueueOutbox:  6,
 			asyncjobs.QueueDefault: 3,
+			asyncjobs.QueueSync:    3,
 		},
 	})
 
@@ -66,13 +73,24 @@ func Run(ctx context.Context) error {
 	if _, err := sched.Register(config.FormatEveryCron(cfg.OutboxInterval), asyncjobs.NewOutboxBatchTask()); err != nil {
 		return fmt.Errorf("scheduler register outbox: %w", err)
 	}
+	for _, sourceSystem := range cfg.SyncSourceSystems {
+		task, err := asyncjobs.NewSourceSyncTask(sourceSystem)
+		if err != nil {
+			return fmt.Errorf("build source sync task: %w", err)
+		}
+		if _, err := sched.Register(config.FormatEveryCron(cfg.SyncInterval), task); err != nil {
+			return fmt.Errorf("scheduler register source sync (%s): %w", sourceSystem, err)
+		}
+	}
 
 	slog.Info("AprilProfile Asynq worker starting",
 		"version", version.String(),
 		"concurrency", cfg.AsynqConcurrency,
-		"queues", []string{asyncjobs.QueueDefault, asyncjobs.QueueOutbox},
+		"queues", []string{asyncjobs.QueueDefault, asyncjobs.QueueOutbox, asyncjobs.QueueSync},
 		"ping_every", cfg.PingInterval.String(),
 		"outbox_every", cfg.OutboxInterval.String(),
+		"sync_every", cfg.SyncInterval.String(),
+		"sync_sources", cfg.SyncSourceSystems,
 	)
 
 	if err := srv.Start(mux); err != nil {

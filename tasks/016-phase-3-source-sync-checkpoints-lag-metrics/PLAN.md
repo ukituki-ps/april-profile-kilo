@@ -2,7 +2,7 @@
 
 - **Задача:** [`TASK.md`](./TASK.md)
 - **Дата плана:** 2026-04-21
-- **Статус плана:** черновик
+- **Статус плана:** согласован
 
 ## Исходные допущения
 - В [`014`](../014-phase-3-outbox-event-contract-idempotency/) и [`015`](../015-phase-3-asynq-infra-ping-domain-task/) уже есть outbox и Asynq; синк может быть отдельной периодической задачей.
@@ -30,3 +30,7 @@
 
 ## Проверки
 - Команды из [`TASK.md`](./TASK.md).
+
+## Примечания
+- Обновления плана:
+  - 2026-04-22 — выбран каркас с таблицами `source_sync_checkpoints` + `source_sync_applied_events`, задачей Asynq `april:source_sync:batch` и lag gauge `april_profile_source_sync_lag_seconds{tenant_id,source_system}`.
