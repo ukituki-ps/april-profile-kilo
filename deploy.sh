@@ -140,6 +140,26 @@ run_docs_build() {
   exit 1
 }
 
+# Поднять postgres (и redis) до миграций: Atlas подключается к 127.0.0.1:POSTGRES_PORT на хосте,
+# контейнер должен уже слушать проброшенный порт до полного compose up.
+ensure_db_for_migrations() {
+	if [[ "${SKIP_MIGRATIONS:-}" == "1" ]]; then
+		return 0
+	fi
+	if ! command -v docker >/dev/null 2>&1; then
+		return 0
+	fi
+	if [[ ! -f docker-compose.yml ]]; then
+		return 0
+	fi
+	log "docker compose up -d postgres redis (подготовка к миграциям)"
+	if "${compose_files[@]}" up -d postgres redis; then
+		return 0
+	fi
+	log "замечание: compose up postgres/redis не выполнен (нет профиля db, внешняя БД или ошибка compose) — миграции идут как настроено в DATABASE_URL"
+	return 0
+}
+
 run_compose() {
   local compose_up_flags=(-d)
   if [[ "${COMPOSE_FORCE_RECREATE:-1}" == "1" ]]; then
@@ -167,8 +187,9 @@ main() {
   log "каталог: $ROOT"
   run_git_pull
   run_openapi_lint
-  run_hook "scripts/db-backup.sh" "SKIP_DB_BACKUP" "db-backup"
-  run_hook "scripts/run-migrations.sh" "SKIP_MIGRATIONS" "миграции"
+	run_hook "scripts/db-backup.sh" "SKIP_DB_BACKUP" "db-backup"
+	ensure_db_for_migrations
+	run_hook "scripts/run-migrations.sh" "SKIP_MIGRATIONS" "миграции"
   run_docs_build
   run_compose
   log "готово"
