@@ -21,19 +21,20 @@
 5. **Каталог:** клон репозитория в каталоге деплоя стенда (для AprilProfile на Orange Pi — **`/home/ukituki/april-profile`**). Выкладка на этом хосте: **`./deploy.sh`** из этого каталога.
 6. **Секреты:** `.env`, `images.env` на сервере не коммитить; шаблоны — в репозитории.
 
-## 3. GitHub Actions runner (self-hosted; для AprilProfile — отдельный хост от стенда)
+## 3. GitHub Actions runner (self-hosted)
 
-Цель: runner с labels **`self-hosted`**, **`dev`**, **`RUNNER_LABEL_EXTRA`**, с которого выполняются jobs CI и (по текущему workflow) шаги **`Deploy to dev`** — см. `.github/workflows/dev-deploy.yml`.
+Цель: два контура для **AprilProfile** — см. `.github/workflows/dev-deploy.yml`, [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md).
 
-**AprilProfile (апрель 2026):** runners установлены на **`192.168.1.29`**; **рантайм стенда** (compose, БД, API) — на **`192.168.1.42`**. Это **разные** машины: переменная **`APRIL_DEPLOY_ROOT`** указывает путь к клону **на том хосте, где зарегистрирован runner и выполняется `docker compose`**. Если там нет того же compose, что на Orange Pi, автоматический деплой из job **не обновит** контейнеры на **192.168.1.42** без отдельной донастройки — см. раздел «Разнесённая топология» в [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md).
+**Хост CI (`192.168.1.29`):** runner с labels **`self-hosted`**, **`dev`**, **`RUNNER_LABEL_EXTRA`** (`april-profile`). С него выполняются **CI**, **Backend image (ghcr)** и job **Build docs** в **Deploy to dev**. Нужны Docker, Node.js 20+, npm, `git`, `curl`.
 
-1. **ПО на машине runner'а:** Docker + Compose v2, Node.js 18+, npm, `git`, `curl` (по требованиям workflow); пользователь в группе **`docker`**.
-2. **Доступ к GitHub:** deploy key или credentials для `git fetch` в клоне на **этой** машине.
-3. **Каталог клона на runner'е:** ветка `develop`, **`deploy.sh`**, локальный **`.env`** — по пути **`APRIL_DEPLOY_ROOT`**.
-4. **Runner:** [actions/runner](https://github.com/actions/runner/releases), `./config.sh`, labels **`dev`** и **`RUNNER_LABEL_EXTRA`**.
-5. При необходимости — systemd для runner — по политике команды.
-6. **Проверка:** runner **Idle** в GitHub; после merge в **`develop`** запускаются CI и **Deploy to dev** (на хосте runner'а).
-7. **`APRIL_DEPLOY_ROOT`:** repository variable; должен существовать **на машине runner'а**. Для деплоя **именно на Orange Pi** нужен либо runner на **192.168.1.42**, либо отдельный сценарий (SSH/Ansible) — см. `PROJECT_DEFAULTS.md`.
+**Хост стенда Orange Pi (`192.168.1.42`):** отдельный runner с labels **`self-hosted`**, **`dev`**, **`april-profile-stand`** (**без** `april-profile`). С него выполняется только job **deploy** в **Deploy to dev** (`git` + `docker compose` + `deploy.sh`). Нужны Docker + Compose v2, `git`, `curl`; Node на стенде для этого job **не** обязателен (доки приходят артефактом из предыдущего job).
+
+1. **Доступ к GitHub** на **каждой** машине: ключ/credentials для `git fetch` в клоне по пути **`APRIL_DEPLOY_ROOT`**.
+2. **Каталог клона:** ветка `develop`, **`deploy.sh`**, локальный **`.env`** — **`APRIL_DEPLOY_ROOT`** (на Orange Pi типично **`/home/ukituki/april-profile`**).
+3. **Runner:** [actions/runner](https://github.com/actions/runner/releases), `./config.sh` с нужным набором labels для этой машины.
+4. При необходимости — **systemd** для сервиса runner — по политике команды.
+5. **Проверка:** оба runner'а **Idle** в GitHub; после merge в **`develop`** CI и образ — на .29; **deploy** — на .42.
+6. **`APRIL_DEPLOY_ROOT`:** repository variable; путь должен существовать **на машине runner'а job deploy** (стенд).
 
 ## 4. Проверка документации на dev
 

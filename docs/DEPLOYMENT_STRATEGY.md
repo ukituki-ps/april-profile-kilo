@@ -2,7 +2,7 @@
 
 Документ для агента и команды: зафиксированные решения и порядок шагов для деплоя на **dev-хост** (`DEV_HOST`). Конкретные значения — в [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md); при копировании шаблона замените их по [`guides/FORK_AND_CUSTOMIZE.md`](./guides/FORK_AND_CUSTOMIZE.md).
 
-Конкретные значения для **AprilProfile** — в [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md): `DEV_HOST` = `dev.profile.april.ukituki.tech`, стенд в LAN — **`192.168.1.42`**, runners CI — **`192.168.1.29`** (подробности и предупреждение про **`APRIL_DEPLOY_ROOT`** — в том же документе).
+Конкретные значения для **AprilProfile** — в [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md): `DEV_HOST` = `dev.profile.april.ukituki.tech`, стенд в LAN — **`192.168.1.42`**, CI и сборка backend-образа — **`192.168.1.29`**, job **Deploy to dev** (`deploy`) — на runner'е стенда с label **`april-profile-stand`** (подробности про **`APRIL_DEPLOY_ROOT`** — в том же документе).
 
 ## 1. Репозиторий и триггеры
 
@@ -14,7 +14,7 @@
 
 **Практика для GitHub Actions:** workflow запускается на **`push` в `develop`** (merge PR даёт такой push). Чтобы исключить прямой push в `develop`, на GitHub включается **branch protection** для `develop` (запрет прямых push, обязательный PR). Тогда событие `push` в `develop` по смыслу соответствует «приняли PR».
 
-**Реализация в репозитории:** workflow **Deploy to dev** (файл `.github/workflows/dev-deploy.yml`) на **self-hosted** runner с labels **`dev`** и **`RUNNER_LABEL_EXTRA`** (для AprilProfile: `april-profile`) выполняет в каталоге клона на **хосте этого runner'а** (по умолчанию **`DEPLOY_ROOT`** из workflow, для AprilProfile часто переопределяют **`APRIL_DEPLOY_ROOT`**) `git fetch`, переход на коммит **`github.sha`**, затем **`SKIP_GIT_PULL=1 ./deploy.sh`** (внутри — `docker compose`). Путь к клону задаётся **repository variable** `APRIL_DEPLOY_ROOT`. Ручной перезапуск — **Actions → Deploy to dev → Run workflow** (`workflow_dispatch`). Если runner **не** на том же хосте, где крутится compose стенда, см. [`PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md) («Разнесённая топология»).
+**Реализация в репозитории:** workflow **Deploy to dev** (файл `.github/workflows/dev-deploy.yml`): job **Build docs** — на runner'е с **`RUNNER_LABEL_EXTRA`** (для AprilProfile: `april-profile`, обычно **192.168.1.29**); job **deploy** — на **self-hosted** runner с labels **`dev`** и **`RUNNER_LABEL_STAND`** (для AprilProfile: **`april-profile-stand`**, хост стенда **192.168.1.42**). В каталоге клона на **хосте runner'а job deploy** (по умолчанию **`DEPLOY_ROOT`** из workflow, для AprilProfile — **`APRIL_DEPLOY_ROOT`**, например **`/home/ukituki/april-profile`**) выполняются `git fetch`, переход на коммит **`github.sha`**, затем **`SKIP_GIT_PULL=1 ./deploy.sh`** (внутри — `docker compose`). Путь к клону задаётся **repository variable** `APRIL_DEPLOY_ROOT`. Ручной перезапуск — **Actions → Deploy to dev → Run workflow** (`workflow_dispatch`). См. также [`PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md) («Разнесённая топология»).
 
 ### 1a. Branch protection (чеклист GitHub)
 
@@ -43,10 +43,10 @@
 
 | Решение | Значение |
 |--------|----------|
-| Размещение | **Self-hosted** машина с установленным `actions.runner` и labels из workflow. Для AprilProfile зафиксировано: runners CI на **`192.168.1.29`**, публичный **`DEV_HOST`** и рантайм compose на **`192.168.1.42`** (Orange Pi) — см. [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md). Runner **может** совпадать с сервером стенда, но **не обязан**; тогда **`APRIL_DEPLOY_ROOT`** и шаги `docker compose` должны быть согласованы с тем, **где** реально поднимаются контейнеры. |
+| Размещение | **Self-hosted** машина с установленным `actions.runner` и labels из workflow. Для AprilProfile: **CI и сборка образа** — **`192.168.1.29`**; **рантайм compose** и **job Deploy to dev** — **`192.168.1.42`** (отдельный runner с label **`april-profile-stand`**) — см. [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md). |
 | Охват | По политике команды: один runner на несколько репозиториев или отдельный под проект |
 | Администрирование | Вручную: обновления и перезапуск `actions.runner` |
-| Labels | `dev`, **`RUNNER_LABEL_EXTRA`** — jobs указывают `runs-on` с этими labels (для AprilProfile: `dev`, `april-profile`) |
+| Labels | **CI / образ:** `self-hosted`, `dev`, **`RUNNER_LABEL_EXTRA`** (AprilProfile: `april-profile`). **Deploy to dev (job deploy):** `self-hosted`, `dev`, **`RUNNER_LABEL_STAND`** (AprilProfile: `april-profile-stand`) — только на хосте стенда; на этом runner'е **не** вешать `april-profile`, иначе он заберёт CI. |
 
 | Решение | Значение |
 |--------|----------|
@@ -78,7 +78,7 @@
 |--------|----------|
 | Registry | **ghcr.io** |
 | Теги образов | **Только `git sha`** (без обязательных `latest` / `dev`) |
-| Multi-arch | Нет |
+| Multi-arch | Backend-образ в ghcr: **linux/amd64** и **linux/arm64** (см. `.github/workflows/backend-image-ghcr.yml`); остальные образы — по политике репозитория |
 
 ## 5. Каталог деплоя и compose
 
@@ -171,7 +171,7 @@
 
 ## 12. Порядок шагов для агента (скелет pipeline)
 
-1. Job на runner с labels `self-hosted`, `dev`, **`RUNNER_LABEL_EXTRA`** (для AprilProfile: `april-profile`), ref = commit после merge в `develop`.
+1. Job **Deploy to dev** (`deploy`) на runner с labels `self-hosted`, `dev`, **`RUNNER_LABEL_STAND`** (для AprilProfile: `april-profile-stand`), ref = commit после merge в `develop` (см. `dev-deploy.yml`).
 2. Сборка и тесты (как принято в репо).
 3. Сборка образов, push в ghcr.io с тегом по **git sha**.
 4. На сервере: `cd` в **`DEPLOY_ROOT`** → **`./deploy.sh`** (внутри: `git pull`, при необходимости хуки `scripts/db-backup.sh` / `scripts/run-migrations.sh`, `openapi-lint`, `docs-build`, `docker compose pull` → `up -d --force-recreate --remove-orphans` с учётом `.env` и **`images.env`**; часть шагов может выполняться fallback-режимом через docker). Либо те же шаги вручную: `git pull` → п.5–8.

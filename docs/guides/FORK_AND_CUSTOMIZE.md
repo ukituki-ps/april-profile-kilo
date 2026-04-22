@@ -21,7 +21,7 @@ sidebar_position: 2
 ## 2. Деплой и сервер
 
 - [ ] **`docs/DEPLOYMENT_STRATEGY.md`** и **`docs/ADMIN_DEV_SERVER.md`**: пройти по тексту и заменить хост, путь `/opt/...`, пользователя, примеры `ssh`, упоминания labels runner.
-- [ ] **`.github/workflows/dev-deploy.yml`**: `runs-on` (labels), при необходимости имя workflow; путь по умолчанию к клону (`/opt/april`) — синхронизировать с `APRIL_DEPLOY_ROOT` / переменными в GitHub.
+- [ ] **`.github/workflows/dev-deploy.yml`**: `runs-on` для job **build-docs** и для job **deploy** (для AprilProfile: `april-profile` vs `april-profile-stand`); путь по умолчанию к клону — синхронизировать с `APRIL_DEPLOY_ROOT` / переменными в GitHub.
 - [ ] **`deploy.sh`**: логика обычно универсальна; проверьте вызовы `make` и наличие Node на сервере, если собираете Docusaurus на runner.
 
 ## 3. CI и репозиторий

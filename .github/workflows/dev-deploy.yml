@@ -47,7 +47,9 @@ jobs:
   deploy:
     name: Sync repo and run deploy.sh
     needs: build-docs
-    runs-on: [self-hosted, dev, april-profile]
+    # Только стенд Orange Pi: метка `april-profile-stand` (см. docs/guides/PROJECT_DEFAULTS.md).
+    # CI / сборка образа остаются на runner'ах с `april-profile` (например 192.168.1.29).
+    runs-on: [self-hosted, dev, april-profile-stand]
     timeout-minutes: 60
     steps:
       - name: Download docs artifact
