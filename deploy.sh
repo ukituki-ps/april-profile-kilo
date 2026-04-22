@@ -185,15 +185,17 @@ check_compose_host_ports() {
 		log "замечание: python3 не найден — пропуск проверки портов (или установите python3 / задайте SKIP_PORT_CHECK=1)"
 		return 0
 	fi
-	local cfg_json
-	if ! cfg_json="$(compose_exec config --format json 2>/dev/null)"; then
+	local cfg_tmp
+	cfg_tmp="$(mktemp)"
+	trap 'rm -f "${cfg_tmp:-}"' RETURN
+	if ! compose_exec config --format json >"$cfg_tmp" 2>/dev/null; then
 		log "замечание: docker compose config --format json недоступен — пропуск проверки портов"
 		return 0
 	fi
 	mapfile -t compose_cids < <(compose_exec ps -q 2>/dev/null || true)
 	export APRIL_COMPOSE_CONTAINER_IDS="${compose_cids[*]}"
-	# Конфиг compose в Python через stdin: не кладём JSON в переменную окружения (риск обрезки/искажения).
-	if ! printf '%s' "${cfg_json}" | python3 - <<'PY'
+	export APRIL_CFG_TMP="$cfg_tmp"
+	if ! python3 - <<'PY'
 import json, os, re, socket, subprocess, sys
 
 def parse_published(pub):
@@ -244,7 +246,7 @@ def port_bindable(port):
     finally:
         s.close()
 
-cfg = json.load(sys.stdin)
+cfg = json.load(open(os.environ["APRIL_CFG_TMP"], encoding="utf-8"))
 ids = os.environ.get("APRIL_COMPOSE_CONTAINER_IDS", "").split()
 want = want_ports(cfg)
 owned = owned_host_ports(ids)
@@ -269,10 +271,10 @@ if conflicts:
     sys.exit(1)
 PY
 	then
-		unset APRIL_COMPOSE_CONTAINER_IDS
+		unset APRIL_COMPOSE_CONTAINER_IDS APRIL_CFG_TMP
 		return 1
 	fi
-	unset APRIL_COMPOSE_CONTAINER_IDS
+	unset APRIL_COMPOSE_CONTAINER_IDS APRIL_CFG_TMP
 }
 
 run_compose() {
