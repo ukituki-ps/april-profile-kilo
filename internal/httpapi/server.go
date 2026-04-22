@@ -19,9 +19,14 @@ import (
 	"github.com/ukituki-ps/april-profile/internal/profiles"
 )
 
-const requestIDHeader = "X-Request-Id"
+const (
+	requestIDHeader     = "X-Request-Id"
+	correlationIDHeader = "X-Correlation-Id"
+)
 
 type ctxKeyRequestID struct{}
+
+type ctxKeyCorrelationID struct{}
 
 // ReadinessChecker проверяет доступность внешних зависимостей.
 type ReadinessChecker interface {
@@ -87,7 +92,9 @@ func NewMux(v *auth.Validator, readiness ReadinessChecker, catalog EntityTypeCat
 	mux.Handle("GET /v1/admin/profile-conflicts", adminChain(http.HandlerFunc(handleListProfileConflicts(admin))))
 	mux.Handle("POST /v1/admin/profile-conflicts/{conflictID}/resolve", adminChain(http.HandlerFunc(handleResolveProfileConflict(admin))))
 	mux.Handle("POST /v1/admin/entities/merge", adminChain(http.HandlerFunc(handleMergeEntities(admin))))
-	return withRequestLogging(logger, withRequestID(mux))
+	mux.Handle("GET /metrics", prometheusMetricsHandler())
+	// Цепочка: корреляция и request id внутри, затем метрики, затем лог по завершении ответа.
+	return withRequestLogging(logger, withPrometheusHTTPMetrics(withCorrelationID(withRequestID(mux))))
 }
 
 func handleHealthz(w http.ResponseWriter, r *http.Request) {
@@ -135,6 +142,18 @@ func withRequestID(next http.Handler) http.Handler {
 	})
 }
 
+func withCorrelationID(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		correlationID := r.Header.Get(correlationIDHeader)
+		if correlationID == "" {
+			correlationID = newRequestID()
+		}
+		w.Header().Set(correlationIDHeader, correlationID)
+		ctx := context.WithValue(r.Context(), ctxKeyCorrelationID{}, correlationID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 func withRequestLogging(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -144,12 +163,17 @@ func withRequestLogging(logger *slog.Logger, next http.Handler) http.Handler {
 		if requestID == "" {
 			requestID = rec.Header().Get(requestIDHeader)
 		}
+		correlationID := CorrelationIDFromContext(r.Context())
+		if correlationID == "" {
+			correlationID = rec.Header().Get(correlationIDHeader)
+		}
 		attrs := []any{
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", rec.status,
 			"duration_ms", time.Since(start).Milliseconds(),
-			"request_id", requestID,
+			"requestId", requestID,
+			"correlationId", correlationID,
 		}
 		if tenantID := auth.TenantIDFromContext(r.Context()); tenantID != "" {
 			attrs = append(attrs, "tenant_id", tenantID)
@@ -161,6 +185,12 @@ func withRequestLogging(logger *slog.Logger, next http.Handler) http.Handler {
 // RequestIDFromContext возвращает request_id из контекста запроса.
 func RequestIDFromContext(ctx context.Context) string {
 	value, _ := ctx.Value(ctxKeyRequestID{}).(string)
+	return value
+}
+
+// CorrelationIDFromContext возвращает correlation id из контекста (заголовок X-Correlation-Id).
+func CorrelationIDFromContext(ctx context.Context) string {
+	value, _ := ctx.Value(ctxKeyCorrelationID{}).(string)
 	return value
 }
 

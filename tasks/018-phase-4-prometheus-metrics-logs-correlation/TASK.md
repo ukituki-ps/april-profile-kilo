@@ -1,7 +1,7 @@
 # Задача: Фаза 4.1 (часть 1) — Prometheus `GET /metrics`, логи под Promtail/Loki, корреляция `request_id`
 
 ## Мета
-- **ID / ветка:** (например `feat/phase-4-prometheus-metrics`)
+- **ID / ветка:** `feature/phase-4-prometheus-metrics-logs-correlation`
 - **Приоритет:** обычный
 - **Родительская дорожная карта:** [`tasks/000-full-service-aprilhub-roadmap/`](../000-full-service-aprilhub-roadmap/) — [`PLAN.md`](../000-full-service-aprilhub-roadmap/PLAN.md), **Фаза 4**, подраздел **4.1 Платформа**, блок **«Сначала»** (метрики Prometheus, логи для Promtail/Loki, корреляция `request_id`).
 - **Связанные подзадачи:** логически после [`008-phase-1-observability-config-readiness-deps`](../008-phase-1-observability-config-readiness-deps/) (структурные логи и `request_id`); перед [`019-phase-4-grafana-alerts-slo-hub-coordination`](../019-phase-4-grafana-alerts-slo-hub-coordination/). Связь с [`020-phase-4-profile-contract-behind-hub-bff`](../020-phase-4-profile-contract-behind-hub-bff/) — только косвенно (общий dev-контур).
@@ -70,11 +70,11 @@
 - Секреты — только через env ([`docs/DEPLOYMENT_STRATEGY.md`](../../docs/DEPLOYMENT_STRATEGY.md)).
 
 ## Критерии готовности (acceptance)
-- [ ] `GET /metrics` на том же `host:port`, что и API, отдаёт валидный **Prometheus text exposition** (тест или скрипт).
-- [ ] В доке репозитория указаны: **namespace метрик** (например `april_profile`), ожидаемые лейблы без высокой кардинальности, и как central Prometheus достучится до **`OBS_STAND_HOST:OBS_METRICS_PORT`** (или зафиксировано отклонение / необходимость доработки scrape в april-worker).
-- [ ] Логи — **JSON** в stdout; корреляция с HTTP через **`X-Request-Id` / `X-Correlation-Id`** и поля **`requestId` / `correlationId`** в теле лога **или** явное отклонение и причина в `REPORT.md`.
-- [ ] Учтено правило Loki: **не** поднимать `requestId` / `correlationId` / `userId` в **labels** Loki.
-- [ ] `go vet ./...`, `go test ./...` зелёные; при изменении `openapi/openapi.yaml` — `make openapi-lint` и совместимость по политике CI.
+- [x] `GET /metrics` на том же `host:port`, что и API, отдаёт валидный **Prometheus text exposition** (тест или скрипт).
+- [x] В доке репозитория указаны: **namespace метрик** (например `april_profile`), ожидаемые лейблы без высокой кардинальности, и как central Prometheus достучится до **`OBS_STAND_HOST:OBS_METRICS_PORT`** (или зафиксировано отклонение / необходимость доработки scrape в april-worker).
+- [x] Логи — **JSON** в stdout; корреляция с HTTP через **`X-Request-Id` / `X-Correlation-Id`** и поля **`requestId` / `correlationId`** в теле лога **или** явное отклонение и причина в `REPORT.md`.
+- [x] Учтено правило Loki: **не** поднимать `requestId` / `correlationId` / `userId` в **labels** Loki.
+- [x] `go vet ./...`, `go test ./...` зелёные; при изменении `openapi/openapi.yaml` — `make openapi-lint` и совместимость по политике CI.
 
 ## Проверка (команды)
 ```bash
@@ -92,7 +92,7 @@ make docs-build
 Список метрик и лейблов; пример `curl` к `http://<host>:<port>/metrics`; ссылка на PR; **блок «приняли / отклонили от контракта april-worker»** (например только ingress без прямого `:port` для Prometheus — и что делать дальше); follow-up для задачи **019** (дашборды в Hub) и при необходимости PR в april-worker для target/scrape.
 
 ## Человекопонятная история в docs-site (обязательно)
-- [ ] Создана страница `docs-site/docs/task-story-018-phase-4-prometheus-metrics-logs-correlation.md`.
-- [ ] В `docs-site/docs/task-stories-overview.md` добавлены пункт и строка статуса по задаче 018.
-- [ ] На простом языке: зачем `/metrics` для AprilHub, что даёт команда эксплуатации, как проверить без Grafana.
-- [ ] В конце страницы — ссылки на `tasks/018-phase-4-prometheus-metrics-logs-correlation/TASK.md`, `REPORT.md`.
+- [x] Создана страница `docs-site/docs/task-story-018-phase-4-prometheus-metrics-logs-correlation.md`.
+- [x] В `docs-site/docs/task-stories-overview.md` добавлены пункт и строка статуса по задаче 018.
+- [x] На простом языке: зачем `/metrics` для AprilHub, что даёт команда эксплуатации, как проверить без Grafana.
+- [x] В конце страницы — ссылки на `tasks/018-phase-4-prometheus-metrics-logs-correlation/TASK.md`, `REPORT.md`.
