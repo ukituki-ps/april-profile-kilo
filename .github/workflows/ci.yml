@@ -15,7 +15,7 @@ concurrency:
 jobs:
   openapi-compatibility:
     name: OpenAPI compatibility (no breaking changes)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, dev, april-profile]
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -40,7 +40,7 @@ jobs:
 
   quality:
     name: Lint OpenAPI and build docs
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, dev, april-profile]
     timeout-minutes: 20
     steps:
       - name: Checkout
@@ -61,7 +61,7 @@ jobs:
 
   backend:
     name: Go (vet, build) and Atlas migrations
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, dev, april-profile]
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -81,7 +81,7 @@ jobs:
 
   frontend:
     name: Frontend (design system + shell)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, dev, april-profile]
     timeout-minutes: 20
     steps:
       - name: Checkout
