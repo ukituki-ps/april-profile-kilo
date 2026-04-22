@@ -191,9 +191,9 @@ check_compose_host_ports() {
 		return 0
 	fi
 	mapfile -t compose_cids < <(compose_exec ps -q 2>/dev/null || true)
-	export APRIL_COMPOSE_CONFIG_JSON="${cfg_json}"
 	export APRIL_COMPOSE_CONTAINER_IDS="${compose_cids[*]}"
-	if ! python3 - <<'PY'
+	# Конфиг compose в Python через stdin: не кладём JSON в переменную окружения (риск обрезки/искажения).
+	if ! printf '%s' "${cfg_json}" | python3 - <<'PY'
 import json, os, re, socket, subprocess, sys
 
 def parse_published(pub):
@@ -233,7 +233,7 @@ def owned_host_ports(container_ids):
                 owned.add(int(m.group(1)))
     return owned
 
-def port_bindable(port: int) -> bool:
+def port_bindable(port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -244,7 +244,7 @@ def port_bindable(port: int) -> bool:
     finally:
         s.close()
 
-cfg = json.loads(os.environ.get("APRIL_COMPOSE_CONFIG_JSON", "{}"))
+cfg = json.load(sys.stdin)
 ids = os.environ.get("APRIL_COMPOSE_CONTAINER_IDS", "").split()
 want = want_ports(cfg)
 owned = owned_host_ports(ids)
@@ -269,10 +269,10 @@ if conflicts:
     sys.exit(1)
 PY
 	then
-		unset APRIL_COMPOSE_CONFIG_JSON APRIL_COMPOSE_CONTAINER_IDS
+		unset APRIL_COMPOSE_CONTAINER_IDS
 		return 1
 	fi
-	unset APRIL_COMPOSE_CONFIG_JSON APRIL_COMPOSE_CONTAINER_IDS
+	unset APRIL_COMPOSE_CONTAINER_IDS
 }
 
 run_compose() {
