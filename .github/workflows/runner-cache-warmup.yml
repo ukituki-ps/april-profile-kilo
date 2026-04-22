@@ -1,0 +1,57 @@
+name: Runner cache warmup
+
+on:
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+env:
+  GOMODCACHE: ${{ vars.GOMODCACHE_PATH || '/var/cache/april-profile/go/pkg/mod' }}
+  GOCACHE: ${{ vars.GOCACHE_PATH || '/var/cache/april-profile/go/build' }}
+  npm_config_cache: ${{ vars.NPM_CACHE_PATH || '/var/cache/april-profile/npm' }}
+
+jobs:
+  warmup:
+    name: Warmup Go and Node local caches
+    runs-on: [self-hosted, dev, april-profile]
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          cache: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Prepare local cache directories
+        run: mkdir -p "${npm_config_cache}" "${GOMODCACHE}" "${GOCACHE}"
+
+      - name: Rotate old cache entries
+        run: |
+          set -euo pipefail
+          # Keep go build cache hot but bounded.
+          find "${GOCACHE}" -mindepth 1 -mtime +7 -delete || true
+          # Keep module cache and npm cache longer to maximize reuse.
+          find "${GOMODCACHE}" -mindepth 1 -mtime +21 -delete || true
+          find "${npm_config_cache}" -mindepth 1 -mtime +21 -delete || true
+
+      - name: Warmup Go modules
+        run: go mod download
+
+      - name: Warmup docs dependencies
+        working-directory: docs-site
+        run: npm ci --prefer-offline
+
+      - name: Warmup frontend dependencies
+        working-directory: frontend
+        run: npm ci --prefer-offline
