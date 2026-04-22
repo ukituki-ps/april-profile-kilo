@@ -23,10 +23,10 @@ sidebar_position: 1
 | -------- | -------- |
 | Каталог клона / **`APRIL_DEPLOY_ROOT` в GitHub** | `/home/ukituki/april-profile` |
 | Self-hosted runner (второй процесс, репозиторий `april-profile`) | `~/actions-runner-april-profile`, labels `self-hosted`, `dev`, `april-profile` |
-| Порты HTTP (на том же сервере уже заняты **8080** / **8091** под `april-worker`) | в **`~/april-profile/.env`**: `DOCS_HTTP_PORT=8888`, `STRUCTURIZR_HTTP_PORT=8092` |
+| Порты HTTP (на том же сервере уже заняты **8080** / **8091** под `april-worker`) | в **`~/april-profile/.env`**: при необходимости override; в compose по умолчанию **`DOCS_HTTP_PORT=18080`**, **`STRUCTURIZR_HTTP_PORT=18092`** (блок **1808x** вместе с API **18081**) |
 | Postgres для compose и миграций | В том же **`.env`**: `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` / **`POSTGRES_PORT`** (по умолчанию в compose **15432** на хосте, если занят 5432). `scripts/run-migrations.sh` подключается к `127.0.0.1:${POSTGRES_PORT}`; внутри сети compose по-прежнему `postgres:5432`. |
 
-Публичный **`DEV_HOST`** (`dev.profile.april.ukituki.tech`) при необходимости направляют на этот хост reverse proxy; для smoke по IP: доки **`http://192.168.1.42:8888/`**, Structurizr Lite **`http://192.168.1.42:8092/`**.
+Публичный **`DEV_HOST`** (`dev.profile.april.ukituki.tech`) при необходимости направляют на этот хост reverse proxy; для smoke по IP (при дефолтных портах compose): доки **`http://192.168.1.42:18080/`**, Structurizr Lite **`http://192.168.1.42:18092/`** (если в `.env` заданы другие значения — подставьте их).
 
 При переносе клона в **`/opt/april-profile`** обновите **variable** `APRIL_DEPLOY_ROOT` в GitHub и эту таблицу.
 

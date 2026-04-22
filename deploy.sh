@@ -28,6 +28,7 @@ EOF
   SKIP_DB_BACKUP=1     не вызывать scripts/db-backup.sh (если есть)
   SKIP_MIGRATIONS=1    не вызывать scripts/run-migrations.sh (если есть)
   SKIP_COMPOSE_PULL=1  не выполнять docker compose pull
+  SKIP_PORT_CHECK=1    не проверять занятость проброшенных портов перед compose up
   COMPOSE_FORCE_RECREATE=0  не пересоздавать контейнеры принудительно
   COMPOSE_REMOVE_ORPHANS=0  не удалять orphan-контейнеры
 
@@ -160,6 +161,110 @@ ensure_db_for_migrations() {
 	return 0
 }
 
+# Перед compose up: убедиться, что проброшенные на хост порты свободны или уже заняты
+# контейнерами этого же compose-проекта (повторный деплой). Иначе — выход с подсказкой.
+check_compose_host_ports() {
+	if [[ "${SKIP_PORT_CHECK:-}" == "1" ]]; then
+		log "пропуск проверки портов (SKIP_PORT_CHECK=1)"
+		return 0
+	fi
+	if ! command -v docker >/dev/null 2>&1; then
+		return 0
+	fi
+	if ! command -v python3 >/dev/null 2>&1; then
+		log "замечание: python3 не найден — пропуск проверки портов (или установите python3 / задайте SKIP_PORT_CHECK=1)"
+		return 0
+	fi
+	local cfg_json
+	if ! cfg_json="$("${compose_files[@]}" config --format json 2>/dev/null)"; then
+		log "замечание: docker compose config --format json недоступен — пропуск проверки портов"
+		return 0
+	fi
+	mapfile -t compose_cids < <("${compose_files[@]}" ps -q 2>/dev/null || true)
+	export APRIL_COMPOSE_CONFIG_JSON="${cfg_json}"
+	export APRIL_COMPOSE_CONTAINER_IDS="${compose_cids[*]}"
+	if ! python3 - <<'PY'
+import json, os, re, socket, subprocess, sys
+
+def parse_published(pub):
+    if pub is None:
+        return None
+    s = str(pub).strip()
+    if s.isdigit():
+        return int(s)
+    m = re.search(r":(\d+)\s*$", s)
+    return int(m.group(1)) if m else None
+
+def want_ports(cfg):
+    out = set()
+    for spec in (cfg.get("services") or {}).values():
+        for p in spec.get("ports") or []:
+            n = parse_published(p.get("published"))
+            if n is not None:
+                out.add(n)
+    return out
+
+def owned_host_ports(container_ids):
+    owned = set()
+    for cid in container_ids:
+        cid = cid.strip()
+        if not cid:
+            continue
+        r = subprocess.run(
+            ["docker", "port", cid],
+            capture_output=True,
+            text=True,
+        )
+        if r.returncode != 0:
+            continue
+        for line in r.stdout.splitlines():
+            m = re.search(r"->\s*.+:(\d+)\s*$", line)
+            if m:
+                owned.add(int(m.group(1)))
+    return owned
+
+def port_bindable(port: int) -> bool:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(("0.0.0.0", port))
+        return True
+    except OSError:
+        return False
+    finally:
+        s.close()
+
+cfg = json.loads(os.environ.get("APRIL_COMPOSE_CONFIG_JSON", "{}"))
+ids = os.environ.get("APRIL_COMPOSE_CONTAINER_IDS", "").split()
+want = want_ports(cfg)
+owned = owned_host_ports(ids)
+conflicts = []
+for p in sorted(want):
+    if port_bindable(p):
+        continue
+    if p in owned:
+        continue
+    conflicts.append(p)
+if conflicts:
+    print(
+        "[deploy] порты уже заняты другим процессом (не этим compose): "
+        + ", ".join(str(x) for x in conflicts),
+        file=sys.stderr,
+    )
+    print(
+        "[deploy] задайте в .env свободные DOCS_HTTP_PORT / BACKEND_HTTP_PORT / "
+        "POSTGRES_PORT / REDIS_PORT / STRUCTURIZR_HTTP_PORT или освободите порты.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+PY
+	then
+		unset APRIL_COMPOSE_CONFIG_JSON APRIL_COMPOSE_CONTAINER_IDS
+		return 1
+	fi
+	unset APRIL_COMPOSE_CONFIG_JSON APRIL_COMPOSE_CONTAINER_IDS
+}
+
 run_compose() {
   local compose_up_flags=(-d)
   if [[ "${COMPOSE_FORCE_RECREATE:-1}" == "1" ]]; then
@@ -171,6 +276,7 @@ run_compose() {
 
   log "docker compose config (проверка)"
   "${compose_files[@]}" config >/dev/null
+	check_compose_host_ports
   if [[ "${SKIP_COMPOSE_PULL:-}" == "1" ]]; then
     log "пропуск docker compose pull (SKIP_COMPOSE_PULL=1)"
   else
