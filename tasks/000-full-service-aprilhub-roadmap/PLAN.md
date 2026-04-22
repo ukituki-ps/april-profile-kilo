@@ -103,6 +103,8 @@
 
 **Сначала:** `GET /metrics` (Prometheus), логи в формате, пригодном для Promtail/Loki; корреляция `request_id`.
 
+**Детализация и контракт с AprilHub (april-worker):** задача [`018-phase-4-prometheus-metrics-logs-correlation`](../018-phase-4-prometheus-metrics-logs-correlation/) (`TASK.md`: job `aprilhub_dynamic_targets`, file SD `overlays/targets/*.yml`, логи JSON, поля `requestId`/`correlationId`, ссылки на runbook'и в [april-worker](https://github.com/ukituki-ps/april-worker)).
+
 **Затем:** дашборды и алерты согласованы с командой Hub; черновик SLO.
 
 ### 4.2 Продукт (BFF + UI)
