@@ -45,6 +45,12 @@ jobs:
           find "${GOMODCACHE}" -mindepth 1 -mtime +21 -delete || true
           find "${npm_config_cache}" -mindepth 1 -mtime +21 -delete || true
 
+      - name: Warmup Docker base images
+        run: |
+          set -euo pipefail
+          docker pull --quiet golang:1.25-bookworm
+          docker pull --quiet gcr.io/distroless/static-debian12:nonroot
+
       - name: Warmup Go modules
         run: go mod download
 
