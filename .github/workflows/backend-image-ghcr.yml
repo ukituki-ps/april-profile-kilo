@@ -18,8 +18,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Ensure local registry mirrors
+        run: |
+          set -euo pipefail
+          mkdir -p /home/ukituki/.cache/registry-mirror/docker /home/ukituki/.cache/registry-mirror/gcr
+
+          if [ "$(docker inspect -f '{{.State.Running}}' dockerhub-mirror 2>/dev/null || true)" != "true" ]; then
+            docker rm -f dockerhub-mirror >/dev/null 2>&1 || true
+            docker run -d --restart unless-stopped --name dockerhub-mirror \
+              -p 127.0.0.1:5000:5000 \
+              -e REGISTRY_PROXY_REMOTEURL=https://registry-1.docker.io \
+              -v /home/ukituki/.cache/registry-mirror/docker:/var/lib/registry \
+              registry:2
+          fi
+
+          if [ "$(docker inspect -f '{{.State.Running}}' gcr-mirror 2>/dev/null || true)" != "true" ]; then
+            docker rm -f gcr-mirror >/dev/null 2>&1 || true
+            docker run -d --restart unless-stopped --name gcr-mirror \
+              -p 127.0.0.1:5001:5000 \
+              -e REGISTRY_PROXY_REMOTEURL=https://gcr.io \
+              -v /home/ukituki/.cache/registry-mirror/gcr:/var/lib/registry \
+              registry:2
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          name: april-profile-builder
+          keep-state: true
+          driver-opts: |
+            network=host
+          buildkitd-config-inline: |
+            [registry."docker.io"]
+              mirrors = ["127.0.0.1:5000"]
+            [registry."registry-1.docker.io"]
+              mirrors = ["127.0.0.1:5000"]
+            [registry."gcr.io"]
+              mirrors = ["127.0.0.1:5001"]
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
