@@ -5,6 +5,8 @@ package integrationtest
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -142,10 +144,12 @@ func TestAsynq_outboxBatch_marksPublished(t *testing.T) {
 		},
 	})
 	h := &asyncjobs.Handlers{
-		DB:              pool,
-		RDB:             rdb,
-		Publisher:       asyncjobs.StubPublisher{},
-		OutboxBatchSize: 10,
+		DB:                       pool,
+		RDB:                      rdb,
+		Publisher:                asyncjobs.StubPublisher{},
+		OutboxBatchSize:          10,
+		OutboxPublishMaxAttempts: 5,
+		OutboxPublishBackoffBase: time.Second,
 	}
 	mux := asynq.NewServeMux()
 	h.Register(mux)
@@ -184,6 +188,243 @@ func TestAsynq_outboxBatch_marksPublished(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	t.Fatalf("expected published, last status %q", status)
+}
+
+func TestAsynq_outboxBatch_publishRetriesThenPublished(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	pgURL, cleanupPG := startPostgresWithAtlasMigrations(t, ctx)
+	defer cleanupPG()
+	redisURL, cleanupR := startRedis(t, ctx)
+	defer cleanupR()
+
+	pool, err := pgxpool.New(ctx, pgURL)
+	if err != nil {
+		t.Fatalf("pgxpool: %v", err)
+	}
+	defer pool.Close()
+
+	rOpts, err := redis.ParseURL(redisURL)
+	if err != nil {
+		t.Fatalf("parse redis url: %v", err)
+	}
+	rdb := redis.NewClient(rOpts)
+	defer func() { _ = rdb.Close() }()
+
+	tenantID := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	entityTypeID := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	if _, err := pool.Exec(ctx, `INSERT INTO tenants (id) VALUES ($1)`, tenantID); err != nil {
+		t.Fatalf("insert tenant: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO entity_types (
+			id, tenant_id, namespace, code, schema_json, schema_version, status,
+			published_schema_json, published_schema_version, published_at
+		) VALUES (
+			$1, $2, 'hr', 'employee',
+			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
+			1, 'published',
+			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
+			1, now()
+		)
+	`, entityTypeID, tenantID); err != nil {
+		t.Fatalf("insert entity type: %v", err)
+	}
+
+	service := profiles.NewService(pool)
+	created, err := service.Create(ctx, tenantID, profiles.CreateParams{
+		EntityTypeID: entityTypeID,
+		Document:     map[string]any{"name": "Retry"},
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	pub := &flakyPublisher{failLeft: 2}
+	redisOpt := asynq.RedisClientOpt{
+		Addr:     rOpts.Addr,
+		Password: rOpts.Password,
+		DB:       rOpts.DB,
+	}
+	srv := asynq.NewServer(redisOpt, asynq.Config{
+		Concurrency: 2,
+		Queues: map[string]int{
+			asyncjobs.QueueOutbox:  6,
+			asyncjobs.QueueDefault: 3,
+		},
+	})
+	h := &asyncjobs.Handlers{
+		DB:                       pool,
+		RDB:                      rdb,
+		Publisher:                pub,
+		OutboxBatchSize:          10,
+		OutboxPublishMaxAttempts: 5,
+		OutboxPublishBackoffBase: 5 * time.Millisecond,
+	}
+	mux := asynq.NewServeMux()
+	h.Register(mux)
+	if err := srv.Start(mux); err != nil {
+		t.Fatalf("asynq server: %v", err)
+	}
+	defer srv.Shutdown()
+
+	client := asynq.NewClient(redisOpt)
+	defer func() { _ = client.Close() }()
+
+	deadline := time.Now().Add(45 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, err := client.Enqueue(asyncjobs.NewOutboxBatchTask(), asynq.MaxRetry(0)); err != nil {
+			t.Fatalf("enqueue outbox: %v", err)
+		}
+		var status string
+		err := pool.QueryRow(ctx, `
+			SELECT status FROM profile_outbox
+			WHERE tenant_id = $1 AND entity_id = $2::uuid AND profile_version = 1
+		`, tenantID, created.EntityID).Scan(&status)
+		if err != nil {
+			t.Fatalf("poll status: %v", err)
+		}
+		if status == "published" {
+			return
+		}
+		time.Sleep(40 * time.Millisecond)
+	}
+	t.Fatalf("expected published after flaky publisher recovers, entity %s", created.EntityID)
+}
+
+func TestAsynq_outboxBatch_publishExhaustedToFailed(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	pgURL, cleanupPG := startPostgresWithAtlasMigrations(t, ctx)
+	defer cleanupPG()
+	redisURL, cleanupR := startRedis(t, ctx)
+	defer cleanupR()
+
+	pool, err := pgxpool.New(ctx, pgURL)
+	if err != nil {
+		t.Fatalf("pgxpool: %v", err)
+	}
+	defer pool.Close()
+
+	rOpts, err := redis.ParseURL(redisURL)
+	if err != nil {
+		t.Fatalf("parse redis url: %v", err)
+	}
+	rdb := redis.NewClient(rOpts)
+	defer func() { _ = rdb.Close() }()
+
+	tenantID := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	entityTypeID := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	if _, err := pool.Exec(ctx, `INSERT INTO tenants (id) VALUES ($1)`, tenantID); err != nil {
+		t.Fatalf("insert tenant: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO entity_types (
+			id, tenant_id, namespace, code, schema_json, schema_version, status,
+			published_schema_json, published_schema_version, published_at
+		) VALUES (
+			$1, $2, 'hr', 'employee',
+			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
+			1, 'published',
+			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
+			1, now()
+		)
+	`, entityTypeID, tenantID); err != nil {
+		t.Fatalf("insert entity type: %v", err)
+	}
+
+	service := profiles.NewService(pool)
+	created, err := service.Create(ctx, tenantID, profiles.CreateParams{
+		EntityTypeID: entityTypeID,
+		Document:     map[string]any{"name": "DLQ"},
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	redisOpt := asynq.RedisClientOpt{
+		Addr:     rOpts.Addr,
+		Password: rOpts.Password,
+		DB:       rOpts.DB,
+	}
+	srv := asynq.NewServer(redisOpt, asynq.Config{
+		Concurrency: 2,
+		Queues: map[string]int{
+			asyncjobs.QueueOutbox:  6,
+			asyncjobs.QueueDefault: 3,
+		},
+	})
+	h := &asyncjobs.Handlers{
+		DB:                       pool,
+		RDB:                      rdb,
+		Publisher:                alwaysFailPublisher{},
+		OutboxBatchSize:          10,
+		OutboxPublishMaxAttempts: 3,
+		OutboxPublishBackoffBase: 5 * time.Millisecond,
+	}
+	mux := asynq.NewServeMux()
+	h.Register(mux)
+	if err := srv.Start(mux); err != nil {
+		t.Fatalf("asynq server: %v", err)
+	}
+	defer srv.Shutdown()
+
+	client := asynq.NewClient(redisOpt)
+	defer func() { _ = client.Close() }()
+
+	deadline := time.Now().Add(45 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, err := client.Enqueue(asyncjobs.NewOutboxBatchTask(), asynq.MaxRetry(0)); err != nil {
+			t.Fatalf("enqueue outbox: %v", err)
+		}
+		var status string
+		var attempts int
+		err := pool.QueryRow(ctx, `
+			SELECT status, publish_attempts FROM profile_outbox
+			WHERE tenant_id = $1 AND entity_id = $2::uuid AND profile_version = 1
+		`, tenantID, created.EntityID).Scan(&status, &attempts)
+		if err != nil {
+			t.Fatalf("poll status: %v", err)
+		}
+		if status == "failed" && attempts >= 3 {
+			var errMsg *string
+			if err := pool.QueryRow(ctx, `
+				SELECT last_publish_error FROM profile_outbox
+				WHERE tenant_id = $1 AND entity_id = $2::uuid AND profile_version = 1
+			`, tenantID, created.EntityID).Scan(&errMsg); err != nil {
+				t.Fatalf("last_publish_error: %v", err)
+			}
+			if errMsg == nil || *errMsg == "" {
+				t.Fatal("expected last_publish_error on failed row")
+			}
+			return
+		}
+		time.Sleep(40 * time.Millisecond)
+	}
+	t.Fatal("expected failed after max publish attempts")
+}
+
+type flakyPublisher struct {
+	mu       sync.Mutex
+	failLeft int
+}
+
+func (f *flakyPublisher) PublishProfileChange(context.Context, string, []byte) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failLeft > 0 {
+		f.failLeft--
+		return fmt.Errorf("simulated_publish_failure")
+	}
+	return nil
+}
+
+type alwaysFailPublisher struct{}
+
+func (alwaysFailPublisher) PublishProfileChange(context.Context, string, []byte) error {
+	return fmt.Errorf("always_fail_publish")
 }
 
 func TestAsynq_sourceSync_checkpointAndLagMetric(t *testing.T) {

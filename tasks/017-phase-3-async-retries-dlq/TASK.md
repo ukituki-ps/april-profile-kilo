@@ -34,10 +34,10 @@
 - Не логировать PII при ошибках синка/outbox без маскирования.
 
 ## Критерии готовности (acceptance)
-- [ ] Документирована и реализована политика retry (интервалы, max попыток) для целевых типов задач.
-- [ ] Определено поведение после исчерпания попыток (DLQ / dead record) и как это диагностировать.
-- [ ] Автотесты на сценарий «ошибка → retry → терминал».
-- [ ] `go vet ./...`, `go test ./...` зелёные.
+- [x] Документирована и реализована политика retry (интервалы, max попыток) для целевых типов задач.
+- [x] Определено поведение после исчерпания попыток (DLQ / dead record) и как это диагностировать.
+- [x] Автотесты на сценарий «ошибка → retry → терминал».
+- [x] `go vet ./...`, `go test ./...` зелёные.
 
 ## Проверка (команды)
 ```bash
@@ -52,8 +52,8 @@ make docs-build
 Таблица политик по типам задач, где лежит DLQ, как делать replay, open questions для эксплуатации.
 
 ## Человекопонятная история в docs-site (обязательно)
-- [ ] Создана страница `docs-site/docs/task-story-017-<slug>.md`.
-- [ ] Обновлён [`docs-site/docs/task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md).
-- [ ] Простым языком: зачем DLQ и ретраи для надёжности доставки и синков.
-- [ ] Границы: без UI-консоли, без полной observability-фазы Hub.
-- [ ] Ссылки на `tasks/017-phase-3-async-retries-dlq/TASK.md`, `REPORT.md`.
+- [x] Создана страница `docs-site/docs/task-story-017-async-retries-dlq.md`.
+- [x] Обновлён [`docs-site/docs/task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md).
+- [x] Простым языком: зачем DLQ и ретраи для надёжности доставки и синков.
+- [x] Границы: без UI-консоли, без полной observability-фазы Hub.
+- [x] Ссылки на `tasks/017-phase-3-async-retries-dlq/TASK.md`, `REPORT.md`.

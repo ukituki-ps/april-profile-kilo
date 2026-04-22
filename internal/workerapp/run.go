@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -42,12 +43,14 @@ func Run(ctx context.Context) error {
 	}
 
 	h := &asyncjobs.Handlers{
-		DB:              pool,
-		RDB:             rdb,
-		Publisher:       asyncjobs.StubPublisher{},
-		OutboxBatchSize: cfg.OutboxBatchSize,
-		SourceClient:    asyncjobs.NoopSourceClient{},
-		SyncBatchSize:   cfg.SyncBatchSize,
+		DB:                       pool,
+		RDB:                      rdb,
+		Publisher:                asyncjobs.StubPublisher{},
+		OutboxBatchSize:          cfg.OutboxBatchSize,
+		OutboxPublishMaxAttempts: cfg.OutboxPublishMaxAttempts,
+		OutboxPublishBackoffBase: cfg.OutboxPublishBackoffBase,
+		SourceClient:             asyncjobs.NoopSourceClient{},
+		SyncBatchSize:            cfg.SyncBatchSize,
 	}
 	h.LagMetrics, err = asyncjobs.NewSyncLagMetrics(nil)
 	if err != nil {
@@ -56,6 +59,10 @@ func Run(ctx context.Context) error {
 	mux := asynq.NewServeMux()
 	h.Register(mux)
 
+	retryBase := cfg.AsynqRetryBaseDelay
+	if retryBase <= 0 {
+		retryBase = 2 * time.Second
+	}
 	srv := asynq.NewServer(redisOpt, asynq.Config{
 		Concurrency: cfg.AsynqConcurrency,
 		Queues: map[string]int{
@@ -63,18 +70,60 @@ func Run(ctx context.Context) error {
 			asyncjobs.QueueDefault: 3,
 			asyncjobs.QueueSync:    3,
 		},
+		RetryDelayFunc: func(n int, err error, task *asynq.Task) time.Duration {
+			_ = err
+			_ = task
+			if n < 0 {
+				n = 0
+			}
+			if n > 16 {
+				n = 16
+			}
+			d := retryBase
+			for i := 0; i < n; i++ {
+				next := d * 2
+				if next < d {
+					return 15 * time.Minute
+				}
+				d = next
+				if d > 15*time.Minute {
+					return 15 * time.Minute
+				}
+			}
+			if d > 15*time.Minute {
+				return 15 * time.Minute
+			}
+			return d
+		},
+		ErrorHandler: asynq.ErrorHandlerFunc(func(ctx context.Context, task *asynq.Task, err error) {
+			tid, _ := asynq.GetTaskID(ctx)
+			slog.WarnContext(ctx, "asynq task handler returned error (retries/archive по политике Asynq)",
+				"task_type", task.Type(),
+				"asynq_task_id", tid,
+				"err", err,
+			)
+		}),
 	})
 
 	sched := asynq.NewScheduler(redisOpt, nil)
 
-	if _, err := sched.Register(config.FormatEveryCron(cfg.PingInterval), asyncjobs.NewPingTask()); err != nil {
+	if _, err := sched.Register(config.FormatEveryCron(cfg.PingInterval), asyncjobs.NewPingTask(
+		asynq.MaxRetry(cfg.AsynqPingMaxRetry),
+		asynq.Timeout(cfg.AsynqPingTimeout),
+	)); err != nil {
 		return fmt.Errorf("scheduler register ping: %w", err)
 	}
-	if _, err := sched.Register(config.FormatEveryCron(cfg.OutboxInterval), asyncjobs.NewOutboxBatchTask()); err != nil {
+	if _, err := sched.Register(config.FormatEveryCron(cfg.OutboxInterval), asyncjobs.NewOutboxBatchTask(
+		asynq.MaxRetry(cfg.AsynqOutboxMaxRetry),
+		asynq.Timeout(cfg.AsynqOutboxTimeout),
+	)); err != nil {
 		return fmt.Errorf("scheduler register outbox: %w", err)
 	}
 	for _, sourceSystem := range cfg.SyncSourceSystems {
-		task, err := asyncjobs.NewSourceSyncTask(sourceSystem)
+		task, err := asyncjobs.NewSourceSyncTask(sourceSystem,
+			asynq.MaxRetry(cfg.AsynqSyncMaxRetry),
+			asynq.Timeout(cfg.AsynqSyncTimeout),
+		)
 		if err != nil {
 			return fmt.Errorf("build source sync task: %w", err)
 		}

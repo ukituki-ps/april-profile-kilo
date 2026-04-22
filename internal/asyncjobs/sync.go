@@ -186,6 +186,13 @@ func (h *Handlers) syncTenantSource(ctx context.Context, tenantID, sourceSystem 
 		Now:          now,
 	})
 	if err != nil {
+		tid, _ := asynq.GetTaskID(ctx)
+		logSyncWarning("asyncjobs: fetch source changes failed",
+			"asynq_task_id", tid,
+			"tenant_id", tenantID,
+			"source_system", sourceSystem,
+			"err", err,
+		)
 		return fmt.Errorf("asyncjobs: fetch source changes: %w", err)
 	}
 
