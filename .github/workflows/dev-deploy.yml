@@ -20,7 +20,7 @@ permissions:
 jobs:
   build-docs:
     name: Build docs artifact
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, dev, april-profile]
     timeout-minutes: 20
     steps:
       - name: Checkout
