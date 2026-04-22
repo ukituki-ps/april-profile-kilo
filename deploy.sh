@@ -51,6 +51,11 @@ if [[ -f images.env ]]; then
   compose_files+=(--env-file images.env)
 fi
 
+# У Docker Compose подстановка ${VAR} в yaml берёт значение из окружения процесса
+# с приоритетом над --env-file. На self-hosted runner в профиле часто экспортирован
+# DOCS_HTTP_PORT и т.п. — сбрасываем только порты, чтобы использовались .env и дефолты compose.
+unset DOCS_HTTP_PORT STRUCTURIZR_HTTP_PORT BACKEND_HTTP_PORT POSTGRES_PORT REDIS_PORT 2>/dev/null || true
+
 run_git_pull() {
   if [[ "${SKIP_GIT_PULL:-}" == "1" ]]; then
     log "пропуск git pull (SKIP_GIT_PULL=1)"
