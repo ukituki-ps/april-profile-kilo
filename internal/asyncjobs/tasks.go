@@ -22,13 +22,16 @@ const (
 )
 
 // NewPingTask — периодическая проверка работоспособности воркера и Redis.
-func NewPingTask() *asynq.Task {
-	return asynq.NewTask(TaskTypePing, nil, asynq.Queue(QueueDefault))
+// opts — например asynq.MaxRetry, asynq.Timeout (см. workerapp).
+func NewPingTask(opts ...asynq.Option) *asynq.Task {
+	all := append([]asynq.Option{asynq.Queue(QueueDefault)}, opts...)
+	return asynq.NewTask(TaskTypePing, nil, all...)
 }
 
 // NewOutboxBatchTask — батч публикации строк profile_outbox со статусом pending.
-func NewOutboxBatchTask() *asynq.Task {
-	return asynq.NewTask(TaskTypeOutboxBatch, nil, asynq.Queue(QueueOutbox))
+func NewOutboxBatchTask(opts ...asynq.Option) *asynq.Task {
+	all := append([]asynq.Option{asynq.Queue(QueueOutbox)}, opts...)
+	return asynq.NewTask(TaskTypeOutboxBatch, nil, all...)
 }
 
 // SourceSyncPayload — минимальный payload джобы синка.
@@ -37,11 +40,12 @@ type SourceSyncPayload struct {
 }
 
 // NewSourceSyncTask — батч синхронизации по одному source_system.
-func NewSourceSyncTask(sourceSystem string) (*asynq.Task, error) {
+func NewSourceSyncTask(sourceSystem string, opts ...asynq.Option) (*asynq.Task, error) {
 	payload := SourceSyncPayload{SourceSystem: sourceSystem}
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("marshal source sync payload: %w", err)
 	}
-	return asynq.NewTask(TaskTypeSourceSync, raw, asynq.Queue(QueueSync)), nil
+	all := append([]asynq.Option{asynq.Queue(QueueSync)}, opts...)
+	return asynq.NewTask(TaskTypeSourceSync, raw, all...), nil
 }

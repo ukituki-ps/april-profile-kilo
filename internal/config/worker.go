@@ -26,6 +26,17 @@ type WorkerConfig struct {
 
 	SyncBatchSize     int
 	SyncSourceSystems []string
+
+	// Asynq: повторы всей задачи при ошибке обработчика (архив Redis после исчерпания).
+	AsynqRetryBaseDelay      time.Duration
+	AsynqPingMaxRetry        int
+	AsynqOutboxMaxRetry      int
+	AsynqSyncMaxRetry        int
+	AsynqPingTimeout         time.Duration
+	AsynqOutboxTimeout       time.Duration
+	AsynqSyncTimeout         time.Duration
+	OutboxPublishMaxAttempts int
+	OutboxPublishBackoffBase time.Duration
 }
 
 // LoadWorker читает env для процесса april-worker. Keycloak не требуется.
@@ -67,6 +78,45 @@ func LoadWorker() (WorkerConfig, error) {
 	if syncBatchSize < 1 {
 		syncBatchSize = 1
 	}
+	retryBase, err := durationFromEnv("ASYNQ_RETRY_BASE_DELAY", 2*time.Second)
+	if err != nil {
+		return WorkerConfig{}, err
+	}
+	pingMaxRetry, err := intFromEnv("ASYNQ_PING_MAX_RETRY", 3)
+	if err != nil {
+		return WorkerConfig{}, err
+	}
+	outboxMaxRetry, err := intFromEnv("ASYNQ_OUTBOX_BATCH_MAX_RETRY", 5)
+	if err != nil {
+		return WorkerConfig{}, err
+	}
+	syncMaxRetry, err := intFromEnv("ASYNQ_SYNC_MAX_RETRY", 5)
+	if err != nil {
+		return WorkerConfig{}, err
+	}
+	pingTimeout, err := durationFromEnv("ASYNQ_PING_TIMEOUT", 30*time.Second)
+	if err != nil {
+		return WorkerConfig{}, err
+	}
+	outboxTimeout, err := durationFromEnv("ASYNQ_OUTBOX_TIMEOUT", 3*time.Minute)
+	if err != nil {
+		return WorkerConfig{}, err
+	}
+	syncTimeout, err := durationFromEnv("ASYNQ_SYNC_TIMEOUT", 3*time.Minute)
+	if err != nil {
+		return WorkerConfig{}, err
+	}
+	outboxPubMax, err := intFromEnv("OUTBOX_PUBLISH_MAX_ATTEMPTS", 5)
+	if err != nil {
+		return WorkerConfig{}, err
+	}
+	if outboxPubMax < 1 {
+		outboxPubMax = 1
+	}
+	outboxBackoff, err := durationFromEnv("OUTBOX_PUBLISH_BACKOFF_BASE", time.Second)
+	if err != nil {
+		return WorkerConfig{}, err
+	}
 
 	cfg := WorkerConfig{
 		DatabaseURL:      strings.TrimSpace(os.Getenv("DATABASE_URL")),
@@ -83,6 +133,15 @@ func LoadWorker() (WorkerConfig, error) {
 			"SYNC_SOURCE_SYSTEMS",
 			[]string{"mock-hr"},
 		),
+		AsynqRetryBaseDelay:      retryBase,
+		AsynqPingMaxRetry:        pingMaxRetry,
+		AsynqOutboxMaxRetry:      outboxMaxRetry,
+		AsynqSyncMaxRetry:        syncMaxRetry,
+		AsynqPingTimeout:         pingTimeout,
+		AsynqOutboxTimeout:       outboxTimeout,
+		AsynqSyncTimeout:         syncTimeout,
+		OutboxPublishMaxAttempts: outboxPubMax,
+		OutboxPublishBackoffBase: outboxBackoff,
 	}
 	if cfg.DatabaseURL == "" {
 		return WorkerConfig{}, fmt.Errorf("config: требуется DATABASE_URL")

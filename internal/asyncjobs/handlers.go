@@ -19,9 +19,13 @@ type Handlers struct {
 	RDB             *redis.Client
 	Publisher       Publisher
 	OutboxBatchSize int
-	SourceClient    SourceClient
-	SyncBatchSize   int
-	LagMetrics      *SyncLagMetrics
+	// OutboxPublishMaxAttempts — после скольких неудачных Publish строка уходит в status=failed (DLQ в БД).
+	OutboxPublishMaxAttempts int
+	// OutboxPublishBackoffBase — базовая задержка экспоненциального backoff между попытками одной строки.
+	OutboxPublishBackoffBase time.Duration
+	SourceClient             SourceClient
+	SyncBatchSize            int
+	LagMetrics               *SyncLagMetrics
 }
 
 // Register mounts task handlers on mux.
@@ -55,6 +59,7 @@ func (h *Handlers) handleOutboxBatch(ctx context.Context, _ *asynq.Task) error {
 	if h.Publisher == nil {
 		return fmt.Errorf("asyncjobs: publisher is nil")
 	}
+	taskID, _ := asynq.GetTaskID(ctx)
 	if h.RDB != nil {
 		_ = h.RDB.Set(ctx, RedisKeyLastOutboxRun, time.Now().UTC().Format(time.RFC3339Nano), 0).Err()
 	}
@@ -69,6 +74,7 @@ func (h *Handlers) handleOutboxBatch(ctx context.Context, _ *asynq.Task) error {
 		SELECT id::text, tenant_id::text, payload
 		FROM profile_outbox
 		WHERE status = 'pending'
+		  AND (next_retry_at IS NULL OR next_retry_at <= now())
 		ORDER BY created_at ASC
 		LIMIT $1
 		FOR UPDATE SKIP LOCKED
@@ -90,31 +96,84 @@ func (h *Handlers) handleOutboxBatch(ctx context.Context, _ *asynq.Task) error {
 		return fmt.Errorf("asyncjobs: rows: %w", err)
 	}
 
+	maxPub := h.outboxPublishMaxAttempts()
+	backoffBase := h.outboxPublishBackoffBase()
+
 	for _, row := range list {
 		if !json.Valid(row.Payload) {
 			_, err := tx.Exec(ctx, `
-				UPDATE profile_outbox SET status = 'failed' WHERE id = $1::uuid AND status = 'pending'
+				UPDATE profile_outbox
+				SET status = 'failed',
+					last_publish_error = 'invalid_json_payload',
+					next_retry_at = NULL
+				WHERE id = $1::uuid AND status = 'pending'
 			`, row.ID)
 			if err != nil {
 				return fmt.Errorf("asyncjobs: mark failed invalid json: %w", err)
 			}
+			slog.WarnContext(ctx, "asyncjobs: outbox row invalid json, marked failed",
+				"asynq_task_id", taskID,
+				"outbox_id", row.ID,
+				"tenant_id", row.TenantID,
+			)
 			continue
 		}
 		pubCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		err := h.Publisher.PublishProfileChange(pubCtx, row.TenantID, row.Payload)
 		cancel()
 		if err != nil {
-			_, err2 := tx.Exec(ctx, `
-				UPDATE profile_outbox SET status = 'failed' WHERE id = $1::uuid AND status = 'pending'
-			`, row.ID)
+			errMsg := sanitizePublishError(err)
+			nextAttempts := 0
+			if err := tx.QueryRow(ctx, `SELECT publish_attempts FROM profile_outbox WHERE id = $1::uuid`, row.ID).Scan(&nextAttempts); err != nil {
+				return fmt.Errorf("asyncjobs: read publish_attempts: %w", err)
+			}
+			newCount := nextAttempts + 1
+			var nextRetry any
+			if newCount >= maxPub {
+				nextRetry = nil
+			} else {
+				nextRetry = time.Now().UTC().Add(outboxPublishBackoff(newCount, backoffBase))
+			}
+			tag, err2 := tx.Exec(ctx, `
+				UPDATE profile_outbox
+				SET publish_attempts = publish_attempts + 1,
+					last_publish_error = $2,
+					next_retry_at = $3,
+					status = CASE WHEN publish_attempts + 1 >= $4 THEN 'failed' ELSE 'pending' END
+				WHERE id = $1::uuid AND status = 'pending'
+			`, row.ID, errMsg, nextRetry, maxPub)
 			if err2 != nil {
-				return fmt.Errorf("asyncjobs: mark failed after publish: %w", err2)
+				return fmt.Errorf("asyncjobs: update outbox after publish error: %w", err2)
+			}
+			if tag.RowsAffected() == 0 {
+				continue
+			}
+			if newCount >= maxPub {
+				slog.WarnContext(ctx, "asyncjobs: outbox publish exhausted, row in DLQ (failed)",
+					"asynq_task_id", taskID,
+					"outbox_id", row.ID,
+					"tenant_id", row.TenantID,
+					"publish_attempts", newCount,
+					"last_publish_error", errMsg,
+				)
+			} else {
+				slog.WarnContext(ctx, "asyncjobs: outbox publish failed, will retry",
+					"asynq_task_id", taskID,
+					"outbox_id", row.ID,
+					"tenant_id", row.TenantID,
+					"publish_attempts", newCount,
+					"next_retry_at", nextRetry,
+				)
 			}
 			continue
 		}
 		_, err = tx.Exec(ctx, `
 			UPDATE profile_outbox
-			SET status = 'published', published_at = now()
+			SET status = 'published',
+				published_at = now(),
+				publish_attempts = 0,
+				last_publish_error = NULL,
+				next_retry_at = NULL
 			WHERE id = $1::uuid AND status = 'pending'
 		`, row.ID)
 		if err != nil {
@@ -126,6 +185,20 @@ func (h *Handlers) handleOutboxBatch(ctx context.Context, _ *asynq.Task) error {
 		return fmt.Errorf("asyncjobs: commit: %w", err)
 	}
 	return nil
+}
+
+func (h *Handlers) outboxPublishMaxAttempts() int {
+	if h.OutboxPublishMaxAttempts < 1 {
+		return 5
+	}
+	return h.OutboxPublishMaxAttempts
+}
+
+func (h *Handlers) outboxPublishBackoffBase() time.Duration {
+	if h.OutboxPublishBackoffBase <= 0 {
+		return time.Second
+	}
+	return h.OutboxPublishBackoffBase
 }
 
 func (h *Handlers) outboxLimit() int {
