@@ -18,16 +18,37 @@ if [[ -f .env ]]; then
 	set +a
 fi
 
-if [[ -z "${DATABASE_URL:-}" ]]; then
+if [[ -z "${DATABASE_URL:-}" && -z "${MIGRATION_DATABASE_URL:-}" && -z "${POSTGRES_PASSWORD:-}" ]]; then
 	echo "[run-migrations] DATABASE_URL не задан — пропуск миграций (добавьте в серверный .env для автоприменения при деплое)" >&2
 	exit 0
 fi
 
-# Atlas запускается с --network host: хост `postgres` из compose не резолвится — подмена на 127.0.0.1
-# при типичном пробросе порта 5432 (см. .env.example).
-MIGRATE_URL="${MIGRATION_DATABASE_URL:-${DATABASE_URL}}"
-if [[ -z "${MIGRATION_DATABASE_URL:-}" && "${MIGRATE_URL}" == *"@postgres:"* ]]; then
-	MIGRATE_URL="${MIGRATE_URL/@postgres:/@127.0.0.1:}"
+# Источник URL для Atlas (хост 127.0.0.1, --network host в docker run ниже):
+# 1) MIGRATION_DATABASE_URL — явный override;
+# 2) иначе, если задан POSTGRES_PASSWORD (как у сервиса postgres в compose), собираем строку из тех же
+#    POSTGRES_* что и контейнер — чтобы не расходился пароль с устаревшим DATABASE_URL в .env (типичный dev);
+# 3) иначе DATABASE_URL с подменой @postgres: → @127.0.0.1: (см. .env.example).
+MIGRATE_URL=""
+if [[ -n "${MIGRATION_DATABASE_URL:-}" ]]; then
+	MIGRATE_URL="${MIGRATION_DATABASE_URL}"
+elif [[ -n "${POSTGRES_PASSWORD:-}" ]]; then
+	PG_USER="${POSTGRES_USER:-april}"
+	PG_DB="${POSTGRES_DB:-april_profile}"
+	PG_PORT="${POSTGRES_PORT:-5432}"
+	PG_PASS_ENC="${POSTGRES_PASSWORD}"
+	if command -v python3 >/dev/null 2>&1; then
+		PG_PASS_ENC="$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=""))' "${POSTGRES_PASSWORD}")"
+	fi
+	MIGRATE_URL="postgres://${PG_USER}:${PG_PASS_ENC}@127.0.0.1:${PG_PORT}/${PG_DB}?sslmode=disable"
+	echo "[run-migrations] используется URL из POSTGRES_* (хост 127.0.0.1) для согласованности с compose" >&2
+elif [[ -n "${DATABASE_URL:-}" ]]; then
+	MIGRATE_URL="${DATABASE_URL}"
+	if [[ "${MIGRATE_URL}" == *"@postgres:"* ]]; then
+		MIGRATE_URL="${MIGRATE_URL/@postgres:/@127.0.0.1:}"
+	fi
+else
+	echo "[run-migrations] нет ни DATABASE_URL, ни POSTGRES_PASSWORD — пропуск" >&2
+	exit 0
 fi
 
 echo "[run-migrations] atlas migrate apply --env local (образ ${ATLAS_IMAGE})" >&2

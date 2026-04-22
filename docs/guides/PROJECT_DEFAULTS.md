@@ -24,6 +24,7 @@ sidebar_position: 1
 | Каталог клона / **`APRIL_DEPLOY_ROOT` в GitHub** | `/home/ukituki/april-profile` |
 | Self-hosted runner (второй процесс, репозиторий `april-profile`) | `~/actions-runner-april-profile`, labels `self-hosted`, `dev`, `april-profile` |
 | Порты HTTP (на том же сервере уже заняты **8080** / **8091** под `april-worker`) | в **`~/april-profile/.env`**: `DOCS_HTTP_PORT=8888`, `STRUCTURIZR_HTTP_PORT=8092` |
+| Postgres для compose и миграций | В том же **`.env`**: `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` / `POSTGRES_PORT` — для `scripts/run-migrations.sh` при наличии `POSTGRES_PASSWORD` URL для Atlas собирается из этих переменных (см. `.env.example`), чтобы не расходился пароль с устаревшим `DATABASE_URL`. |
 
 Публичный **`DEV_HOST`** (`dev.profile.april.ukituki.tech`) при необходимости направляют на этот хост reverse proxy; для smoke по IP: доки **`http://192.168.1.42:8888/`**, Structurizr Lite **`http://192.168.1.42:8092/`**.
 
