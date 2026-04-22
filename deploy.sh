@@ -52,9 +52,14 @@ if [[ -f images.env ]]; then
 fi
 
 # У Docker Compose подстановка ${VAR} в yaml берёт значение из окружения процесса
-# с приоритетом над --env-file. На self-hosted runner в профиле часто экспортирован
-# DOCS_HTTP_PORT и т.п. — сбрасываем только порты, чтобы использовались .env и дефолты compose.
+# с приоритетом над --env-file. На self-hosted runner часто задан DOCS_HTTP_PORT (иногда readonly) —
+# unset не всегда снимает; все вызовы compose идут через compose_exec с env -u.
 unset DOCS_HTTP_PORT STRUCTURIZR_HTTP_PORT BACKEND_HTTP_PORT POSTGRES_PORT REDIS_PORT 2>/dev/null || true
+
+compose_exec() {
+	env -u DOCS_HTTP_PORT -u STRUCTURIZR_HTTP_PORT -u BACKEND_HTTP_PORT -u POSTGRES_PORT -u REDIS_PORT \
+		"${compose_files[@]}" "$@"
+}
 
 run_git_pull() {
   if [[ "${SKIP_GIT_PULL:-}" == "1" ]]; then
@@ -159,7 +164,7 @@ ensure_db_for_migrations() {
 		return 0
 	fi
 	log "docker compose up -d postgres redis (подготовка к миграциям)"
-	if "${compose_files[@]}" up -d postgres redis; then
+	if compose_exec up -d postgres redis; then
 		return 0
 	fi
 	log "замечание: compose up postgres/redis не выполнен (нет профиля db, внешняя БД или ошибка compose) — миграции идут как настроено в DATABASE_URL"
@@ -181,11 +186,11 @@ check_compose_host_ports() {
 		return 0
 	fi
 	local cfg_json
-	if ! cfg_json="$("${compose_files[@]}" config --format json 2>/dev/null)"; then
+	if ! cfg_json="$(compose_exec config --format json 2>/dev/null)"; then
 		log "замечание: docker compose config --format json недоступен — пропуск проверки портов"
 		return 0
 	fi
-	mapfile -t compose_cids < <("${compose_files[@]}" ps -q 2>/dev/null || true)
+	mapfile -t compose_cids < <(compose_exec ps -q 2>/dev/null || true)
 	export APRIL_COMPOSE_CONFIG_JSON="${cfg_json}"
 	export APRIL_COMPOSE_CONTAINER_IDS="${compose_cids[*]}"
 	if ! python3 - <<'PY'
@@ -280,18 +285,18 @@ run_compose() {
   fi
 
   log "docker compose config (проверка)"
-  "${compose_files[@]}" config >/dev/null
+  compose_exec config >/dev/null
 	check_compose_host_ports
   if [[ "${SKIP_COMPOSE_PULL:-}" == "1" ]]; then
     log "пропуск docker compose pull (SKIP_COMPOSE_PULL=1)"
   else
     log "docker compose pull"
-    "${compose_files[@]}" pull
+    compose_exec pull
   fi
   log "docker compose up ${compose_up_flags[*]}"
-  "${compose_files[@]}" up "${compose_up_flags[@]}"
+  compose_exec up "${compose_up_flags[@]}"
   log "docker compose ps"
-  "${compose_files[@]}" ps
+  compose_exec ps
 }
 
 main() {
