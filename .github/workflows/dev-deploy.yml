@@ -102,4 +102,7 @@ jobs:
           cp -a /tmp/docs-site-build-${{ github.sha }}/. docs-site/build/
           ls -la docs-site/build | sed -n '1,20p'
           test -x ./deploy.sh
-          IMAGE_TAG_BACKEND="${{ github.sha }}" SKIP_GIT_PULL=1 SKIP_DOCS_BUILD=1 ./deploy.sh
+          # Снять утечку портовых переменных из окружения раннера (readonly/экспорт), чтобы compose и deploy.sh
+          # брали значения из серверного .env и дефолты из docker-compose.yml.
+          env -u DOCS_HTTP_PORT -u STRUCTURIZR_HTTP_PORT -u BACKEND_HTTP_PORT -u POSTGRES_PORT -u REDIS_PORT \
+            IMAGE_TAG_BACKEND="${{ github.sha }}" SKIP_GIT_PULL=1 SKIP_DOCS_BUILD=1 ./deploy.sh
