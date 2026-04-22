@@ -1,5 +1,6 @@
-h1:ZVyBqQKtbIOjfhJ24mo0BozqnrA5gpbl4A5aoj7fFy0=
+h1:pOPT8gCdAeBf+zOXy9CWkXuf3cnO4ULdK5CZSc9SKkw=
 20260420140000_initial.sql h1:Ph8nnh/KzuebYxXz7RbeafV6kxVzh8Me+MlKE6m1AVo=
 20260421103000_entity_types_publication.sql h1:RCoZxiq+tWcs54farH+VnhSG0gESX0fYdzbwuvWNjK0=
 20260422120000_authority_conflicts_audit.sql h1:2lsNhb0+96mAruhhbYM5AI2uKXLOx06Br/s3EaQp2/s=
 20260423120000_profile_outbox.sql h1:fqO0w0XzbNR+PeD8nYyxCKHdrr3D29oveLY6xfkAXyI=
+20260424120000_source_sync_checkpoints.sql h1:7QMUYB6VlcGcKSgU4UyOOhnlZcf82wta8vl0bRoPuz8=

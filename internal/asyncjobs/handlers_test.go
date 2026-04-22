@@ -2,12 +2,17 @@ package asyncjobs
 
 import (
 	"testing"
+	"time"
 
 	"github.com/hibiken/asynq"
 )
 
 func TestTaskTypes_registeredWithAsynq(t *testing.T) {
 	t.Parallel()
+	syncTask, err := NewSourceSyncTask("mock-hr")
+	if err != nil {
+		t.Fatalf("new source sync task: %v", err)
+	}
 	for _, tt := range []struct {
 		name string
 		task *asynq.Task
@@ -15,6 +20,7 @@ func TestTaskTypes_registeredWithAsynq(t *testing.T) {
 	}{
 		{"ping", NewPingTask(), TaskTypePing},
 		{"outbox", NewOutboxBatchTask(), TaskTypeOutboxBatch},
+		{"source-sync", syncTask, TaskTypeSourceSync},
 	} {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
@@ -23,6 +29,17 @@ func TestTaskTypes_registeredWithAsynq(t *testing.T) {
 				t.Fatalf("task type: got %q want %q", tt.task.Type(), tt.want)
 			}
 		})
+	}
+}
+
+func TestCalculateLagSeconds(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC)
+	if got := CalculateLagSeconds(now, now.Add(-45*time.Second)); got != 45 {
+		t.Fatalf("want 45, got %v", got)
+	}
+	if got := CalculateLagSeconds(now, now.Add(2*time.Second)); got != 0 {
+		t.Fatalf("future watermark must clamp to 0, got %v", got)
 	}
 }
 

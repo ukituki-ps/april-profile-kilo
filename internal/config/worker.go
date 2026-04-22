@@ -22,6 +22,10 @@ type WorkerConfig struct {
 
 	PingInterval   time.Duration
 	OutboxInterval time.Duration
+	SyncInterval   time.Duration
+
+	SyncBatchSize     int
+	SyncSourceSystems []string
 }
 
 // LoadWorker читает env для процесса april-worker. Keycloak не требуется.
@@ -52,6 +56,17 @@ func LoadWorker() (WorkerConfig, error) {
 	if err != nil {
 		return WorkerConfig{}, err
 	}
+	syncEvery, err := durationFromEnv("ASYNQ_SYNC_INTERVAL", 20*time.Second)
+	if err != nil {
+		return WorkerConfig{}, err
+	}
+	syncBatchSize, err := intFromEnv("SYNC_BATCH_SIZE", 200)
+	if err != nil {
+		return WorkerConfig{}, err
+	}
+	if syncBatchSize < 1 {
+		syncBatchSize = 1
+	}
 
 	cfg := WorkerConfig{
 		DatabaseURL:      strings.TrimSpace(os.Getenv("DATABASE_URL")),
@@ -62,6 +77,12 @@ func LoadWorker() (WorkerConfig, error) {
 		OutboxBatchSize:  batch,
 		PingInterval:     pingEvery,
 		OutboxInterval:   outboxEvery,
+		SyncInterval:     syncEvery,
+		SyncBatchSize:    syncBatchSize,
+		SyncSourceSystems: csvFromEnv(
+			"SYNC_SOURCE_SYSTEMS",
+			[]string{"mock-hr"},
+		),
 	}
 	if cfg.DatabaseURL == "" {
 		return WorkerConfig{}, fmt.Errorf("config: требуется DATABASE_URL")
@@ -70,6 +91,25 @@ func LoadWorker() (WorkerConfig, error) {
 		return WorkerConfig{}, fmt.Errorf("config: требуется REDIS_ADDR")
 	}
 	return cfg, nil
+}
+
+func csvFromEnv(name string, fallback []string) []string {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return fallback
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	if len(out) == 0 {
+		return fallback
+	}
+	return out
 }
 
 // FormatEveryCron возвращает спецификацию cron для Register("@every ...") из интервала.
