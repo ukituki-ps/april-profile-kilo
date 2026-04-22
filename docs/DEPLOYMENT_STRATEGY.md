@@ -2,7 +2,7 @@
 
 Документ для агента и команды: зафиксированные решения и порядок шагов для деплоя на **dev-хост** (`DEV_HOST`). Конкретные значения — в [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md); при копировании шаблона замените их по [`guides/FORK_AND_CUSTOMIZE.md`](./guides/FORK_AND_CUSTOMIZE.md).
 
-Конкретные значения для **AprilProfile** — в [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md): `DEV_HOST` = `dev.profile.april.ukituki.tech`, **`DEPLOY_ROOT`** = `/opt/april-profile`.
+Конкретные значения для **AprilProfile** — в [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md): `DEV_HOST` = `dev.profile.april.ukituki.tech`, стенд в LAN — **`192.168.1.42`**, runners CI — **`192.168.1.29`** (подробности и предупреждение про **`APRIL_DEPLOY_ROOT`** — в том же документе).
 
 ## 1. Репозиторий и триггеры
 
@@ -14,7 +14,7 @@
 
 **Практика для GitHub Actions:** workflow запускается на **`push` в `develop`** (merge PR даёт такой push). Чтобы исключить прямой push в `develop`, на GitHub включается **branch protection** для `develop` (запрет прямых push, обязательный PR). Тогда событие `push` в `develop` по смыслу соответствует «приняли PR».
 
-**Реализация в репозитории:** workflow **Deploy to dev** (файл `.github/workflows/dev-deploy.yml`) на **self-hosted** runner с labels **`dev`** и **`RUNNER_LABEL_EXTRA`** (для AprilProfile: `april-profile`) выполняет в каталоге клона (**`DEPLOY_ROOT`**, для AprilProfile: `/opt/april-profile`) `git fetch`, переход на коммит **`github.sha`**, затем **`SKIP_GIT_PULL=1 ./deploy.sh`**. Путь к клону можно переопределить **repository variable** `APRIL_DEPLOY_ROOT`. Ручной перезапуск того же сценария — **Actions → Deploy to dev → Run workflow** (`workflow_dispatch`).
+**Реализация в репозитории:** workflow **Deploy to dev** (файл `.github/workflows/dev-deploy.yml`) на **self-hosted** runner с labels **`dev`** и **`RUNNER_LABEL_EXTRA`** (для AprilProfile: `april-profile`) выполняет в каталоге клона на **хосте этого runner'а** (по умолчанию **`DEPLOY_ROOT`** из workflow, для AprilProfile часто переопределяют **`APRIL_DEPLOY_ROOT`**) `git fetch`, переход на коммит **`github.sha`**, затем **`SKIP_GIT_PULL=1 ./deploy.sh`** (внутри — `docker compose`). Путь к клону задаётся **repository variable** `APRIL_DEPLOY_ROOT`. Ручной перезапуск — **Actions → Deploy to dev → Run workflow** (`workflow_dispatch`). Если runner **не** на том же хосте, где крутится compose стенда, см. [`PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md) («Разнесённая топология»).
 
 ### 1a. Branch protection (чеклист GitHub)
 
@@ -43,8 +43,8 @@
 
 | Решение | Значение |
 |--------|----------|
-| Размещение | Тот же сервер, что обслуживает `DEV_HOST` (для AprilProfile: `dev.profile.april.ukituki.tech`) |
-| Охват | Один runner на все репозитории |
+| Размещение | **Self-hosted** машина с установленным `actions.runner` и labels из workflow. Для AprilProfile зафиксировано: runners CI на **`192.168.1.29`**, публичный **`DEV_HOST`** и рантайм compose на **`192.168.1.42`** (Orange Pi) — см. [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md). Runner **может** совпадать с сервером стенда, но **не обязан**; тогда **`APRIL_DEPLOY_ROOT`** и шаги `docker compose` должны быть согласованы с тем, **где** реально поднимаются контейнеры. |
+| Охват | По политике команды: один runner на несколько репозиториев или отдельный под проект |
 | Администрирование | Вручную: обновления и перезапуск `actions.runner` |
 | Labels | `dev`, **`RUNNER_LABEL_EXTRA`** — jobs указывают `runs-on` с этими labels (для AprilProfile: `dev`, `april-profile`) |
 
@@ -64,7 +64,7 @@
 | Имя | Где задать | Назначение |
 |-----|------------|------------|
 | `SUBMODULES_TOKEN` | **Settings → Secrets and variables → Actions → Secrets** | PAT с доступом **Contents: Read** к приватному submodule **DisignApril** (`ukituki-ps/DisignApril`), если submodule недоступен через `GITHUB_TOKEN`. В [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) (job `frontend`) и [`.github/workflows/bootstrap-ci.yml`](../.github/workflows/bootstrap-ci.yml) задан fallback на `github.token`, если секрет пуст — при публичном submodule или достаточных правах токена секрет можно не задавать. |
-| `APRIL_DEPLOY_ROOT` | **Settings → Variables → Actions** | Абсолютный путь к git-клону на dev-хосте; должен совпадать с **`DEPLOY_ROOT`** в [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md) (для AprilProfile: `/opt/april-profile`). Если переменная не задана, workflow использует значение по умолчанию из `dev-deploy.yml`. |
+| `APRIL_DEPLOY_ROOT` | **Settings → Variables → Actions** | Абсолютный путь к git-клону **на хосте, где выполняется job Deploy to dev** (тот же хост, что и self-hosted runner для этого job). Должен совпадать с каталогом, из которого на этой машине вызывается **`deploy.sh`** и **`docker compose`**. Для AprilProfile при разнесённой топологии см. [`guides/PROJECT_DEFAULTS.md`](./guides/PROJECT_DEFAULTS.md). Если переменная не задана, workflow использует значение по умолчанию из `dev-deploy.yml`. |
 | `GHCR_PUSH_TOKEN` *(опционально)* | **Settings → Secrets and variables → Actions → Secrets** | PAT для `docker login ghcr.io` (минимум `packages:write`, при необходимости `read:packages`). В [`.github/workflows/backend-image-ghcr.yml`](../.github/workflows/backend-image-ghcr.yml) по умолчанию используется `secrets.GITHUB_TOKEN`; если прав этого токена недостаточно (org policy), замените пароль логина на `secrets.GHCR_PUSH_TOKEN`. |
 | `GHCR_PULL_TOKEN` *(опционально)* | **Settings → Secrets and variables → Actions → Secrets** | PAT только если **`github.token`** на runner **не** может тянуть образ из ghcr (политика org и т.п.). Обязательный scope: **`read:packages`**. В [`.github/workflows/dev-deploy.yml`](../.github/workflows/dev-deploy.yml): `secrets.GHCR_PULL_TOKEN \|\| github.token` — если секрет задан **без** `read:packages` (например обычный OAuth-токен `gh auth`), `docker pull` даст **403** — лучше **не задавать** секрет и оставить `github.token` (в workflow включено `permissions: packages: read`). |
 
