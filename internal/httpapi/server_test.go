@@ -298,6 +298,17 @@ func TestMetrics_returnsPrometheusText(t *testing.T) {
 	}, nil, nil, nil, "", nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(ts.Close)
 
+	// CounterVec emits a series only after first observation with concrete labels.
+	// Prime one request through the HTTP middleware chain before scraping /metrics.
+	warmupRes, err := ts.Client().Get(ts.URL + "/healthz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = warmupRes.Body.Close()
+	if warmupRes.StatusCode != http.StatusOK {
+		t.Fatalf("warmup status %d", warmupRes.StatusCode)
+	}
+
 	res, err := ts.Client().Get(ts.URL + "/metrics")
 	if err != nil {
 		t.Fatal(err)
