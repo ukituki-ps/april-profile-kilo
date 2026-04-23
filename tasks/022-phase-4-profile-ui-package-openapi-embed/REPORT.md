@@ -1,9 +1,9 @@
 ## 1) Итого
 - Статус: ✅ выполнено
 - Задача: Фаза 4.2 (часть 2, AprilProfile) — пакет UI, клиент из OpenAPI, встраиваемый компонент и `onSaveSuccess`
-- Ветка: `develop` (локальная рабочая ветка на момент выполнения; перед PR требуется перенос в `feature/*`)
-- Коммиты: не создавались в рамках этой сессии
-- PR: не создавался
+- Ветка: `feature/022-profile-ui-package-openapi-embed` -> `develop`
+- Коммиты: `e4ec44f` (feature), `dfd557b` (merge commit в `develop`)
+- PR: https://github.com/ukituki-ps/april-profile/pull/64 (merged)
 
 ## 2) Что сделано
 - [frontend] Добавлен workspace-пакет `frontend/packages/profile-ui` (`@april/profile-ui`) с semver, публичными экспортами и сборкой в `dist`.
@@ -49,29 +49,41 @@
 - Сборка: ok
 - Unit tests: ok
 - Integration tests: не запускались (не затронут backend)
-- E2E / smoke: не запускались (host-driven e2e вынесен в задачу 023)
+- E2E / smoke: частичный dev smoke выполнен (см. §6), host-driven e2e остаётся в задаче 023
+- CI: `CI` / `bootstrap-ci` / `Backend image (ghcr)` / `Deploy to dev` для `dfd557b` — `success`
 
 Команды (фактически выполненные):
 ```bash
 cd frontend && npm install
 cd frontend && npm run generate:api -w @april/profile-ui
 cd frontend && npm run lint && npm run test && npm run build
+cd frontend && npm run test -w @april/profile-ui
 make openapi-lint
 make docs-build
 ```
 
 ## 6) Деплой
-- Среда: нет
+- Среда: dev (`dev.profile.april.ukituki.tech`, `dev.april.ukituki.tech`)
 - Согласовано с: `docs/DEPLOYMENT_STRATEGY.md`
-- Образы: не применялось
-- Health / readiness: не применимо
+- Образы: применены через workflow `Deploy to dev` (run `24837016745`, SHA `dfd557b2ce52ce2f259373a60c3a96ff8c9b222a`)
+- Health / readiness:
+  - `https://dev.profile.april.ukituki.tech/healthz` -> `{"status":"ok"}`
+  - `https://dev.profile.april.ukituki.tech/readyz` -> `{"database":"ok","redis":"ok","status":"ready"}`
+  - `https://dev.profile.april.ukituki.tech/api/v1/system/ping` -> `{"status":"ok"}`
+  - `https://dev.april.ukituki.tech/healthz` -> `{"status":"ok"}`
+  - `https://dev.april.ukituki.tech/readyz` -> `{"status":"ready","timestamp":"..."}`
+  - `https://dev.april.ukituki.tech/profile-widget-demo` -> `HTTP 200` (SPA index.html загружается)
+- Доп. наблюдения smoke:
+  - `https://dev.profile.april.ukituki.tech/admin/profile/api/v1/system/ping` -> `502` (profile-host без hub BFF слоя).
+  - `https://dev.april.ukituki.tech/api/v1/admin/profile/v1/system/ping` -> `404` (маршрут требует уточнения конфигурации Hub BFF для follow-up 023).
 - Rollback: не применялся
 
 ## 7) Риски и ограничения
 - Экспорт `src/generated/index.ts` поддерживается вручную; после смены генератора/контрактов нужен контроль diff.
 - В `frontend` build остаётся warning про размер бандла Vite (`>500kB`), функционально не блокирует задачу.
 - Полное host-интеграционное и e2e покрытие остаётся в рамках задачи 023 (AprilHub).
+- Проверка BFF proxy endpoint на `dev.april` показала `404` для пути `api/v1/admin/profile/v1/*`; нужно синхронизировать smoke URL со свежей конфигурацией Hub BFF в задаче 023.
 
 ## 8) Что осталось
-- [ ] Создать git commit(ы) и PR в ветку `feature/*` по workflow команды.
-- [ ] Подтвердить интеграцию в AprilHub host и e2e smoke в задаче 023.
+- [x] Создать git commit(ы), PR, дождаться CI, выполнить merge в `develop`.
+- [ ] Подтвердить сквозной host-driven BFF сценарий (корректный proxy URL + авторизованный `whoami`) и e2e smoke в задаче 023.
