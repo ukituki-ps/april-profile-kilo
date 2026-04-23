@@ -33,6 +33,7 @@ sidebar_position: 20
 - [016 — Синк с checkpoint и lag-метрики по источникам](./task-story-016-source-sync-checkpoints-lag)
 - [017 — Ретраи и DLQ для фоновых задач (Asynq, outbox, синк)](./task-story-017-async-retries-dlq)
 - [018 — Prometheus `/metrics`, логи под Loki, корреляция с Hub](./task-story-018-phase-4-prometheus-metrics-logs-correlation)
+- [019 — Grafana / алерты / SLO-draft для Profile в AprilHub (april-worker)](./task-story-019-phase-4-grafana-alerts-slo-hub-coordination)
 
 ## Быстрый статус
 
@@ -57,3 +58,4 @@ sidebar_position: 20
 | 016 source sync checkpoint + lag metrics | ✅ | [016](./task-story-016-source-sync-checkpoints-lag) | Появились checkpoint по tenant/source, идемпотентный sync-batch и метрика `april_profile_source_sync_lag_seconds` |
 | 017 async retries + DLQ | ✅ | [017](./task-story-017-async-retries-dlq) | Ретраи Asynq и per-row outbox, DLQ в БД (`failed`), backoff и интеграционные тесты |
 | 018 Prometheus + логи + корреляция | ✅ | [018](./task-story-018-phase-4-prometheus-metrics-logs-correlation) | `GET /metrics`, JSON-логи, `X-Request-Id` / `X-Correlation-Id`, поля `requestId` / `correlationId` |
+| 019 Grafana + алерты + SLO (Hub) | ✅ | [019](./task-story-019-phase-4-grafana-alerts-slo-hub-coordination) | Дашборд/алерты/SLO-draft в april-worker ([PR #28](https://github.com/ukituki-ps/april-worker/pull/28)); метрики остаются из 018 |

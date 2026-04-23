@@ -49,4 +49,4 @@ curl -sS "http://127.0.0.1:8080/metrics" | head -n 30
 ## Связанные задачи
 
 - Реализация: [`tasks/018-phase-4-prometheus-metrics-logs-correlation/`](../tasks/018-phase-4-prometheus-metrics-logs-correlation/TASK.md).
-- Дашборды и SLO в Hub: [`tasks/019-phase-4-grafana-alerts-slo-hub-coordination/`](../tasks/019-phase-4-grafana-alerts-slo-hub-coordination/).
+- Дашборды и SLO в Hub: [`tasks/019-phase-4-grafana-alerts-slo-hub-coordination/`](../tasks/019-phase-4-grafana-alerts-slo-hub-coordination/). После merge в april-worker: дашборд Grafana **AprilProfile Service Overview** (UID `april-profile-service-overview`), правила `aprilprofile-alerts.yml`, runbook `docs/runbooks/APRILPROFILE_SLO_DRAFT.md` — см. [PR #28](https://github.com/ukituki-ps/april-worker/pull/28).

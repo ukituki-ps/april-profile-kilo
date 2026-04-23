@@ -2,7 +2,7 @@
 
 - **Задача:** [`TASK.md`](./TASK.md)
 - **Дата плана:** 2026-04-22
-- **Статус плана:** черновик
+- **Статус плана:** согласован с реализацией в april-worker (PR [#28](https://github.com/ukituki-ps/april-worker/pull/28); ветка `feature/april-profile-grafana-alerts-slo-019`)
 
 ## Исходные допущения
 - Метрики AprilProfile уже экспортируются (`GET /metrics`) после задачи [`018-phase-4-prometheus-metrics-logs-correlation`](../018-phase-4-prometheus-metrics-logs-correlation/).
