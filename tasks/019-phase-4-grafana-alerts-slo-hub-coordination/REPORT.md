@@ -56,6 +56,15 @@ cd /home/ukituki/april-profile-1 && make docs-build
 - [ ] На dev: убедиться, что target для Profile зарегистрирован и панели показывают данные; при необходимости скорректировать `for` / silence.
 - [ ] Контакт согласования с владельцем Hub — по процессу из `tasks/000-full-service-aprilhub-roadmap/PLAN.md`.
 
+## 9) Чеклист дозакрытия (оперативно)
+1. В `april-worker` открыть Actions и восстановить запуск jobs (billing/spending limit у GitHub Actions), затем сделать re-run последних workflow для `develop`.
+2. Дождаться зелёного статуса минимум по pipeline `CI` и `bootstrap-ci`; зафиксировать ссылки на успешные runs в этом отчёте.
+3. На dev-стенде проверить наличие target с `service="april-profile"` в `aprilhub_dynamic_targets` и `up == 1`.
+4. В Grafana открыть дашборд `AprilProfile Service Overview` (UID `april-profile-service-overview`) и подтвердить данные по HTTP rate/latency/5xx и `/readyz`.
+5. Проверить, что правила из `aprilprofile-alerts.yml` загружены в Prometheus и переходят в expected state (без ложных firing на idle-стенде или с оговорённым silence).
+6. Обновить `tasks/019.../TASK.md`: отметить acceptance-пункт про проверки PR как выполненный либо приложить согласованное исключение с владельцем и сроком follow-up.
+7. После выполнения пунктов выше закрыть задачу 019 как полностью завершённую в трекере/статусах команды.
+
 ## Список алертов (имена)
 - `AprilProfileHigh5xxRate`
 - `AprilProfileReadyzFailures`
