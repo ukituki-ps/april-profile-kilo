@@ -34,10 +34,10 @@
 - Секреты — только env; не коммитить realm secrets.
 
 ## Критерии готовности (acceptance)
-- [ ] В репозитории есть **однозначное** описание: как Hub должен звать Profile (host, path, заголовки).
-- [ ] OpenAPI согласован с фактическим поведением REST (синхронизация в одном PR).
-- [ ] `make openapi-lint`, `make docs-build`, `go test ./...`, `go vet ./...` зелёные.
-- [ ] Описан **smoke-сценарий** dev (шаги), воспроизводимый командой из репо или compose.
+- [x] В репозитории есть **однозначное** описание: как Hub должен звать Profile (host, path, заголовки).
+- [x] OpenAPI согласован с фактическим поведением REST (синхронизация в одном PR).
+- [x] `make openapi-lint`, `make docs-build`, `go test ./...`, `go vet ./...` зелёные.
+- [x] Описан **smoke-сценарий** dev (шаги), воспроизводимый командой из репо или compose.
 
 ## Проверка (команды)
 ```bash
@@ -52,7 +52,7 @@ make docs-build
 Ссылка на согласованный префикс и пример `curl`; список доверенных заголовков; follow-up для задачи 021 (Hub).
 
 ## Человекопонятная история в docs-site (обязательно)
-- [ ] Страница `docs-site/docs/task-story-020-phase-4-profile-contract-behind-hub-bff.md`.
-- [ ] Обновлён `docs-site/docs/task-stories-overview.md`.
-- [ ] Простым языком: зачем BFF и tenant, что проверяет smoke.
-- [ ] Ссылки на `tasks/020-phase-4-profile-contract-behind-hub-bff/TASK.md`, `REPORT.md`.
+- [x] Страница `docs-site/docs/task-story-020-phase-4-profile-contract-behind-hub-bff.md`.
+- [x] Обновлён `docs-site/docs/task-stories-overview.md`.
+- [x] Простым языком: зачем BFF и tenant, что проверяет smoke.
+- [x] Ссылки на `tasks/020-phase-4-profile-contract-behind-hub-bff/TASK.md`, `REPORT.md`.

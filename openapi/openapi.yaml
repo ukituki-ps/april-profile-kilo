@@ -4,12 +4,19 @@ info:
   description: |
     REST API микросервиса April Profile (профиль пользователя).
     Спецификация ведётся в репозитории (`openapi/openapi.yaml`); скорректируйте `servers` под свой gateway.
+    Для AprilHub BFF (фаза 4.2) публичный путь согласован как `/admin/profile/api/v1/...`,
+    при этом сервисный путь остаётся `/api/v1/...` и tenant берётся только из JWT claim.
   version: 0.2.0
   license:
     name: UNLICENSED
 servers:
+  - url: /admin/profile/api
+    description: |
+      Рекомендуемый базовый путь за AprilHub BFF (same-origin админ-маршрут).
+      BFF/reverse proxy снимает префикс `/admin/profile` и проксирует в AprilProfile `/api`.
   - url: https://dev.profile.april.ukituki.tech/api
     description: |
+      Прямой URL сервиса на dev-стенде (без BFF Hub), используется для backend smoke.
       Подставьте базовый URL за gateway. См. `docs/guides/FORK_AND_CUSTOMIZE.md`.
 tags:
   - name: Admin
@@ -620,7 +627,9 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Access token Keycloak (проверка JWKS, iss, aud|azp).
+      description: |
+        Access token Keycloak (проверка JWKS, iss, aud|azp).
+        `tenant_id` извлекается только из trusted JWT claim, не из query/body/forwarded headers.
   schemas:
     WhoAmI:
       type: object

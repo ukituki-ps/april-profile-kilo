@@ -34,10 +34,10 @@
 - Секреты datasource — только через механизмы april-worker/infra, не в этом репозитории.
 
 ## Критерии готовности (acceptance)
-- [ ] В april-worker (или согласованном infra-репо) есть **merge-ready** изменения: dashboard JSON / Terraform / Helm — по принятому в Hub способу.
-- [ ] Запросы к метрикам учитывают job **`aprilhub_dynamic_targets`** и labels **`env` / `host` / `stand` / `service`** из [`overlays/targets/*.yml`](https://github.com/ukituki-ps/april-worker/tree/develop/infra/observability/overlays/targets); задокументировано соответствие именам метрик из **018** (например `april_profile_*`).
-- [ ] Алерты заведены с понятными сообщениями и ссылкой на runbook.
-- [ ] Черновик SLO опубликован в согласованном месте docs april-worker.
+- [x] В april-worker (или согласованном infra-репо) есть **merge-ready** изменения: dashboard JSON / Terraform / Helm — по принятому в Hub способу.
+- [x] Запросы к метрикам учитывают job **`aprilhub_dynamic_targets`** и labels **`env` / `host` / `stand` / `service`** из [`overlays/targets/*.yml`](https://github.com/ukituki-ps/april-worker/tree/develop/infra/observability/overlays/targets); задокументировано соответствие именам метрик из **018** (например `april_profile_*`).
+- [x] Алерты заведены с понятными сообщениями и ссылкой на runbook.
+- [x] Черновик SLO опубликован в согласованном месте docs april-worker.
 - [ ] Прогон проверок april-worker на PR (по [`docs/TESTING_STRATEGY.md`](../../docs/TESTING_STRATEGY.md) того репозитория) — зелёный, либо в `REPORT.md` зафиксированы исключения и владелец.
 
 ## Проверка (команды)
@@ -52,6 +52,6 @@
 Ссылки на PR в april-worker; скрин или UID дашборда; список алертов; краткий SLO; контакты согласования с Hub.
 
 ## Человекопонятная история в docs-site (обязательно)
-- [ ] Если по политике april-profile требуется зеркальная story: страница `docs-site/docs/task-story-019-phase-4-grafana-alerts-slo-hub-coordination.md` с акцентом «работа в Hub, ссылка на PR».
-- [ ] В `docs-site/docs/task-stories-overview.md` — строка по задаче 019.
-- [ ] В конце — ссылки на `tasks/019-phase-4-grafana-alerts-slo-hub-coordination/TASK.md`, `PLAN.md`, `REPORT.md`.
+- [x] Если по политике april-profile требуется зеркальная story: страница `docs-site/docs/task-story-019-phase-4-grafana-alerts-slo-hub-coordination.md` с акцентом «работа в Hub, ссылка на PR».
+- [x] В `docs-site/docs/task-stories-overview.md` — строка по задаче 019.
+- [x] В конце — ссылки на `tasks/019-phase-4-grafana-alerts-slo-hub-coordination/TASK.md`, `PLAN.md`, `REPORT.md`.
