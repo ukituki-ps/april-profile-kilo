@@ -34,6 +34,7 @@ sidebar_position: 20
 - [017 — Ретраи и DLQ для фоновых задач (Asynq, outbox, синк)](./task-story-017-async-retries-dlq)
 - [018 — Prometheus `/metrics`, логи под Loki, корреляция с Hub](./task-story-018-phase-4-prometheus-metrics-logs-correlation)
 - [019 — Grafana / алерты / SLO-draft для Profile в AprilHub (april-worker)](./task-story-019-phase-4-grafana-alerts-slo-hub-coordination)
+- [020 — Контракт вызова Profile за Hub BFF (tenant, path-prefix, dev smoke)](./task-story-020-phase-4-profile-contract-behind-hub-bff)
 
 ## Быстрый статус
 
@@ -59,3 +60,4 @@ sidebar_position: 20
 | 017 async retries + DLQ | ✅ | [017](./task-story-017-async-retries-dlq) | Ретраи Asynq и per-row outbox, DLQ в БД (`failed`), backoff и интеграционные тесты |
 | 018 Prometheus + логи + корреляция | ✅ | [018](./task-story-018-phase-4-prometheus-metrics-logs-correlation) | `GET /metrics`, JSON-логи, `X-Request-Id` / `X-Correlation-Id`, поля `requestId` / `correlationId` |
 | 019 Grafana + алерты + SLO (Hub) | ✅ | [019](./task-story-019-phase-4-grafana-alerts-slo-hub-coordination) | Дашборд/алерты/SLO-draft в april-worker ([PR #28](https://github.com/ukituki-ps/april-worker/pull/28)); метрики остаются из 018 |
+| 020 BFF-контракт Profile за Hub | ✅ | [020](./task-story-020-phase-4-profile-contract-behind-hub-bff) | Зафиксирован путь `/admin/profile/api/v1/...`, trusted headers, tenant только из JWT и локальный reverse-proxy smoke |

@@ -142,6 +142,19 @@ Host собирает страницу из layout, провайдеров (те
 - Тот же OIDC-клиент и сессия, что и у Hub; отдельный «логин в админку» без необходимости не вводить.
 - Длинные таблицы и фильтры не обязаны дублировать компоненты встраиваемого профиля: общие **примитивы** (таблица, фильтры) — из `@april/ui` / общих пакетов April.
 
+### 9.1 Контракт Hub BFF -> AprilProfile (dev-first)
+
+Для фазы 4.2 фиксируем режим, который использует AprilHub BFF:
+
+- **Публичный путь в Hub:** `/admin/profile/api/v1/...`.
+- **Внутренний путь сервиса:** AprilProfile обслуживает API как `/api/v1/...`; BFF/reverse proxy снимает префикс `/admin/profile` перед отправкой в сервис.
+- **Авторизация:** `Authorization: Bearer <access_token>` передаётся в сервис без подмены; tenant извлекается backend-ом только из trusted JWT claim (`tenant_id` по умолчанию).
+- **Trusted proxy headers:** допускаются `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Prefix`; они используются только как контекст прокси и не являются источником tenant или RBAC-решений.
+- **Анти-паттерн (запрещено):** принимать tenant из query (`?tenant_id=`), body или произвольных браузерных заголовков.
+- **CORS:** для сценария через BFF целевой режим same-origin (Hub frontend -> Hub BFF -> Profile API). Расширение CORS под прямые браузерные вызовы к Profile делается только по отдельному ADR.
+
+Минимальный smoke до готовности Hub выполняется через локальный nginx reverse proxy по гайду `docs/guides/PROFILE_BFF_DEV_SMOKE.md`: запросы к `/admin/profile/api/v1/auth/whoami` и доменным endpoint-ам должны проксироваться в AprilProfile без изменения JWT-контекста.
+
 ---
 
 ## 10. Module Federation (опционально)
