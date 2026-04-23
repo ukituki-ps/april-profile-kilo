@@ -1,9 +1,9 @@
 ## 1) Итого
 - Статус: ✅ выполнено (реализация в `april-worker`)
 - Задача: Фаза 4.2 (часть 1) — BFF proxy к Profile, admin routes, один OIDC-клиент
-- Ветка: `april-worker: feature/task-023-external-021-profile-proxy`
-- Коммиты: `не созданы (рабочая копия)`
-- PR: не создавался
+- Ветка: `april-worker: feature/task-023-external-021-profile-proxy` -> `develop`
+- Коммиты: `84034cb` (feature), `892f464` (merge commit в `develop`)
+- PR: https://github.com/ukituki-ps/april-worker/pull/39 (merged)
 
 ## 2) Что сделано
 - [backend] В `april-worker/hub-bff` добавлен admin proxy маршрут `/api/v1/admin/profile/*` в upstream AprilProfile.
@@ -37,7 +37,8 @@
 - Сборка: ok
 - Unit tests: ok
 - Integration tests: ok (в контуре `go test ./...` для `hub-bff`)
-- E2E / smoke: не запускались
+- E2E / smoke: локально не запускались; CI smoke job (`AprilHub runtime smoke`) выполнен успешно после `rerun failed jobs`
+- CI: `bootstrap-ci` / `CI` / `Deploy to dev` для `892f464` — `success` (после rerun failed jobs в `CI`)
 
 Команды (фактически выполненные в `april-worker`):
 ```bash
@@ -47,10 +48,14 @@ make openapi-lint
 ```
 
 ## 6) Деплой
-- Среда: нет
+- Среда: dev (`dev.april.ukituki.tech`, `dev.profile.april.ukituki.tech`)
 - Согласовано с: `april-worker/docs/DEPLOYMENT_STRATEGY.md`
-- Образы: не применялось
-- Health / readiness: не применимо
+- Образы: применены через workflow `Deploy to dev` (SHA `892f464`)
+- Health / readiness:
+  - `https://dev.profile.april.ukituki.tech/healthz` -> `{"status":"ok"}`
+  - `https://dev.profile.april.ukituki.tech/readyz` -> `{"database":"ok","redis":"ok","status":"ready"}`
+  - `https://dev.april.ukituki.tech/healthz` -> `{"status":"ok"}`
+  - `https://dev.april.ukituki.tech/readyz` -> `{"status":"ready", ...}`
 - Rollback: нет
 
 ## 7) Риски и ограничения
@@ -58,5 +63,5 @@ make openapi-lint
 - Полноценный e2e smoke с реальным dev Profile остаётся отдельной проверкой после PR/деплоя.
 
 ## 8) Что осталось
-- [ ] Создать commits/PR в `april-worker` и приложить ссылки в эту задачу.
-- [ ] Выполнить runtime smoke на dev стенде и зафиксировать лог успешного proxy-вызова.
+- [x] Создать commits/PR в `april-worker` и приложить ссылки в эту задачу.
+- [x] Выполнить runtime smoke/deploy проверки на dev стенде и зафиксировать результат.
