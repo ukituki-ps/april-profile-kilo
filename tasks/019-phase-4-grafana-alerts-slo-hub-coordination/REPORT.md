@@ -3,9 +3,8 @@
 - Задача: Фаза 4.1 (2/2) — дашборды Grafana, алерты, черновик SLO (AprilHub / april-worker)
 - Ветка: `feature/019-phase-4-grafana-alerts-slo-docs`
 - Коммиты (april-worker PR #28): `63b160a` (основной), `a871a54` (пустой коммит для повторного прогона CI)
-- Коммит (april-profile PR): `0b79444`
 - PR (april-worker): https://github.com/ukituki-ps/april-worker/pull/28
-- PR (april-profile): https://github.com/ukituki-ps/april-profile/pull/61
+- PR (april-profile): https://github.com/ukituki-ps/april-profile/pull/61 (ветка `feature/019-phase-4-grafana-alerts-slo-docs`)
 
 ## 2) Что сделано
 - [april-worker] Дашборд **AprilProfile Service Overview** (`infra/observability/grafana/dashboards/april-profile-service-overview.json`, UID `april-profile-service-overview`): rate/latency p95/5xx по `april_profile_http_*`, панель `/readyz`, lag `april_profile_source_sync_lag_seconds`; переменные `env` / `stand` / `host` / `service` для job `aprilhub_dynamic_targets`.
