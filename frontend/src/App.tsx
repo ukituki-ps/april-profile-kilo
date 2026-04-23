@@ -1,5 +1,7 @@
 import { UIKit } from "@april/ui";
-import { Anchor, Container, Group, Stack, Text, Title } from "@mantine/core";
+import { EntityProfileWidget } from "@april/profile-ui";
+import { Alert, Anchor, Container, Group, Stack, Text, Title } from "@mantine/core";
+import { useState } from "react";
 import { Link, Route, Routes } from "react-router-dom";
 
 function HomePage() {
@@ -9,6 +11,9 @@ function HomePage() {
         <Title order={1}>April Profile</Title>
         <Anchor component={Link} to="/showcase">
           Открыть страницу showcase
+        </Anchor>
+        <Anchor component={Link} to="/profile-widget-demo">
+          Открыть демо встраиваемого профиля
         </Anchor>
         <Text c="dimmed">
           Замените этот экран маршрутизацией и экранами профиля. Стили и тема — из @april/ui
@@ -36,11 +41,47 @@ function ShowcasePage() {
   );
 }
 
+function ProfileWidgetDemoPage() {
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const apiBaseUrl = import.meta.env.VITE_PROFILE_API_BASE_URL ?? "/admin/profile/api";
+  const accessToken = import.meta.env.VITE_PROFILE_ACCESS_TOKEN;
+  const demoEntityId =
+    import.meta.env.VITE_PROFILE_DEMO_ENTITY_ID ?? "00000000-0000-0000-0000-000000000001";
+
+  return (
+    <Container py="xl" size="md">
+      <Stack gap="md">
+        <Group gap="sm">
+          <Anchor component={Link} to="/">
+            April Profile
+          </Anchor>
+          <Text c="dimmed">/</Text>
+          <Text>Widget demo</Text>
+        </Group>
+        <Text size="sm" c="dimmed">
+          Embedded demo for <code>@april/profile-ui</code> with `onSaveSuccess` callback.
+        </Text>
+        {saveMessage ? <Alert color="green">{saveMessage}</Alert> : null}
+        <EntityProfileWidget
+          hostContext={{ tenant: { id: "demo-tenant" }, telemetry: { requestId: "local-demo-req" } }}
+          entityId={demoEntityId}
+          apiBaseUrl={apiBaseUrl}
+          accessToken={accessToken}
+          onSaveSuccess={(payload) => {
+            setSaveMessage(`Saved entity ${payload.entityId}, version ${payload.version}`);
+          }}
+        />
+      </Stack>
+    </Container>
+  );
+}
+
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/showcase" element={<ShowcasePage />} />
+      <Route path="/profile-widget-demo" element={<ProfileWidgetDemoPage />} />
     </Routes>
   );
 }

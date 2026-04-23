@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "ds:prepare": "sh ./scripts/ds-prepare.sh",
     "predev": "npm run ds:prepare",
@@ -10,12 +13,16 @@
     "prelint": "npm run ds:prepare",
     "pretest": "npm run ds:prepare",
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "lint": "tsc --noEmit",
-    "test": "vitest run",
+    "build:app": "tsc --noEmit && vite build",
+    "build": "npm run build:app && npm run build -w @april/profile-ui",
+    "lint:app": "tsc --noEmit",
+    "lint": "npm run lint:app && npm run lint -w @april/profile-ui",
+    "test:app": "vitest run",
+    "test": "npm run test:app",
     "preview": "vite preview --host 0.0.0.0 --port 4173"
   },
   "dependencies": {
+    "@april/profile-ui": "file:./packages/profile-ui",
     "@april/tokens": "file:../design-system/DisignApril/packages/tokens",
     "@april/ui": "file:../design-system/DisignApril/packages/ui",
     "@emotion/react": "^11.14.0",

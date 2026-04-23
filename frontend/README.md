@@ -20,9 +20,9 @@ npm run dev
 | -------- | ---------- |
 | `npm run ds:prepare` | Сборка пакетов DS в submodule |
 | `npm run dev` | Vite dev server (порт 5173) |
-| `npm run build` | Typecheck + production bundle |
-| `npm run lint` | `tsc --noEmit` |
-| `npm test` | Vitest |
+| `npm run build` | Build shell + build `@april/profile-ui` (with OpenAPI generation) |
+| `npm run lint` | Typecheck shell + typecheck `@april/profile-ui` |
+| `npm test` | Vitest for shell + `@april/profile-ui` |
 
 ## Дубликаты React при `file:`-зависимостях
 
@@ -31,3 +31,5 @@ npm run dev
 ## Документация
 
 Дизайн-система — [`docs/guides/DESIGN_SYSTEM.md`](../docs/guides/DESIGN_SYSTEM.md). Интеграция с AprilHub, админка и встраиваемые компоненты — [`docs/FRONTEND_STRATEGY.md`](../docs/FRONTEND_STRATEGY.md).
+
+Пакет виджета профиля и его публичный API: [`packages/profile-ui/README.md`](./packages/profile-ui/README.md).
