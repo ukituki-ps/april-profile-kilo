@@ -35,6 +35,7 @@ sidebar_position: 20
 - [018 — Prometheus `/metrics`, логи под Loki, корреляция с Hub](./task-story-018-phase-4-prometheus-metrics-logs-correlation)
 - [019 — Grafana / алерты / SLO-draft для Profile в AprilHub (april-worker)](./task-story-019-phase-4-grafana-alerts-slo-hub-coordination)
 - [020 — Контракт вызова Profile за Hub BFF (tenant, path-prefix, dev smoke)](./task-story-020-phase-4-profile-contract-behind-hub-bff)
+- [022 — Пакет `@april/profile-ui`, OpenAPI-клиент и `onSaveSuccess`](./task-story-022-phase-4-profile-ui-package-openapi-embed)
 
 ## Быстрый статус
 
@@ -61,3 +62,4 @@ sidebar_position: 20
 | 018 Prometheus + логи + корреляция | ✅ | [018](./task-story-018-phase-4-prometheus-metrics-logs-correlation) | `GET /metrics`, JSON-логи, `X-Request-Id` / `X-Correlation-Id`, поля `requestId` / `correlationId` |
 | 019 Grafana + алерты + SLO (Hub) | ✅ | [019](./task-story-019-phase-4-grafana-alerts-slo-hub-coordination) | Дашборд/алерты/SLO-draft в april-worker ([PR #28](https://github.com/ukituki-ps/april-worker/pull/28)); метрики остаются из 018 |
 | 020 BFF-контракт Profile за Hub | ✅ | [020](./task-story-020-phase-4-profile-contract-behind-hub-bff) | Зафиксирован путь `/admin/profile/api/v1/...`, trusted headers, tenant только из JWT и локальный reverse-proxy smoke |
+| 022 UI-пакет и OpenAPI-клиент | ✅ | [022](./task-story-022-phase-4-profile-ui-package-openapi-embed) | Добавлен `@april/profile-ui`, generated client, виджет с `onSaveSuccess` и локальный embed-demo |

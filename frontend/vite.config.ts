@@ -12,6 +12,7 @@ export default defineConfig({
     alias: {
       react: path.resolve(dirname, "node_modules/react"),
       "react-dom": path.resolve(dirname, "node_modules/react-dom"),
+      "@april/profile-ui": path.resolve(dirname, "packages/profile-ui/src/index.ts"),
     },
   },
   server: {

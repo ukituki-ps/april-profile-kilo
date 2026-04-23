@@ -12,10 +12,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
-    "baseUrl": ".",
-    "paths": {
-      "@april/profile-ui": ["packages/profile-ui/src/index.ts"]
-    }
+    "types": ["vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": ["src", "packages/profile-ui/src"]
+  "include": ["src"]
 }
