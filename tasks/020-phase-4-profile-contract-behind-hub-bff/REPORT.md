@@ -1,9 +1,9 @@
 ## 1) Итого
 - Статус: ✅ выполнено
 - Задача: Фаза 4.2 (часть 1, AprilProfile) — контракт «за BFF»: tenant, маршруты, документация для dev
-- Ветка: `feature/020-phase-4-profile-contract-bff-docs`
-- Коммиты: не создавались
-- PR: не создавался
+- Ветка: `feature/020-phase-4-profile-contract-bff-docs` (merged -> `develop`)
+- Коммиты: `ca3adf5` (feature), `b0da384` (merge commit в `develop`)
+- PR: https://github.com/ukituki-ps/april-profile/pull/62
 
 ## 2) Что сделано
 - [docs] В `docs/FRONTEND_STRATEGY.md` (и синхронно в `docs-site/docs/frontend-strategy.md`) добавлен явный контракт Hub BFF -> Profile: публичный префикс `/admin/profile/api/v1/...`, снятие `/admin/profile` на прокси, trusted headers и правила по tenant.
@@ -36,6 +36,7 @@
 - Unit tests: ok
 - Integration tests: ok (в составе `go test ./...`)
 - E2E / smoke: ok (описан и зафиксирован воспроизводимый dev smoke-сценарий через локальный reverse proxy)
+- CI после merge в `develop`: **ok** — https://github.com/ukituki-ps/april-profile/actions/runs/24833169716
 
 Команды (фактически выполненные):
 ```bash
@@ -46,15 +47,18 @@ make docs-build
 ```
 
 ## 6) Деплой
-- Среда: нет (задача на контракт/документацию без деплоя)
+- Среда: dev (`develop` pipeline)
 - Согласовано с: [`docs/DEPLOYMENT_STRATEGY.md`](../../docs/DEPLOYMENT_STRATEGY.md)
-- Образы: не применялось
-- Health / readiness: не применялось
-- Rollback: нет
+- Образы: backend image собран успешно (`Backend image (ghcr)` run success) — https://github.com/ukituki-ps/april-profile/actions/runs/24833169710
+- Deploy to dev: **ok после rerun** — https://github.com/ukituki-ps/april-profile/actions/runs/24833169697
+- Health / readiness: выполнены в рамках успешного `deploy.sh` на dev-runner
+- Rollback: не применялся
 
 ## 7) Риски и ограничения
 - До выполнения задачи 021 в AprilHub реальный BFF-маршрут и OIDC-поток остаются внешней зависимостью.
 - Dev smoke использует локальный proxy и предполагает доступный AprilProfile на `127.0.0.1:8080`.
+- Инцидент по правам `docs-site/build` на dev-runner закрыт: после исправления owner/permissions повторный запуск `Deploy to dev` завершился успехом.
 
 ## 8) Что осталось
 - [ ] Выполнить задачу `tasks/021-phase-4-aprilhub-bff-proxy-admin-routes-oidc/TASK.md` на стороне AprilHub: реализовать BFF-проксирование и один OIDC-клиент по зафиксированному контракту.
+- [ ] Продолжить smoke-проверки BFF-сценария после реализации задачи 021 на стороне Hub.
