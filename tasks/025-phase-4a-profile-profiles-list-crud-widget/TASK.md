@@ -1,7 +1,7 @@
 # Задача: Фаза 4a.1 (AprilProfile) — виджет списка профилей и базовый CRUD
 
 ## Мета
-- **ID / ветка:** (например `feat/phase-4a-profiles-list-widget`)
+- **ID / ветка:** `feature/phase-4a-profiles-list-widget`
 - **Приоритет:** высокий
 - **Родительская дорожная карта:** [`tasks/000-full-service-aprilhub-roadmap/`](../000-full-service-aprilhub-roadmap/) — [`PLAN.md`](../000-full-service-aprilhub-roadmap/PLAN.md), **Фаза 4a**, пункт **4a.1**.
 - **Связанные подзадачи:** зависит от завершения [`022-phase-4-profile-ui-package-openapi-embed`](../022-phase-4-profile-ui-package-openapi-embed/) и контрактов API фазы 2 (`010`-`013`); для хостинга в Hub продолжение в [`026-phase-4a-hub-profiles-list-host-bff-flow`](../026-phase-4a-hub-profiles-list-host-bff-flow/).
@@ -37,10 +37,10 @@
 - Секреты и URL окружений только через env.
 
 ## Критерии готовности (acceptance)
-- [ ] Виджет списка профилей работает в локальном/demo контуре с list + CRUD сценариями.
-- [ ] Для неуспешных ответов есть предсказуемое UX-поведение (`401/403/409`).
-- [ ] Публичный контракт виджета описан в README пакета.
-- [ ] Проверки фронтенда и документации проходят.
+- [x] Виджет списка профилей работает в локальном/demo контуре с list + CRUD сценариями.
+- [x] Для неуспешных ответов есть предсказуемое UX-поведение (`401/403/409`).
+- [x] Публичный контракт виджета описан в README пакета.
+- [x] Проверки фронтенда и документации проходят.
 
 ## Проверка (команды)
 ```bash
@@ -53,8 +53,8 @@ cd frontend && npm ci && npm run lint && npm run test && npm run build
 Список измененных файлов пакета и demo, подтверждение CRUD-сценариев, известные ограничения перед интеграцией в Hub.
 
 ## Человекопонятная история в docs-site (обязательно)
-- [ ] Создана/обновлена страница `docs-site/docs/task-story-025-phase-4a-profile-profiles-list-crud-widget.md`.
-- [ ] В [`docs-site/docs/task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md) добавлена ссылка и обновлен статус.
-- [ ] Простым языком описано, зачем нужен виджет списка профилей и как его проверить.
-- [ ] Описаны границы: что сделано в AprilProfile и что остается для AprilHub.
-- [ ] В конце страницы есть ссылки на `tasks/025-phase-4a-profile-profiles-list-crud-widget/TASK.md`, `PLAN.md` (если появится), `REPORT.md`.
+- [x] Создана/обновлена страница `docs-site/docs/task-story-025-phase-4a-profile-profiles-list-crud-widget.md`.
+- [x] В [`docs-site/docs/task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md) добавлена ссылка и обновлен статус.
+- [x] Простым языком описано, зачем нужен виджет списка профилей и как его проверить.
+- [x] Описаны границы: что сделано в AprilProfile и что остается для AprilHub.
+- [x] В конце страницы есть ссылки на `tasks/025-phase-4a-profile-profiles-list-crud-widget/TASK.md`, `PLAN.md` (если появится), `REPORT.md`.

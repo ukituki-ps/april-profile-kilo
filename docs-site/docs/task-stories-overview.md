@@ -37,6 +37,7 @@ sidebar_position: 20
 - [020 — Контракт вызова Profile за Hub BFF (tenant, path-prefix, dev smoke)](./task-story-020-phase-4-profile-contract-behind-hub-bff)
 - [022 — Пакет `@april/profile-ui`, OpenAPI-клиент и `onSaveSuccess`](./task-story-022-phase-4-profile-ui-package-openapi-embed)
 - [024 — Модель документации виджетов и единый каталог profile -> widgets](./task-story-024-phase-4-widget-docs-operating-model-and-project-ingestion)
+- [025 — `ProfilesListWidget`: список профилей и базовый CRUD](./task-story-025-phase-4a-profile-profiles-list-crud-widget)
 
 ## Быстрый статус
 
@@ -65,3 +66,4 @@ sidebar_position: 20
 | 020 BFF-контракт Profile за Hub | ✅ | [020](./task-story-020-phase-4-profile-contract-behind-hub-bff) | Зафиксирован путь `/admin/profile/api/v1/...`, trusted headers, tenant только из JWT и локальный reverse-proxy smoke |
 | 022 UI-пакет и OpenAPI-клиент | ✅ | [022](./task-story-022-phase-4-profile-ui-package-openapi-embed) | Добавлен `@april/profile-ui`, generated client, виджет с `onSaveSuccess` и локальный embed-demo |
 | 024 модель документации виджетов | ✅ | [024](./task-story-024-phase-4-widget-docs-operating-model-and-project-ingestion) | Единая схема `profile -> widgets -> version/status`, каталог карточек и синхронизация docs/docs-site через чеклисты |
+| 025 ProfilesListWidget + CRUD | ✅ | [025](./task-story-025-phase-4a-profile-profiles-list-crud-widget) | Добавлен виджет списка профилей с search/filter/pagination, CRUD и безопасной обработкой `401/403/409` |
