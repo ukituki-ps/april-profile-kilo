@@ -22,6 +22,10 @@ sidebar_position: 8
 
 **Design System** (`@april/ui`): обновления minor/patch не должны ломать виджеты без явного bump peer dependency; major DS — координация с владельцами виджетов и Hub.
 
+### 1.1. `@april/profile-ui`
+
+Правила PATCH / MINOR / MAJOR и обязательность release notes для Hub — в каноническом файле в корне репозитория `docs/VERSIONING_AND_COMPATIBILITY.md` §1.1 (та же копия, что и эта страница, плюс детали для пакета profile-ui).
+
 ---
 
 ## 2. Матрица совместимости (Host × Widget)

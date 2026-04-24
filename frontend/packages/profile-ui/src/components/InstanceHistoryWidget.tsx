@@ -14,6 +14,8 @@ import {
 } from "@mantine/core";
 import { ApiError, OpenAPI, ProfilesService } from "../generated";
 import type { ProfileSnapshot } from "../generated";
+import { emitProfileWidgetTelemetry } from "../observability";
+import type { ProfileWidgetObservabilityHandler } from "../observability";
 import type { ProfileWidgetHostContext } from "../types";
 
 type CompareMode = "current" | "previous";
@@ -24,6 +26,8 @@ export type InstanceHistoryWidgetProps = {
   apiBaseUrl: string;
   accessToken?: string;
   onError?: (payload: { message: string; requestId?: string }) => void;
+  /** Только `view_loaded` (виджет без мутаций сохранения в текущем API). */
+  onObservability?: ProfileWidgetObservabilityHandler;
 };
 
 type TimelineVersion = {
@@ -131,6 +135,7 @@ export function InstanceHistoryWidget({
   apiBaseUrl,
   accessToken,
   onError,
+  onObservability,
 }: InstanceHistoryWidgetProps) {
   const requestId = hostContext.telemetry?.requestId;
   const [loading, setLoading] = useState(true);
@@ -160,6 +165,11 @@ export function InstanceHistoryWidget({
         const timeline = snapshots.map(toTimelineVersion).sort((a, b) => b.version - a.version);
         setVersions(timeline);
         setSelectedVersion(timeline[0]?.version ?? null);
+        emitProfileWidgetTelemetry(onObservability, hostContext, {
+          widget: "instance_history",
+          event: "view_loaded",
+          meta: { entity_id: entityId, version_count: timeline.length },
+        });
       } catch (error) {
         if (cancelled) {
           return;
@@ -178,7 +188,7 @@ export function InstanceHistoryWidget({
     return () => {
       cancelled = true;
     };
-  }, [accessToken, apiBaseUrl, entityId, onError, requestId]);
+  }, [accessToken, apiBaseUrl, entityId, hostContext, onError, onObservability, requestId]);
 
   const selected = useMemo(
     () => versions.find((item) => item.version === selectedVersion) ?? null,

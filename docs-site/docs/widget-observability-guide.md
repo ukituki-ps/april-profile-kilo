@@ -17,6 +17,7 @@ sidebar_position: 11
 | Поле | Где задаётся | Назначение |
 |------|----------------|------------|
 | `requestId` | Host генерирует или пробрасывает с edge; передаётся в `HostContext.telemetry` | Связка логов UI и бэкенда в одном запросе. |
+| `correlationId` | Опционально в `HostContext.telemetry` | Сквозная корреляция; в событиях `@april/profile-ui` — поле `correlation_id` (при отсутствии совпадает с `requestId`). |
 | `traceId` / `spanId` | При наличии OpenTelemetry в Hub — опционально | End-to-end трассировка. |
 
 Виджет при вызове API должен передавать `requestId` в заголовке (например `X-Request-Id`) согласно соглашению BFF.
@@ -41,6 +42,19 @@ sidebar_position: 11
 | Долгий запрос | Порог latency на BFF (SLO по договорённости с Hub). |
 
 Конкретная реализация (Prometheus, продуктовая аналитика) — по runbook AprilHub; виджет не внедряет отдельный стек без согласования.
+
+### 3.1. Единый минимум `@april/profile-ui` (фаза 4a)
+
+Опциональный колбэк `onObservability(event)`; в событии — `request_id` / `correlation_id` из telemetry host, при необходимости `api_request_id` из тела ошибки API.
+
+| `event` | Смысл |
+|---------|--------|
+| `view_loaded` | Успешная первичная загрузка данных виджета. |
+| `save_submitted` | Старт мутации в API (после локальной валидации). |
+| `save_succeeded` | Успешный ответ API. |
+| `save_failed` | Валидация до API или ошибка API. |
+
+Стабильные `widget`: `entity_profile`, `profiles_list`, `profile_instances`, `instance_history`, `conflict_queue`. Подробности — канонический файл в корне репозитория `docs/WIDGET_OBSERVABILITY_GUIDE.md` §3.1.
 
 ---
 

@@ -14,6 +14,8 @@ import {
   Title,
 } from "@mantine/core";
 import { ApiError, OpenAPI, ProfilesService } from "../generated";
+import { emitProfileWidgetTelemetry } from "../observability";
+import type { ProfileWidgetObservabilityHandler } from "../observability";
 import type {
   ProfileWidgetHostContext,
   ProfilesListAction,
@@ -28,6 +30,7 @@ export type ProfilesListWidgetProps = {
   pageSize?: number;
   onAction?: (action: ProfilesListAction) => void;
   onError?: (payload: { message: string; requestId?: string }) => void;
+  onObservability?: ProfileWidgetObservabilityHandler;
 };
 
 const DEFAULT_PAGE_SIZE = 5;
@@ -83,6 +86,7 @@ export function ProfilesListWidget({
   pageSize = DEFAULT_PAGE_SIZE,
   onAction,
   onError,
+  onObservability,
 }: ProfilesListWidgetProps) {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -116,6 +120,11 @@ export function ProfilesListWidget({
         }
         const nextItems = snapshots.map(toListItem);
         setItems(nextItems);
+        emitProfileWidgetTelemetry(onObservability, hostContext, {
+          widget: "profiles_list",
+          event: "view_loaded",
+          meta: { row_count: nextItems.length },
+        });
       } catch (error) {
         if (cancelled) {
           return;
@@ -134,7 +143,7 @@ export function ProfilesListWidget({
     return () => {
       cancelled = true;
     };
-  }, [accessToken, apiBaseUrl, entityIds, onError, requestId]);
+  }, [accessToken, apiBaseUrl, entityIds, hostContext, onError, onObservability, requestId]);
 
   const typeOptions = useMemo(() => {
     const unique = [...new Set(items.map((item) => item.entityTypeId))];
@@ -171,12 +180,22 @@ export function ProfilesListWidget({
     const parsed = parseJsonObject(createDocument);
     if (!createTypeId.trim() || !parsed) {
       setErrorMessage("Create form expects entity type ID and JSON object document.");
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profiles_list",
+        event: "save_failed",
+        meta: { operation: "create_entity_profile", phase: "validation" },
+      });
       return;
     }
 
     OpenAPI.BASE = apiBaseUrl;
     OpenAPI.TOKEN = accessToken;
     setBusyEntityId("create");
+    emitProfileWidgetTelemetry(onObservability, hostContext, {
+      widget: "profiles_list",
+      event: "save_submitted",
+      meta: { operation: "create_entity_profile" },
+    });
     try {
       const created = await ProfilesService.createEntityProfile({
         entity_type_id: createTypeId.trim(),
@@ -185,10 +204,20 @@ export function ProfilesListWidget({
       const item = toListItem(created);
       setItems((prev) => [item, ...prev]);
       onAction?.({ type: "created", item });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profiles_list",
+        event: "save_succeeded",
+        meta: { operation: "create_entity_profile", entity_id: item.entityId },
+      });
     } catch (error) {
       const message = secureErrorMessage(error);
       setErrorMessage(message);
       onError?.({ message, requestId });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profiles_list",
+        event: "save_failed",
+        meta: { operation: "create_entity_profile", phase: "api" },
+      });
     } finally {
       setBusyEntityId(null);
     }
@@ -220,22 +249,42 @@ export function ProfilesListWidget({
     const parsed = parseJsonObject(editDocument);
     if (!parsed) {
       setErrorMessage("Edit form expects JSON object document.");
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profiles_list",
+        event: "save_failed",
+        meta: { operation: "update_entity_profile", phase: "validation" },
+      });
       return;
     }
 
     OpenAPI.BASE = apiBaseUrl;
     OpenAPI.TOKEN = accessToken;
     setBusyEntityId(editEntityId);
+    emitProfileWidgetTelemetry(onObservability, hostContext, {
+      widget: "profiles_list",
+      event: "save_submitted",
+      meta: { operation: "update_entity_profile", entity_id: editEntityId },
+    });
     try {
       const updated = await ProfilesService.updateEntityProfile(editEntityId, { document: parsed });
       const updatedItem = toListItem(updated);
       setItems((prev) => prev.map((item) => (item.entityId === editEntityId ? updatedItem : item)));
       setEditEntityId(null);
       onAction?.({ type: "updated", item: updatedItem });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profiles_list",
+        event: "save_succeeded",
+        meta: { operation: "update_entity_profile", entity_id: updatedItem.entityId, version: updatedItem.version },
+      });
     } catch (error) {
       const message = secureErrorMessage(error);
       setErrorMessage(message);
       onError?.({ message, requestId });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profiles_list",
+        event: "save_failed",
+        meta: { operation: "update_entity_profile", phase: "api", entity_id: editEntityId },
+      });
     } finally {
       setBusyEntityId(null);
     }
@@ -246,14 +295,29 @@ export function ProfilesListWidget({
     OpenAPI.BASE = apiBaseUrl;
     OpenAPI.TOKEN = accessToken;
     setBusyEntityId(entityId);
+    emitProfileWidgetTelemetry(onObservability, hostContext, {
+      widget: "profiles_list",
+      event: "save_submitted",
+      meta: { operation: "delete_entity_profile", entity_id: entityId },
+    });
     try {
       await ProfilesService.deleteEntityProfile(entityId);
       setItems((prev) => prev.filter((item) => item.entityId !== entityId));
       onAction?.({ type: "deleted", entityId });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profiles_list",
+        event: "save_succeeded",
+        meta: { operation: "delete_entity_profile", entity_id: entityId },
+      });
     } catch (error) {
       const message = secureErrorMessage(error);
       setErrorMessage(message);
       onError?.({ message, requestId });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profiles_list",
+        event: "save_failed",
+        meta: { operation: "delete_entity_profile", phase: "api", entity_id: entityId },
+      });
     } finally {
       setBusyEntityId(null);
     }
