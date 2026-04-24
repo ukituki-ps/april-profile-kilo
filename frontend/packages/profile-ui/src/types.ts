@@ -31,3 +31,16 @@ export type ProfilesListAction =
   | { type: "created"; item: ProfilesListItem }
   | { type: "updated"; item: ProfilesListItem }
   | { type: "deleted"; entityId: string };
+
+export type ProfileInstanceListItem = {
+  entityId: string;
+  profileId: string;
+  version: number;
+  updatedAt: string;
+  preview: string;
+};
+
+export type ProfileInstancesAction =
+  | { type: "created"; item: ProfileInstanceListItem }
+  | { type: "updated"; item: ProfileInstanceListItem }
+  | { type: "deleted"; entityId: string };
