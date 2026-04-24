@@ -1,7 +1,7 @@
 # Задача: Фаза 4a.5 (AprilProfile) — observability-события виджетов и semver readiness
 
 ## Мета
-- **ID / ветка:** (например `feat/phase-4a-widget-observability-semver`)
+- **ID / ветка:** `feature/phase-4a-widget-observability-semver`
 - **Приоритет:** обычный
 - **Родительская дорожная карта:** [`tasks/000-full-service-aprilhub-roadmap/`](../000-full-service-aprilhub-roadmap/) — [`PLAN.md`](../000-full-service-aprilhub-roadmap/PLAN.md), **Фаза 4a**, пункт **4a.5**.
 - **Связанные подзадачи:** зависит от реализации продуктовых виджетов [`025`](../025-phase-4a-profile-profiles-list-crud-widget/), [`027`](../027-phase-4a-profile-instances-crud-widget/), [`029`](../029-phase-4a-profile-instance-history-widget/), [`031`](../031-phase-4a-profile-conflicts-merge-admin-ui/); Hub-интеграция качества — [`034-phase-4a-hub-widget-release-gates-smoke`](../034-phase-4a-hub-widget-release-gates-smoke/).
@@ -34,9 +34,9 @@
 - Секреты/ключи не коммитить.
 
 ## Критерии готовности (acceptance)
-- [ ] Для целевых виджетов внедрен единый событийный минимум.
-- [ ] В документации описаны semver правила и совместимость для Hub consumers.
-- [ ] Проверки сборки/тестов проходят.
+- [x] Для целевых виджетов внедрен единый событийный минимум.
+- [x] В документации описаны semver правила и совместимость для Hub consumers.
+- [x] Проверки сборки/тестов проходят.
 
 ## Проверка (команды)
 ```bash
@@ -48,8 +48,8 @@ cd frontend && npm ci && npm run lint && npm run test && npm run build
 Таблица внедренных событий по виджетам, описание semver политики и список оставшихся интеграционных шагов в Hub.
 
 ## Человекопонятная история в docs-site (обязательно)
-- [ ] Создана/обновлена страница `docs-site/docs/task-story-033-phase-4a-profile-widget-observability-semver.md`.
-- [ ] В [`docs-site/docs/task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md) добавлена ссылка и обновлен статус.
-- [ ] Простым языком описано, какие события теперь есть и зачем нужен semver режим.
-- [ ] Указано, как интеграторам проверять совместимость версий.
-- [ ] В конце страницы есть ссылки на `tasks/033-phase-4a-profile-widget-observability-semver/TASK.md`, `PLAN.md` (если появится), `REPORT.md`.
+- [x] Создана/обновлена страница `docs-site/docs/task-story-033-phase-4a-profile-widget-observability-semver.md`.
+- [x] В [`docs-site/docs/task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md) добавлена ссылка и обновлен статус.
+- [x] Простым языком описано, какие события теперь есть и зачем нужен semver режим.
+- [x] Указано, как интеграторам проверять совместимость версий.
+- [x] В конце страницы есть ссылки на `tasks/033-phase-4a-profile-widget-observability-semver/TASK.md`, `PLAN.md` (если появится), `REPORT.md`.

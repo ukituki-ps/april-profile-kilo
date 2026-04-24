@@ -9,6 +9,8 @@ export type ProfileWidgetHostContext = {
   locale?: string;
   telemetry?: {
     requestId: string;
+    /** Опционально: сквозной correlation id (например edge / BFF); иначе в событиях подставляется `requestId`. */
+    correlationId?: string;
     traceId?: string;
     spanId?: string;
   };

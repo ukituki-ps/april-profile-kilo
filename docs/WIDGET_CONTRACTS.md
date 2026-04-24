@@ -29,7 +29,7 @@
 | `auth` | `{ subject?: string; roles?: string[]; tokenRef?: string }` | Идентификация пользователя и роли Keycloak (см. ABAC на API). `tokenRef` — опциональная ссылка на получение access token для API-клиента, если принято в host. |
 | `theme` | `'light' \| 'dark' \| 'system'` | Согласование с Mantine/host. |
 | `locale` | `string` (BCP 47) | Локаль UI. |
-| `telemetry` | `{ requestId: string; traceId?: string; spanId?: string }` | Корреляция логов и трасс; `requestId` обязателен для цепочки host → BFF → сервис. |
+| `telemetry` | `{ requestId: string; correlationId?: string; traceId?: string; spanId?: string }` | Корреляция логов и трасс; `requestId` обязателен для цепочки host → BFF → сервис; `correlationId` — опционально для сквозного id (см. [`WIDGET_OBSERVABILITY_GUIDE.md`](./WIDGET_OBSERVABILITY_GUIDE.md) §3.1). |
 
 Расширения (например `featureFlags`) — только через явную новую версию контракта или optional-поля, не ломающие потребителей.
 
@@ -46,6 +46,7 @@
 | `entityType` / `schemaRef` | по сценарию | Ссылка на тип/версию схемы в метамодели. |
 | `apiBaseUrl` или клиент API | по договорённости | Либо инжектированный клиент из host, либо базовый URL BFF. |
 | `onEvent` / именованные колбэки | рекомендуется | См. §4. |
+| `onObservability?` | рекомендуется для прод-сценариев | Унифицированные события `view_loaded` / `save_*` с `request_id` / `correlation_id` (см. [`WIDGET_OBSERVABILITY_GUIDE.md`](./WIDGET_OBSERVABILITY_GUIDE.md) §3.1). |
 
 Виджет **не** принимает «сырой» `tenantId` из пользовательского ввода без сверки с `hostContext.tenant`.
 

@@ -23,5 +23,8 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
     cache: false,
+    // Пакет `@april/profile-ui` имеет свой `vitest run` в workspace; здесь только shell-приложение.
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    exclude: ["**/node_modules/**", "**/dist/**", "packages/**"],
   },
 });

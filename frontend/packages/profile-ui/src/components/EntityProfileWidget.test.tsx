@@ -40,6 +40,7 @@ afterAll(() => server.close());
 describe("EntityProfileWidget", () => {
   it("calls onSaveSuccess after successful save", async () => {
     const onSaveSuccess = vi.fn();
+    const onObservability = vi.fn();
 
     render(
       <MantineProvider>
@@ -48,11 +49,21 @@ describe("EntityProfileWidget", () => {
           entityId={entityId}
           apiBaseUrl={apiBaseUrl}
           onSaveSuccess={onSaveSuccess}
+          onObservability={onObservability}
         />
       </MantineProvider>,
     );
 
     expect(await screen.findByText(/Current version: 1/i)).toBeInTheDocument();
+    expect(onObservability).toHaveBeenCalledWith(
+      expect.objectContaining({
+        widget: "entity_profile",
+        event: "view_loaded",
+        request_id: "req-1",
+        correlation_id: "req-1",
+      }),
+    );
+
     const editor = screen.getByLabelText(/Profile document \(JSON\)/i);
     fireEvent.change(editor, { target: { value: JSON.stringify({ first_name: "Alice" }) } });
     fireEvent.click(screen.getByRole("button", { name: /Save profile/i }));
@@ -60,6 +71,21 @@ describe("EntityProfileWidget", () => {
     await waitFor(() => {
       expect(onSaveSuccess).toHaveBeenCalledWith({ entityId, version: 2 });
     });
+    expect(onObservability).toHaveBeenCalledWith(
+      expect.objectContaining({
+        widget: "entity_profile",
+        event: "save_submitted",
+        request_id: "req-1",
+        meta: expect.objectContaining({ operation: "update_entity_profile" }),
+      }),
+    );
+    expect(onObservability).toHaveBeenCalledWith(
+      expect.objectContaining({
+        widget: "entity_profile",
+        event: "save_succeeded",
+        request_id: "req-1",
+      }),
+    );
     expect(await screen.findByText(/Current version: 2/i)).toBeInTheDocument();
   });
 

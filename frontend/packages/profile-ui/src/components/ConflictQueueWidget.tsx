@@ -17,6 +17,8 @@ import {
 } from "@mantine/core";
 import { AdminService, ApiError, OpenAPI } from "../generated";
 import type { MergeEntityProfilesResponse, ProfileFieldConflict, ProfileSnapshot } from "../generated";
+import { emitProfileWidgetTelemetry } from "../observability";
+import type { ProfileWidgetObservabilityHandler } from "../observability";
 import type { ProfileWidgetHostContext } from "../types";
 
 export type ConflictQueueWidgetProps = {
@@ -24,6 +26,7 @@ export type ConflictQueueWidgetProps = {
   apiBaseUrl: string;
   accessToken?: string;
   onError?: (payload: { message: string; requestId?: string }) => void;
+  onObservability?: ProfileWidgetObservabilityHandler;
 };
 
 type StatusFilter = "open" | "all";
@@ -101,7 +104,13 @@ const errorMessageFromApi = (error: unknown): { message: string; requestId?: str
   return { message: "Unexpected API error." };
 };
 
-export function ConflictQueueWidget({ hostContext, apiBaseUrl, accessToken, onError }: ConflictQueueWidgetProps) {
+export function ConflictQueueWidget({
+  hostContext,
+  apiBaseUrl,
+  accessToken,
+  onError,
+  onObservability,
+}: ConflictQueueWidgetProps) {
   const requestIdTelemetry = hostContext.telemetry?.requestId;
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
@@ -145,7 +154,8 @@ export function ConflictQueueWidget({ hostContext, apiBaseUrl, accessToken, onEr
     });
   }, [items, search, statusFilter]);
 
-  const loadList = useCallback(async () => {
+  const loadList = useCallback(async (options?: { emitViewLoaded?: boolean }) => {
+    const emitViewLoaded = options?.emitViewLoaded !== false;
     setLoading(true);
     setListError(null);
     setListErrorRequestId(undefined);
@@ -154,6 +164,13 @@ export function ConflictQueueWidget({ hostContext, apiBaseUrl, accessToken, onEr
     try {
       const res = await AdminService.listProfileFieldConflicts();
       setItems(res.items);
+      if (emitViewLoaded) {
+        emitProfileWidgetTelemetry(onObservability, hostContext, {
+          widget: "conflict_queue",
+          event: "view_loaded",
+          meta: { conflict_count: res.items.length },
+        });
+      }
     } catch (error) {
       const { message, requestId } = errorMessageFromApi(error);
       setListError(message);
@@ -162,7 +179,7 @@ export function ConflictQueueWidget({ hostContext, apiBaseUrl, accessToken, onEr
     } finally {
       setLoading(false);
     }
-  }, [accessToken, apiBaseUrl, onError, requestIdTelemetry]);
+  }, [accessToken, apiBaseUrl, hostContext, onError, onObservability, requestIdTelemetry]);
 
   useEffect(() => {
     void loadList();
@@ -191,6 +208,11 @@ export function ConflictQueueWidget({ hostContext, apiBaseUrl, accessToken, onEr
       resolution = parseResolutionPayload(resolutionText);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Invalid resolution.");
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "conflict_queue",
+        event: "save_failed",
+        meta: { operation: "resolve_profile_field_conflict", phase: "validation" },
+      });
       return;
     }
     setBusy(true);
@@ -198,6 +220,11 @@ export function ConflictQueueWidget({ hostContext, apiBaseUrl, accessToken, onEr
     setActionErrorRequestId(undefined);
     OpenAPI.BASE = apiBaseUrl;
     OpenAPI.TOKEN = accessToken;
+    emitProfileWidgetTelemetry(onObservability, hostContext, {
+      widget: "conflict_queue",
+      event: "save_submitted",
+      meta: { operation: "resolve_profile_field_conflict", conflict_id: selected.id },
+    });
     try {
       const snapshot = await AdminService.resolveProfileFieldConflict(selected.id, {
         resolution,
@@ -211,12 +238,28 @@ export function ConflictQueueWidget({ hostContext, apiBaseUrl, accessToken, onEr
       });
       setResolveOpen(false);
       setSelectedId(null);
-      await loadList();
+      await loadList({ emitViewLoaded: false });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "conflict_queue",
+        event: "save_succeeded",
+        meta: {
+          operation: "resolve_profile_field_conflict",
+          conflict_id: selected.id,
+          entity_id: snapshot.entity_id,
+          version: snapshot.version,
+        },
+      });
     } catch (error) {
       const { message, requestId } = errorMessageFromApi(error);
       setActionError(message);
       setActionErrorRequestId(requestId);
       onError?.({ message, requestId: requestId ?? requestIdTelemetry });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "conflict_queue",
+        event: "save_failed",
+        meta: { operation: "resolve_profile_field_conflict", phase: "api" },
+        api_request_id: requestId,
+      });
     } finally {
       setBusy(false);
     }
@@ -228,6 +271,11 @@ export function ConflictQueueWidget({ hostContext, apiBaseUrl, accessToken, onEr
     setActionErrorRequestId(undefined);
     OpenAPI.BASE = apiBaseUrl;
     OpenAPI.TOKEN = accessToken;
+    emitProfileWidgetTelemetry(onObservability, hostContext, {
+      widget: "conflict_queue",
+      event: "save_submitted",
+      meta: { operation: "merge_entity_profiles" },
+    });
     try {
       const response = await AdminService.mergeEntityProfiles({
         source_entity_id: mergeSource.trim(),
@@ -241,12 +289,28 @@ export function ConflictQueueWidget({ hostContext, apiBaseUrl, accessToken, onEr
       setMergeOpen(false);
       setMergeSource("");
       setMergeTarget("");
-      await loadList();
+      await loadList({ emitViewLoaded: false });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "conflict_queue",
+        event: "save_succeeded",
+        meta: {
+          operation: "merge_entity_profiles",
+          source_entity_id: response.source_entity_id,
+          target_entity_id: response.target_entity_id,
+          target_version: response.target_version,
+        },
+      });
     } catch (error) {
       const { message, requestId } = errorMessageFromApi(error);
       setActionError(message);
       setActionErrorRequestId(requestId);
       onError?.({ message, requestId: requestId ?? requestIdTelemetry });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "conflict_queue",
+        event: "save_failed",
+        meta: { operation: "merge_entity_profiles", phase: "api" },
+        api_request_id: requestId,
+      });
     } finally {
       setBusy(false);
     }

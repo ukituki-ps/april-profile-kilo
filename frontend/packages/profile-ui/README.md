@@ -2,6 +2,10 @@
 
 Embeddable React widget package for AprilProfile scenarios in AprilHub/host apps.
 
+## Observability (фаза 4a)
+
+Все виджеты ниже принимают опциональный **`onObservability`**: колбэк с типом `ProfileWidgetTelemetryEvent` (`widget`, `event`, `request_id`, `correlation_id`, опционально `api_request_id`, `meta`). События: **`view_loaded`**, **`save_submitted`**, **`save_succeeded`**, **`save_failed`**. Идентификаторы берутся из `hostContext.telemetry.requestId` и опционально `correlationId` (см. `docs/WIDGET_OBSERVABILITY_GUIDE.md` §3.1). Типы и `emitProfileWidgetTelemetry` экспортируются из пакета.
+
 ## Public API
 
 ### `EntityProfileWidget`
@@ -14,6 +18,7 @@ Props:
 - `accessToken?` — Bearer token passed to generated OpenAPI client.
 - `onSaveSuccess?` — callback after successful `PUT /v1/entities/{entityID}`.
 - `onError?` — callback with a normalized error message.
+- `onObservability?` — единый контур событий (`view_loaded`, `save_*`), см. раздел «Observability».
 
 ### `ProfilesListWidget`
 
@@ -26,6 +31,7 @@ Props:
 - `pageSize?` — client-side pagination size (default: `5`).
 - `onAction?` — typed callback for CRUD actions (`created`, `updated`, `deleted`).
 - `onError?` — callback with normalized error payload (`401/403/409` are mapped to predictable UX text).
+- `onObservability?` — события наблюдаемости, см. раздел «Observability».
 
 ### `ProfileInstancesWidget`
 
@@ -40,6 +46,7 @@ Props:
 - `onAction?` — typed callback for CRUD actions (`created`, `updated`, `deleted`).
 - `onOpenInstance?` — navigation callback for opening instance card.
 - `onError?` — callback with normalized error payload.
+- `onObservability?` — события наблюдаемости, см. раздел «Observability».
 
 ### `InstanceHistoryWidget`
 
@@ -50,6 +57,7 @@ Props:
 - `apiBaseUrl` — profile API base URL (for BFF flow usually `/admin/profile/api`).
 - `accessToken?` — Bearer token for OpenAPI client.
 - `onError?` — callback with normalized error payload.
+- `onObservability?` — для истории эмитится только `view_loaded` (нет мутаций в текущем API).
 
 Notes:
 
@@ -65,6 +73,7 @@ Props:
 - `apiBaseUrl` — profile API base URL (for BFF flow usually `/admin/profile/api`).
 - `accessToken?` — Bearer token for OpenAPI client (admin realm role required on API).
 - `onError?` — callback with normalized error payload (`401/403/404/409` mapped to operator-safe copy).
+- `onObservability?` — `view_loaded` после списка; `save_*` для resolve и merge.
 
 Notes:
 

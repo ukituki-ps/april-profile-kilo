@@ -17,6 +17,14 @@
 
 **Design System** (`@april/ui`): обновления minor/patch не должны ломать виджеты без явного bump peer dependency; major DS — координация с владельцами виджетов и Hub.
 
+### 1.1. `@april/profile-ui`: release notes и semver
+
+- **PATCH**: исправления поведения без изменения публичных типов/props, без новых обязательных полей в событиях; допустимы уточнения только в `meta` при сохранении имён `event` / `widget`.
+- **MINOR**: новые **опциональные** props (например `onObservability`), новые optional поля в `HostContext.telemetry` (`correlationId`), новые значения в union событий **только если** старые потребители остаются валидны без изменений.
+- **MAJOR**: удаление/переименование props, изменение обязательности `hostContext`, смена имён или семантики полей `ProfileWidgetTelemetryEvent`, удаление экспортов.
+
+Каждый релиз пакета с пользовательско-значимыми изменениями сопровождайте записью в changelog пакета (см. [`templates/WIDGET_CHANGELOG_TEMPLATE.md`](./templates/WIDGET_CHANGELOG_TEMPLATE.md)): что поменялось для Hub (lockfile), какие события телеметрии добавлены или уточнены, нужен ли bump peer `@mantine/*` / React.
+
 ---
 
 ## 2. Матрица совместимости (Host × Widget)

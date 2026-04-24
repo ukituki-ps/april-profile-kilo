@@ -16,4 +16,11 @@ export type {
   ProfilesListItem,
   SaveSuccessPayload,
 } from "./types";
+export type {
+  ProfileWidgetObservabilityHandler,
+  ProfileWidgetTelemetryEvent,
+  ProfileWidgetTelemetryEventName,
+  ProfileWidgetTelemetryKind,
+} from "./observability";
+export { buildTelemetryIds, emitProfileWidgetTelemetry } from "./observability";
 export { ProfilesService, OpenAPI } from "./generated";

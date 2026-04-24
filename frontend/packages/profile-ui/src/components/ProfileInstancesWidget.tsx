@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Badge, Button, Group, Loader, Pagination, Stack, Table, Text, TextInput, Title } from "@mantine/core";
 import { ApiError, OpenAPI, ProfilesService } from "../generated";
+import { emitProfileWidgetTelemetry } from "../observability";
+import type { ProfileWidgetObservabilityHandler } from "../observability";
 import type { ProfileInstanceListItem, ProfileInstancesAction, ProfileWidgetHostContext } from "../types";
 
 export type ProfileInstancesWidgetProps = {
@@ -13,6 +15,7 @@ export type ProfileInstancesWidgetProps = {
   onAction?: (action: ProfileInstancesAction) => void;
   onOpenInstance?: (entityId: string) => void;
   onError?: (payload: { message: string; requestId?: string }) => void;
+  onObservability?: ProfileWidgetObservabilityHandler;
 };
 
 const DEFAULT_PAGE_SIZE = 5;
@@ -63,6 +66,7 @@ export function ProfileInstancesWidget({
   onAction,
   onOpenInstance,
   onError,
+  onObservability,
 }: ProfileInstancesWidgetProps) {
   const requestId = hostContext.telemetry?.requestId;
   const [loading, setLoading] = useState(true);
@@ -102,7 +106,13 @@ export function ProfileInstancesWidget({
           }),
         );
         if (!cancelled) {
-          setItems(loaded.filter((value): value is ProfileInstanceListItem => value !== null));
+          const nextItems = loaded.filter((value): value is ProfileInstanceListItem => value !== null);
+          setItems(nextItems);
+          emitProfileWidgetTelemetry(onObservability, hostContext, {
+            widget: "profile_instances",
+            event: "view_loaded",
+            meta: { profile_id: profileId, row_count: nextItems.length },
+          });
         }
       } catch (error) {
         if (!cancelled) {
@@ -121,7 +131,7 @@ export function ProfileInstancesWidget({
     return () => {
       cancelled = true;
     };
-  }, [accessToken, apiBaseUrl, instanceIds, onError, profileId, requestId]);
+  }, [accessToken, apiBaseUrl, hostContext, instanceIds, onError, onObservability, profileId, requestId]);
 
   const filtered = useMemo(() => {
     const lower = query.trim().toLowerCase();
@@ -154,13 +164,23 @@ export function ProfileInstancesWidget({
     }
   };
 
-  const withMutation = async (run: () => Promise<void>) => {
+  const withMutation = async (operation: string, run: () => Promise<void>) => {
+    emitProfileWidgetTelemetry(onObservability, hostContext, {
+      widget: "profile_instances",
+      event: "save_submitted",
+      meta: { operation, profile_id: profileId },
+    });
     setSubmitting(true);
     setErrorMessage(null);
     OpenAPI.BASE = apiBaseUrl;
     OpenAPI.TOKEN = accessToken;
     try {
       await run();
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profile_instances",
+        event: "save_succeeded",
+        meta: { operation, profile_id: profileId },
+      });
     } catch (error) {
       const normalized = normalizeError(error);
       setErrorMessage(normalized.message);
@@ -168,6 +188,11 @@ export function ProfileInstancesWidget({
         setReadonlyMode(true);
       }
       onError?.({ message: normalized.message, requestId });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profile_instances",
+        event: "save_failed",
+        meta: { operation, profile_id: profileId, phase: "api" },
+      });
     } finally {
       setSubmitting(false);
     }
@@ -176,9 +201,14 @@ export function ProfileInstancesWidget({
   const handleCreate = async () => {
     const parsed = parseDocument(createDocument);
     if (!parsed) {
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profile_instances",
+        event: "save_failed",
+        meta: { operation: "create_entity_profile", phase: "validation", profile_id: profileId },
+      });
       return;
     }
-    await withMutation(async () => {
+    await withMutation("create_entity_profile", async () => {
       const saved = await ProfilesService.createEntityProfile({ entity_type_id: profileId, document: parsed });
       const created = toItem(saved);
       setItems((prev) => [created, ...prev]);
@@ -187,7 +217,7 @@ export function ProfileInstancesWidget({
   };
 
   const handleUpdate = async (entityId: string) => {
-    await withMutation(async () => {
+    await withMutation("update_entity_profile", async () => {
       const saved = await ProfilesService.updateEntityProfile(entityId, { document: { note: "instance-updated" } });
       const updated = toItem(saved);
       setItems((prev) => prev.map((item) => (item.entityId === entityId ? updated : item)));
@@ -196,7 +226,7 @@ export function ProfileInstancesWidget({
   };
 
   const handleDelete = async (entityId: string) => {
-    await withMutation(async () => {
+    await withMutation("delete_entity_profile", async () => {
       await ProfilesService.deleteEntityProfile(entityId);
       setItems((prev) => prev.filter((item) => item.entityId !== entityId));
       onAction?.({ type: "deleted", entityId });

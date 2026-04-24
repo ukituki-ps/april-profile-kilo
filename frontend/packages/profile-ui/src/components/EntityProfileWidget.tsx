@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Group, Loader, Stack, Text, Textarea, Title } from "@mantine/core";
 import { OpenAPI, ProfilesService } from "../generated";
+import { emitProfileWidgetTelemetry } from "../observability";
+import type { ProfileWidgetObservabilityHandler } from "../observability";
 import type { SaveSuccessPayload, ProfileWidgetHostContext } from "../types";
 
 export type EntityProfileWidgetProps = {
@@ -10,6 +12,8 @@ export type EntityProfileWidgetProps = {
   accessToken?: string;
   onSaveSuccess?: (payload: SaveSuccessPayload) => void;
   onError?: (payload: { message: string; requestId?: string }) => void;
+  /** События наблюдаемости фазы 4a (`view_loaded`, `save_*`) с `request_id` / `correlation_id` из host. */
+  onObservability?: ProfileWidgetObservabilityHandler;
 };
 
 type ProfileSnapshot = Awaited<ReturnType<typeof ProfilesService.getEntityCurrentProfile>>;
@@ -30,6 +34,7 @@ export function EntityProfileWidget({
   accessToken,
   onSaveSuccess,
   onError,
+  onObservability,
 }: EntityProfileWidgetProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,6 +60,11 @@ export function EntityProfileWidget({
         }
         setProfile(snapshot);
         setEditorValue(prettyJson(snapshot.document));
+        emitProfileWidgetTelemetry(onObservability, hostContext, {
+          widget: "entity_profile",
+          event: "view_loaded",
+          meta: { entity_id: entityId },
+        });
       } catch (error) {
         if (cancelled) {
           return;
@@ -73,7 +83,7 @@ export function EntityProfileWidget({
     return () => {
       cancelled = true;
     };
-  }, [accessToken, apiBaseUrl, entityId, onError, requestId]);
+  }, [accessToken, apiBaseUrl, entityId, hostContext, onError, onObservability, requestId]);
 
   const canSave = useMemo(() => !loading && !saving && profile !== null, [loading, saving, profile]);
 
@@ -89,17 +99,33 @@ export function EntityProfileWidget({
     } catch {
       const message = "Document must be valid JSON";
       setErrorMessage(message);
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "entity_profile",
+        event: "save_failed",
+        meta: { entity_id: entityId, phase: "validation", reason: "invalid_json" },
+      });
       return;
     }
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
       const message = "Document must be a JSON object";
       setErrorMessage(message);
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "entity_profile",
+        event: "save_failed",
+        meta: { entity_id: entityId, phase: "validation", reason: "not_object" },
+      });
       return;
     }
 
     setSaving(true);
     OpenAPI.BASE = apiBaseUrl;
     OpenAPI.TOKEN = accessToken;
+
+    emitProfileWidgetTelemetry(onObservability, hostContext, {
+      widget: "entity_profile",
+      event: "save_submitted",
+      meta: { entity_id: entityId, operation: "update_entity_profile" },
+    });
 
     try {
       const saved = await ProfilesService.updateEntityProfile(entityId, {
@@ -108,10 +134,20 @@ export function EntityProfileWidget({
       setProfile(saved);
       setEditorValue(prettyJson(saved.document));
       onSaveSuccess?.({ entityId: saved.entity_id, version: saved.version });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "entity_profile",
+        event: "save_succeeded",
+        meta: { entity_id: entityId, version: saved.version, operation: "update_entity_profile" },
+      });
     } catch (error) {
       const message = parseErrorMessage(error);
       setErrorMessage(message);
       onError?.({ message, requestId });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "entity_profile",
+        event: "save_failed",
+        meta: { entity_id: entityId, phase: "api", operation: "update_entity_profile" },
+      });
     } finally {
       setSaving(false);
     }
