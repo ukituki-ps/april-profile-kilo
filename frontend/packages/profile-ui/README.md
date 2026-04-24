@@ -41,6 +41,22 @@ Props:
 - `onOpenInstance?` — navigation callback for opening instance card.
 - `onError?` — callback with normalized error payload.
 
+### `InstanceHistoryWidget`
+
+Props:
+
+- `hostContext` — host/widget v1 context (`tenant`, optional `auth`, optional telemetry fields).
+- `entityId` — target instance ID for append-only history.
+- `apiBaseUrl` — profile API base URL (for BFF flow usually `/admin/profile/api`).
+- `accessToken?` — Bearer token for OpenAPI client.
+- `onError?` — callback with normalized error payload.
+
+Notes:
+
+- Versions are loaded from `GET /v1/entities/{entityID}` + `GET /v1/entities/{entityID}/versions/{version}`.
+- Diff supports comparison against current or previous version.
+- Current API contract has no restore endpoint, so widget is intentionally read-only.
+
 ### Generated OpenAPI API client
 
 Package exports generated modules from `src/generated`:
@@ -51,7 +67,7 @@ Package exports generated modules from `src/generated`:
 ## Usage example
 
 ```tsx
-import { EntityProfileWidget, ProfilesListWidget } from "@april/profile-ui";
+import { EntityProfileWidget, InstanceHistoryWidget, ProfileInstancesWidget, ProfilesListWidget } from "@april/profile-ui";
 import { ProfileInstancesWidget } from "@april/profile-ui";
 
 <EntityProfileWidget
@@ -92,6 +108,16 @@ import { ProfileInstancesWidget } from "@april/profile-ui";
   }}
   onOpenInstance={(entityId) => {
     console.log("open instance", entityId);
+  }}
+/>;
+
+<InstanceHistoryWidget
+  hostContext={{ tenant: { id: "tenant-a" }, telemetry: { requestId: "req-4" } }}
+  entityId="c7c5e6ea-8787-4ca0-a691-9f4fdc9830ff"
+  apiBaseUrl="/admin/profile/api"
+  accessToken={accessToken}
+  onError={(payload) => {
+    console.log("history error", payload.message);
   }}
 />;
 ```

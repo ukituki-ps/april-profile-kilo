@@ -1,5 +1,10 @@
 import { UIKit } from "@april/ui";
-import { EntityProfileWidget, ProfileInstancesWidget, ProfilesListWidget } from "@april/profile-ui";
+import {
+  EntityProfileWidget,
+  InstanceHistoryWidget,
+  ProfileInstancesWidget,
+  ProfilesListWidget,
+} from "@april/profile-ui";
 import { Alert, Anchor, Container, Group, Stack, Text, Title } from "@mantine/core";
 import { useState } from "react";
 import { Link, Route, Routes } from "react-router-dom";
@@ -20,6 +25,9 @@ function HomePage() {
         </Anchor>
         <Anchor component={Link} to="/profile-instances-widget-demo">
           Открыть демо списка экземпляров профиля
+        </Anchor>
+        <Anchor component={Link} to="/instance-history-widget-demo">
+          Открыть демо истории экземпляра
         </Anchor>
         <Text c="dimmed">
           Замените этот экран маршрутизацией и экранами профиля. Стили и тема — из @april/ui
@@ -176,6 +184,36 @@ function ProfileInstancesWidgetDemoPage() {
   );
 }
 
+function InstanceHistoryWidgetDemoPage() {
+  const apiBaseUrl = import.meta.env.VITE_PROFILE_API_BASE_URL ?? "/admin/profile/api";
+  const accessToken = import.meta.env.VITE_PROFILE_ACCESS_TOKEN;
+  const entityId =
+    import.meta.env.VITE_PROFILE_HISTORY_DEMO_ENTITY_ID ?? "00000000-0000-0000-0000-000000000001";
+
+  return (
+    <Container py="xl" size="lg">
+      <Stack gap="md">
+        <Group gap="sm">
+          <Anchor component={Link} to="/">
+            April Profile
+          </Anchor>
+          <Text c="dimmed">/</Text>
+          <Text>Instance history widget demo</Text>
+        </Group>
+        <Text size="sm" c="dimmed">
+          Embedded demo for version timeline and JSON diff in read-only history mode.
+        </Text>
+        <InstanceHistoryWidget
+          hostContext={{ tenant: { id: "demo-tenant" }, telemetry: { requestId: "local-demo-req-history" } }}
+          entityId={entityId}
+          apiBaseUrl={apiBaseUrl}
+          accessToken={accessToken}
+        />
+      </Stack>
+    </Container>
+  );
+}
+
 export default function App() {
   return (
     <Routes>
@@ -184,6 +222,7 @@ export default function App() {
       <Route path="/profile-widget-demo" element={<ProfileWidgetDemoPage />} />
       <Route path="/profiles-list-widget-demo" element={<ProfilesListWidgetDemoPage />} />
       <Route path="/profile-instances-widget-demo" element={<ProfileInstancesWidgetDemoPage />} />
+      <Route path="/instance-history-widget-demo" element={<InstanceHistoryWidgetDemoPage />} />
     </Routes>
   );
 }
