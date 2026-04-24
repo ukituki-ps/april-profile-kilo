@@ -2,8 +2,8 @@
 - Статус: ✅ выполнено
 - Задача: Фаза 4a.2 (AprilProfile) — виджет списка экземпляров профиля и CRUD экземпляра
 - Ветка: `feature/phase-4a-profile-instances-widget`
-- Коммиты: не создавались
-- PR: не создавался
+- Коммиты: `5541d6b`
+- PR: https://github.com/ukituki-ps/april-profile/pull/73
 
 ## 2) Что сделано
 - [frontend] Добавлен новый `ProfileInstancesWidget` в `@april/profile-ui` с загрузкой по `instanceIds` в контексте `profileId`, поиском, пагинацией и навигационным callback `onOpenInstance`.
@@ -59,5 +59,5 @@ cd frontend && npm run build -w @april/profile-ui
 - Хостинг в AprilHub, OIDC/BFF и e2e-маршрутизация остаются в `028` и связанных hub-задачах.
 
 ## 8) Что осталось
-- [ ] Создать коммит(ы) и PR в целевую ветку (`develop`) с test plan и рисками.
+- [x] Создать коммит(ы) и PR в целевую ветку (`develop`) с test plan и рисками.
 - [ ] Проверить сквозной сценарий после встраивания виджета в AprilHub (`028`).
