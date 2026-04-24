@@ -14,7 +14,7 @@
 
 ## Ссылки на изменения
 
-- Репозиторий исполнения: https://github.com/ukituki-ps/april-worker — ветка `feature/030-external-034-release-gates`, основной коммит изменений `a1bbabe` (см. также `git log` на ветке); PR создаётся вручную.
+- Репозиторий исполнения: https://github.com/ukituki-ps/april-worker — PR [#52](https://github.com/ukituki-ps/april-worker/pull/52) влит в `develop` (squash merge commit `fd655480374275bd6a46cdbbeb5eb13a7335a5f3`).
 
 ## Риски и follow-up
 
