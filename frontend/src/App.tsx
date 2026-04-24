@@ -1,5 +1,5 @@
 import { UIKit } from "@april/ui";
-import { EntityProfileWidget } from "@april/profile-ui";
+import { EntityProfileWidget, ProfilesListWidget } from "@april/profile-ui";
 import { Alert, Anchor, Container, Group, Stack, Text, Title } from "@mantine/core";
 import { useState } from "react";
 import { Link, Route, Routes } from "react-router-dom";
@@ -14,6 +14,9 @@ function HomePage() {
         </Anchor>
         <Anchor component={Link} to="/profile-widget-demo">
           Открыть демо встраиваемого профиля
+        </Anchor>
+        <Anchor component={Link} to="/profiles-list-widget-demo">
+          Открыть демо списка профилей
         </Anchor>
         <Text c="dimmed">
           Замените этот экран маршрутизацией и экранами профиля. Стили и тема — из @april/ui
@@ -76,12 +79,57 @@ function ProfileWidgetDemoPage() {
   );
 }
 
+function ProfilesListWidgetDemoPage() {
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const apiBaseUrl = import.meta.env.VITE_PROFILE_API_BASE_URL ?? "/admin/profile/api";
+  const accessToken = import.meta.env.VITE_PROFILE_ACCESS_TOKEN;
+  const rawDemoEntityIds: string =
+    import.meta.env.VITE_PROFILE_LIST_DEMO_ENTITY_IDS ??
+    "00000000-0000-0000-0000-000000000001,00000000-0000-0000-0000-000000000002";
+  const demoEntityIds = rawDemoEntityIds
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return (
+    <Container py="xl" size="lg">
+      <Stack gap="md">
+        <Group gap="sm">
+          <Anchor component={Link} to="/">
+            April Profile
+          </Anchor>
+          <Text c="dimmed">/</Text>
+          <Text>Profiles list widget demo</Text>
+        </Group>
+        <Text size="sm" c="dimmed">
+          Embedded demo for list/search/filter/pagination with CRUD actions.
+        </Text>
+        {actionMessage ? <Alert color="green">{actionMessage}</Alert> : null}
+        <ProfilesListWidget
+          hostContext={{ tenant: { id: "demo-tenant" }, telemetry: { requestId: "local-demo-req-list" } }}
+          apiBaseUrl={apiBaseUrl}
+          accessToken={accessToken}
+          entityIds={demoEntityIds}
+          onAction={(action) => {
+            if (action.type === "deleted") {
+              setActionMessage(`Deleted entity ${action.entityId}`);
+              return;
+            }
+            setActionMessage(`${action.type} entity ${action.item.entityId}, version ${action.item.version}`);
+          }}
+        />
+      </Stack>
+    </Container>
+  );
+}
+
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/showcase" element={<ShowcasePage />} />
       <Route path="/profile-widget-demo" element={<ProfileWidgetDemoPage />} />
+      <Route path="/profiles-list-widget-demo" element={<ProfilesListWidgetDemoPage />} />
     </Routes>
   );
 }

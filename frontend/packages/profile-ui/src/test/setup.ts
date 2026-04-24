@@ -19,3 +19,19 @@ if (!window.matchMedia) {
       dispatchEvent: () => false,
     }) as MediaQueryList;
 }
+
+if (!globalThis.ResizeObserver) {
+  const ResizeObserverMock = class ResizeObserver {
+    observe() {
+      return undefined;
+    }
+    unobserve() {
+      return undefined;
+    }
+    disconnect() {
+      return undefined;
+    }
+  };
+  globalThis.ResizeObserver = ResizeObserverMock;
+  window.ResizeObserver = ResizeObserverMock;
+}
