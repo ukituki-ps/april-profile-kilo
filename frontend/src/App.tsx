@@ -1,5 +1,6 @@
 import { UIKit } from "@april/ui";
 import {
+  ConflictQueueWidget,
   EntityProfileWidget,
   InstanceHistoryWidget,
   ProfileInstancesWidget,
@@ -28,6 +29,9 @@ function HomePage() {
         </Anchor>
         <Anchor component={Link} to="/instance-history-widget-demo">
           Открыть демо истории экземпляра
+        </Anchor>
+        <Anchor component={Link} to="/conflict-queue-widget-demo">
+          Открыть демо очереди конфликтов и merge
         </Anchor>
         <Text c="dimmed">
           Замените этот экран маршрутизацией и экранами профиля. Стили и тема — из @april/ui
@@ -184,6 +188,34 @@ function ProfileInstancesWidgetDemoPage() {
   );
 }
 
+function ConflictQueueWidgetDemoPage() {
+  const apiBaseUrl = import.meta.env.VITE_PROFILE_API_BASE_URL ?? "/admin/profile/api";
+  const accessToken = import.meta.env.VITE_PROFILE_ACCESS_TOKEN;
+
+  return (
+    <Container py="xl" size="lg">
+      <Stack gap="md">
+        <Group gap="sm">
+          <Anchor component={Link} to="/">
+            April Profile
+          </Anchor>
+          <Text c="dimmed">/</Text>
+          <Text>Conflict queue widget demo</Text>
+        </Group>
+        <Text size="sm" c="dimmed">
+          Admin-only demo: authority conflict queue, manual resolve, and duplicate merge. Requires realm admin role on
+          the API.
+        </Text>
+        <ConflictQueueWidget
+          hostContext={{ tenant: { id: "demo-tenant" }, telemetry: { requestId: "local-demo-req-conflicts" } }}
+          apiBaseUrl={apiBaseUrl}
+          accessToken={accessToken}
+        />
+      </Stack>
+    </Container>
+  );
+}
+
 function InstanceHistoryWidgetDemoPage() {
   const apiBaseUrl = import.meta.env.VITE_PROFILE_API_BASE_URL ?? "/admin/profile/api";
   const accessToken = import.meta.env.VITE_PROFILE_ACCESS_TOKEN;
@@ -223,6 +255,7 @@ export default function App() {
       <Route path="/profiles-list-widget-demo" element={<ProfilesListWidgetDemoPage />} />
       <Route path="/profile-instances-widget-demo" element={<ProfileInstancesWidgetDemoPage />} />
       <Route path="/instance-history-widget-demo" element={<InstanceHistoryWidgetDemoPage />} />
+      <Route path="/conflict-queue-widget-demo" element={<ConflictQueueWidgetDemoPage />} />
     </Routes>
   );
 }

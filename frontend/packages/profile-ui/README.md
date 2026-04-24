@@ -57,18 +57,38 @@ Notes:
 - Diff supports comparison against current or previous version.
 - Current API contract has no restore endpoint, so widget is intentionally read-only.
 
+### `ConflictQueueWidget`
+
+Props:
+
+- `hostContext` — host/widget v1 context (`tenant`, optional `auth`, optional telemetry fields).
+- `apiBaseUrl` — profile API base URL (for BFF flow usually `/admin/profile/api`).
+- `accessToken?` — Bearer token for OpenAPI client (admin realm role required on API).
+- `onError?` — callback with normalized error payload (`401/403/404/409` mapped to operator-safe copy).
+
+Notes:
+
+- Uses admin OpenAPI operations: list conflicts, resolve conflict, merge duplicate entities.
+- After success, shows a short audit-oriented summary (entity/version from API responses).
+
 ### Generated OpenAPI API client
 
 Package exports generated modules from `src/generated`:
 
 - `OpenAPI` — runtime config (`BASE`, `TOKEN`, etc.).
-- `ProfilesService` — profile API methods generated from `openapi/openapi.yaml`.
+- `ProfilesService` — public profile API methods generated from `openapi/openapi.yaml`.
+- Admin routes (`AdminService` in `src/generated`) are used internally by `ConflictQueueWidget`; regenerate via `npm run generate:api` in this package when OpenAPI changes.
 
 ## Usage example
 
 ```tsx
-import { EntityProfileWidget, InstanceHistoryWidget, ProfileInstancesWidget, ProfilesListWidget } from "@april/profile-ui";
-import { ProfileInstancesWidget } from "@april/profile-ui";
+import {
+  ConflictQueueWidget,
+  EntityProfileWidget,
+  InstanceHistoryWidget,
+  ProfileInstancesWidget,
+  ProfilesListWidget,
+} from "@april/profile-ui";
 
 <EntityProfileWidget
   hostContext={{ tenant: { id: "tenant-a" }, telemetry: { requestId: "req-1" } }}
@@ -118,6 +138,15 @@ import { ProfileInstancesWidget } from "@april/profile-ui";
   accessToken={accessToken}
   onError={(payload) => {
     console.log("history error", payload.message);
+  }}
+/>;
+
+<ConflictQueueWidget
+  hostContext={{ tenant: { id: "tenant-a" }, telemetry: { requestId: "req-5" } }}
+  apiBaseUrl="/admin/profile/api"
+  accessToken={accessToken}
+  onError={(payload) => {
+    console.log("conflicts error", payload.message);
   }}
 />;
 ```

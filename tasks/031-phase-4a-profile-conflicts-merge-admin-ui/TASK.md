@@ -1,7 +1,7 @@
 # Задача: Фаза 4a.4 (AprilProfile) — UI потока конфликтов и merge-дубликатов
 
 ## Мета
-- **ID / ветка:** (например `feat/phase-4a-conflict-queue-widget`)
+- **ID / ветка:** `feature/phase-4a-conflict-queue-widget`
 - **Приоритет:** высокий
 - **Родительская дорожная карта:** [`tasks/000-full-service-aprilhub-roadmap/`](../000-full-service-aprilhub-roadmap/) — [`PLAN.md`](../000-full-service-aprilhub-roadmap/PLAN.md), **Фаза 4a**, пункт **4a.4**.
 - **Связанные подзадачи:** зависит от API конфликтов/merge [`012-phase-2-authority-merge-conflicts`](../012-phase-2-authority-merge-conflicts/) и ABAC ограничений [`013-phase-2-abac-field-filtering`](../013-phase-2-abac-field-filtering/); интеграция в Hub — [`032-phase-4a-hub-conflicts-merge-host-rbac`](../032-phase-4a-hub-conflicts-merge-host-rbac/).
@@ -35,9 +35,9 @@
 - Секреты только через env.
 
 ## Критерии готовности (acceptance)
-- [ ] Очередь конфликтов отображается и фильтруется.
-- [ ] Разрешение конфликта и merge дубликатов доступны с корректной обработкой ошибок.
-- [ ] Тесты покрывают позитивные и негативные сценарии.
+- [x] Очередь конфликтов отображается и фильтруется.
+- [x] Разрешение конфликта и merge дубликатов доступны с корректной обработкой ошибок.
+- [x] Тесты покрывают позитивные и негативные сценарии.
 
 ## Проверка (команды)
 ```bash
@@ -50,8 +50,8 @@ cd frontend && npm ci && npm run lint && npm run test && npm run build
 Описание поддержанных операций resolve/merge, UX ошибок прав/конфликтов, список открытых рисков до интеграции в Hub.
 
 ## Человекопонятная история в docs-site (обязательно)
-- [ ] Создана/обновлена страница `docs-site/docs/task-story-031-phase-4a-profile-conflicts-merge-admin-ui.md`.
-- [ ] В [`docs-site/docs/task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md) добавлена ссылка и обновлен статус.
-- [ ] Простым языком описано, как оператор видит и решает конфликты данных.
-- [ ] Указаны ограничения ролей и почему они важны.
-- [ ] В конце страницы есть ссылки на `tasks/031-phase-4a-profile-conflicts-merge-admin-ui/TASK.md`, `PLAN.md` (если появится), `REPORT.md`.
+- [x] Создана/обновлена страница `docs-site/docs/task-story-031-phase-4a-profile-conflicts-merge-admin-ui.md`.
+- [x] В [`docs-site/docs/task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md) добавлена ссылка и обновлен статус.
+- [x] Простым языком описано, как оператор видит и решает конфликты данных.
+- [x] Указаны ограничения ролей и почему они важны.
+- [x] В конце страницы есть ссылки на `tasks/031-phase-4a-profile-conflicts-merge-admin-ui/TASK.md`, `PLAN.md` (если появится), `REPORT.md`.

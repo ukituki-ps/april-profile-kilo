@@ -6,6 +6,8 @@ export { ProfileInstancesWidget } from "./components/ProfileInstancesWidget";
 export type { ProfileInstancesWidgetProps } from "./components/ProfileInstancesWidget";
 export { InstanceHistoryWidget } from "./components/InstanceHistoryWidget";
 export type { InstanceHistoryWidgetProps } from "./components/InstanceHistoryWidget";
+export { ConflictQueueWidget } from "./components/ConflictQueueWidget";
+export type { ConflictQueueWidgetProps } from "./components/ConflictQueueWidget";
 export type {
   ProfileInstanceListItem,
   ProfileInstancesAction,
