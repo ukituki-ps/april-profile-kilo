@@ -26,7 +26,7 @@ structurizr-url:
 	@printf 'Structurizr Lite: http://127.0.0.1:%s/\n' "$${STRUCTURIZR_HTTP_PORT:-8091}"
 
 docs-build:
-	cd docs-site && npm ci && npm run build
+	cd docs-site && npm ci --prefer-offline && npm run build
 
 docs-serve:
 	cd docs-site && npm run serve
