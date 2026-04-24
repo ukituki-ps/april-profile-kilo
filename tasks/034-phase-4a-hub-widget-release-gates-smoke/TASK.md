@@ -35,9 +35,9 @@
 - Не вводить незафиксированные breaking обновления пакета виджетов.
 
 ## Критерии готовности (acceptance)
-- [ ] Для виджетов 4a определен и документирован обязательный release-gate.
-- [ ] Проверка semver совместимости встроена в релизный процесс Hub.
-- [ ] Известные manual fallback шаги и rollback описаны.
+- [x] Для виджетов 4a определен и документирован обязательный release-gate.
+- [x] Проверка semver совместимости встроена в релизный процесс Hub.
+- [x] Известные manual fallback шаги и rollback описаны.
 
 ## Проверка (команды)
 ```bash
@@ -52,8 +52,8 @@
 Ссылки на PR/пайплайны april-worker, перечень релизных гейтов, список ручных fallback шагов.
 
 ## Человекопонятная история в docs-site (обязательно)
-- [ ] Создана/обновлена страница `docs-site/docs/task-story-034-phase-4a-hub-widget-release-gates-smoke.md` с пометкой "исполнение в AprilHub".
-- [ ] В [`docs-site/docs/task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md) добавлена ссылка и обновлен статус.
-- [ ] Простым языком описано, какие проверки теперь обязательны перед релизом.
-- [ ] Отдельно указан порядок действий при падении smoke/e2e.
-- [ ] В конце страницы есть ссылки на `tasks/034-phase-4a-hub-widget-release-gates-smoke/TASK.md`, `PLAN.md` (если появится), `REPORT.md`.
+- [x] Создана/обновлена страница `docs-site/docs/task-story-034-phase-4a-hub-widget-release-gates-smoke.md` с пометкой "исполнение в AprilHub".
+- [x] В [`docs-site/docs/task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md) добавлена ссылка и обновлен статус.
+- [x] Простым языком описано, какие проверки теперь обязательны перед релизом.
+- [x] Отдельно указан порядок действий при падении smoke/e2e.
+- [x] В конце страницы есть ссылки на `tasks/034-phase-4a-hub-widget-release-gates-smoke/TASK.md`, `PLAN.md` (если появится), `REPORT.md`.

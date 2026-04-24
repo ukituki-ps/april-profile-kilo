@@ -42,7 +42,7 @@ sidebar_position: 20
 - [029 — `InstanceHistoryWidget`: история версий экземпляра и diff](./task-story-029-phase-4a-profile-instance-history-widget)
 - [031 — `ConflictQueueWidget`: очередь конфликтов и merge дубликатов](./task-story-031-phase-4a-profile-conflicts-merge-admin-ui)
 - [032 — AprilHub: хостинг конфликтного UI, RBAC и e2e](./task-story-032-phase-4a-hub-conflicts-merge-host-rbac)
-- [033 — События наблюдаемости виджетов и semver `@april/profile-ui`](./task-story-033-phase-4a-profile-widget-observability-semver)
+- [034 — AprilHub: релизные гейты smoke/e2e и semver для виджетов 4a](./task-story-034-phase-4a-hub-widget-release-gates-smoke)
 
 ## Быстрый статус
 
@@ -76,4 +76,4 @@ sidebar_position: 20
 | 029 InstanceHistoryWidget + version diff | ✅ | [029](./task-story-029-phase-4a-profile-instance-history-widget) | Добавлен виджет истории версий экземпляра с таймлайном, просмотром снапшота и diff против previous/current |
 | 031 ConflictQueueWidget + resolve/merge admin UI | ✅ | [031](./task-story-031-phase-4a-profile-conflicts-merge-admin-ui) | Очередь конфликтов authority с фильтрами, resolve и merge с подтверждением, UX для `401/403/409` и аудит-сводка после успеха |
 | 032 Hub host conflicts + RBAC + e2e | ✅ | [032](./task-story-032-phase-4a-hub-conflicts-merge-host-rbac) | Маршрут и host-экран в AprilHub, BFF-вызовы admin API, Playwright (позитив/негатив), dev-пользователи Keycloak |
-| 033 profile-ui observability + semver | ✅ | [033](./task-story-033-phase-4a-profile-widget-observability-semver) | `onObservability` (`view_loaded` / `save_*`), `correlationId`, semver §1.1, тесты workspace в общем `npm test` |
+| 034 Hub release gates 4a widgets | ✅ | [034](./task-story-034-phase-4a-hub-widget-release-gates-smoke) | Документированный P0 gate + semver-скрипт в CI hub-shell, runbook rollback; Playwright — nightly/ручной прогон перед релизом |
