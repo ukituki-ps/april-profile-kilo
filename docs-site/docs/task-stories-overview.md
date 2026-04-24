@@ -41,6 +41,7 @@ sidebar_position: 20
 - [027 — `ProfileInstancesWidget`: список экземпляров профиля и CRUD](./task-story-027-phase-4a-profile-instances-crud-widget)
 - [029 — `InstanceHistoryWidget`: история версий экземпляра и diff](./task-story-029-phase-4a-profile-instance-history-widget)
 - [031 — `ConflictQueueWidget`: очередь конфликтов и merge дубликатов](./task-story-031-phase-4a-profile-conflicts-merge-admin-ui)
+- [032 — AprilHub: хостинг конфликтного UI, RBAC и e2e](./task-story-032-phase-4a-hub-conflicts-merge-host-rbac)
 
 ## Быстрый статус
 
@@ -73,3 +74,4 @@ sidebar_position: 20
 | 027 ProfileInstancesWidget + CRUD | ✅ | [027](./task-story-027-phase-4a-profile-instances-crud-widget) | Добавлен виджет списка экземпляров в контексте `profileId`, CRUD и ABAC UX (`hidden/readonly/denied`) |
 | 029 InstanceHistoryWidget + version diff | ✅ | [029](./task-story-029-phase-4a-profile-instance-history-widget) | Добавлен виджет истории версий экземпляра с таймлайном, просмотром снапшота и diff против previous/current |
 | 031 ConflictQueueWidget + resolve/merge admin UI | ✅ | [031](./task-story-031-phase-4a-profile-conflicts-merge-admin-ui) | Очередь конфликтов authority с фильтрами, resolve и merge с подтверждением, UX для `401/403/409` и аудит-сводка после успеха |
+| 032 Hub host conflicts + RBAC + e2e | ✅ | [032](./task-story-032-phase-4a-hub-conflicts-merge-host-rbac) | Маршрут и host-экран в AprilHub, BFF-вызовы admin API, Playwright (позитив/негатив), dev-пользователи Keycloak |
