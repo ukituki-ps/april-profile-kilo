@@ -12,4 +12,4 @@
 
 | `profileId` | Описание | Виджеты |
 |-------------|----------|---------|
-| `entity-profile` | Домен редактирования профиля сущности в AprilProfile | [`entity-profile-editor`](./profile/entity-profile-editor.md) |
+| `entity-profile` | Домен редактирования профиля сущности в AprilProfile | [`entity-profile-editor`](./profile/entity-profile-editor.md), [`instance-history-widget`](./profile/instance-history-widget.md) |

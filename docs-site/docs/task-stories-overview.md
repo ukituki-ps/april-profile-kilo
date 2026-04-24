@@ -39,6 +39,7 @@ sidebar_position: 20
 - [024 — Модель документации виджетов и единый каталог profile -> widgets](./task-story-024-phase-4-widget-docs-operating-model-and-project-ingestion)
 - [025 — `ProfilesListWidget`: список профилей и базовый CRUD](./task-story-025-phase-4a-profile-profiles-list-crud-widget)
 - [027 — `ProfileInstancesWidget`: список экземпляров профиля и CRUD](./task-story-027-phase-4a-profile-instances-crud-widget)
+- [029 — `InstanceHistoryWidget`: история версий экземпляра и diff](./task-story-029-phase-4a-profile-instance-history-widget)
 
 ## Быстрый статус
 
@@ -69,3 +70,4 @@ sidebar_position: 20
 | 024 модель документации виджетов | ✅ | [024](./task-story-024-phase-4-widget-docs-operating-model-and-project-ingestion) | Единая схема `profile -> widgets -> version/status`, каталог карточек и синхронизация docs/docs-site через чеклисты |
 | 025 ProfilesListWidget + CRUD | ✅ | [025](./task-story-025-phase-4a-profile-profiles-list-crud-widget) | Добавлен виджет списка профилей с search/filter/pagination, CRUD и безопасной обработкой `401/403/409` |
 | 027 ProfileInstancesWidget + CRUD | ✅ | [027](./task-story-027-phase-4a-profile-instances-crud-widget) | Добавлен виджет списка экземпляров в контексте `profileId`, CRUD и ABAC UX (`hidden/readonly/denied`) |
+| 029 InstanceHistoryWidget + version diff | ✅ | [029](./task-story-029-phase-4a-profile-instance-history-widget) | Добавлен виджет истории версий экземпляра с таймлайном, просмотром снапшота и diff против previous/current |
