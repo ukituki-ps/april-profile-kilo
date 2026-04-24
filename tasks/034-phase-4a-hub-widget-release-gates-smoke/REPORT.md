@@ -14,7 +14,8 @@
 
 ## Ссылки на изменения
 
-- Репозиторий исполнения: https://github.com/ukituki-ps/april-worker — PR [#52](https://github.com/ukituki-ps/april-worker/pull/52) влит в `develop` (squash merge commit `fd655480374275bd6a46cdbbeb5eb13a7335a5f3`).
+- Документация и отчёт в этом репозитории: PR [#81](https://github.com/ukituki-ps/april-profile/pull/81) → `develop` (squash merge commit `6327b82d9e8b3dc0cb74aa0c3352812c5fb5938f`).
+- Репозиторий исполнения AprilHub: https://github.com/ukituki-ps/april-worker — PR [#52](https://github.com/ukituki-ps/april-worker/pull/52) влит в `develop` (squash merge commit `fd655480374275bd6a46cdbbeb5eb13a7335a5f3`).
 
 ## Риски и follow-up
 
