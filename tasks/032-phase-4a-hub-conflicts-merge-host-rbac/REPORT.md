@@ -3,7 +3,7 @@
 - Статус: выполнено (интеграция AprilHub в `april-worker`; постановка 032 закрыта по Hub-части).
 - Исполнительный репозиторий: https://github.com/ukituki-ps/april-worker
 - Задача-зеркало в worker: `tasks/029-aprilhub-execute-external-task-032-april-profile-1/`
-- Ветка / PR: см. `tasks/029-aprilhub-execute-external-task-032-april-profile-1/REPORT.md` в `april-worker` (после push).
+- Локальный коммит в `april-profile-1`: `cdfb485` (ветка была `develop` в рабочем клоне; для PR перенесите на `feature/*` по политике репозитория).
 
 ## 2) Что сделано по чеклисту TASK.md (032)
 
