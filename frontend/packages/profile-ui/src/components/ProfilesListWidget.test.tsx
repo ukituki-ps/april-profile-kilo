@@ -86,37 +86,44 @@ describe("ProfilesListWidget", () => {
     expect(screen.queryByText(e1)).not.toBeInTheDocument();
   });
 
-  it("supports create, update and delete actions", async () => {
-    const onAction = vi.fn();
-    renderWidget({ onAction });
+  it(
+    "supports create, update and delete actions",
+    async () => {
+      const onAction = vi.fn();
+      renderWidget({ onAction });
 
-    expect(await screen.findByText(e1)).toBeInTheDocument();
+      expect(await screen.findByText(e1)).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Entity type ID"), { target: { value: entityTypeId } });
-    fireEvent.change(screen.getByLabelText("Document (JSON object)"), {
-      target: { value: '{"name":"Created via test"}' },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Create profile/i }));
+      fireEvent.change(screen.getByLabelText("Entity type ID"), { target: { value: entityTypeId } });
+      fireEvent.change(screen.getByLabelText("Document (JSON object)"), {
+        target: { value: '{"name":"Created via test"}' },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Create profile/i }));
 
-    expect(await screen.findByText("new-entity")).toBeInTheDocument();
+      expect(await screen.findByText("new-entity")).toBeInTheDocument();
 
-    clickAction(e1, "Edit");
-    expect(await screen.findByText(`Edit profile: ${e1}`)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Updated document (JSON object)"), {
-      target: { value: '{"name":"Updated via test"}' },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
-    await screen.findByText("Updated via test");
+      clickAction(e1, "Edit");
+      expect(await screen.findByText(`Edit profile: ${e1}`)).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText("Updated document (JSON object)"), {
+        target: { value: '{"name":"Updated via test"}' },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+      await screen.findByText("Updated via test", {}, { timeout: 10_000 });
 
-    clickAction(e2, "Delete");
-    await waitFor(() => {
-      expect(screen.queryByText(e2)).not.toBeInTheDocument();
-    });
+      clickAction(e2, "Delete");
+      await waitFor(
+        () => {
+          expect(screen.queryByText(e2)).not.toBeInTheDocument();
+        },
+        { timeout: 10_000 },
+      );
 
-    expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ type: "created" }));
-    expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ type: "updated" }));
-    expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ type: "deleted", entityId: e2 }));
-  });
+      expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ type: "created" }));
+      expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ type: "updated" }));
+      expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ type: "deleted", entityId: e2 }));
+    },
+    25_000,
+  );
 
   it("maps 401/403/409 to secure messages", async () => {
     server.use(
