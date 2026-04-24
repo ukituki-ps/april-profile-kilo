@@ -28,3 +28,4 @@
 
 - [ ] Ручной smoke: сохранение, ошибка API, сценарий «следующий» (если применимо).
 - [ ] Lockfile обновлён; CI зелёный.
+- [ ] Синхронизация документации выполнена: `docs/widgets/...` (канон) и `docs-site/docs/widget-catalog.md` / `docs-site/docs/widget-docs-operating-model.md` (человекопонятный слой).

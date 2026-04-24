@@ -20,6 +20,7 @@ sidebar_position: 9
 - [ ] Версия по semver; при breaking — **major** ([версионирование](/docs/versioning-and-compatibility)).
 - [ ] Changelog по `docs/templates/WIDGET_CHANGELOG_TEMPLATE.md`.
 - [ ] Обновлена спецификация виджета (`docs/templates/WIDGET_SPEC_TEMPLATE.md`), если менялся контракт.
+- [ ] Синхронизированы канонические карточки в `docs/widgets/...` и соответствующие страницы в docs-site с теми же идентификаторами и статусами.
 
 ## Качество
 

@@ -16,6 +16,7 @@
 - [ ] Версия по semver; при breaking — **major** ([`VERSIONING_AND_COMPATIBILITY.md`](./VERSIONING_AND_COMPATIBILITY.md)).
 - [ ] Changelog по [`templates/WIDGET_CHANGELOG_TEMPLATE.md`](./templates/WIDGET_CHANGELOG_TEMPLATE.md).
 - [ ] Обновлена спецификация виджета ([`templates/WIDGET_SPEC_TEMPLATE.md`](./templates/WIDGET_SPEC_TEMPLATE.md)), если менялся контракт.
+- [ ] Обновлены карточка в `docs/widgets/...` и адаптированная страница в `docs-site/` без расхождения терминов (`profileId`, `widgetId`, `contractVersion`, `lifecycleStatus`).
 
 ## Качество
 

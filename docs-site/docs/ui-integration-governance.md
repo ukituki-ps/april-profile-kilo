@@ -21,6 +21,8 @@ sidebar_position: 5
 | Документ | Содержание |
 |----------|------------|
 | [Контракты виджетов (HostContext, props, events)](/docs/widget-contracts) | Версия v1 |
+| [Операционная модель документации виджетов](/docs/widget-docs-operating-model) | Единый словарь `profileId/widgetId/version/status` и DoD |
+| [Каталог профилей и виджетов](/docs/widget-catalog) | Точка входа в текущие карточки виджетов |
 | [Матрица решений](/docs/decision-matrix-ui-integration) | Когда какой режим |
 | [Версионирование и совместимость](/docs/versioning-and-compatibility) | Semver, матрица host × widget, deprecation |
 | [Чеклист релиза виджета](/docs/widget-release-checklist) | Перед публикацией npm |
