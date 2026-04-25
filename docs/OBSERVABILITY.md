@@ -46,7 +46,15 @@ curl -sS "http://127.0.0.1:8080/metrics" | head -n 30
 
 После запроса к API в логах контейнера должны быть JSON-строки с `requestId` и `correlationId`.
 
+## Sentry preparation baseline
+
+Подготовительный (документационный) контур Sentry для AprilProfile зафиксирован в
+`docs/runbooks/APRILPROFILE_SENTRY_ROLLOUT_PREPARATION.md`. На этом этапе runtime SDK
+ещё не подключается; цель — заранее согласовать env-контур, правила redaction/filtering,
+smoke/rollback и cross-repo корреляцию с AprilHub.
+
 ## Связанные задачи
 
 - Реализация: [`tasks/018-phase-4-prometheus-metrics-logs-correlation/`](../tasks/018-phase-4-prometheus-metrics-logs-correlation/TASK.md).
 - Дашборды и SLO в Hub: [`tasks/019-phase-4-grafana-alerts-slo-hub-coordination/`](../tasks/019-phase-4-grafana-alerts-slo-hub-coordination/). После merge в april-worker: дашборд Grafana **AprilProfile Service Overview** (UID `april-profile-service-overview`), правила `aprilprofile-alerts.yml`, runbook `docs/runbooks/APRILPROFILE_SLO_DRAFT.md` — см. [PR #28](https://github.com/ukituki-ps/april-worker/pull/28).
+- Подготовка Sentry для AprilProfile: [`tasks/036-phase-4b-profile-sentry-rollout-preparation/`](../tasks/036-phase-4b-profile-sentry-rollout-preparation/TASK.md).
