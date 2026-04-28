@@ -26,6 +26,9 @@ const server = setupServer(
   http.get(`${apiBaseUrl}/v1/entities/${e1}`, () => HttpResponse.json(buildSnapshot(e1, 1, "Jane A"))),
   http.get(`${apiBaseUrl}/v1/entities/${e2}`, () => HttpResponse.json(buildSnapshot(e2, 1, "Jane B"))),
   http.get(`${apiBaseUrl}/v1/entities/${e3}`, () => HttpResponse.json(buildSnapshot(e3, 1, "Jane C"))),
+  http.get(`${apiBaseUrl}/v1/entities/new-entity`, () =>
+    HttpResponse.json(buildSnapshot("new-entity", 1, "Created via test")),
+  ),
   http.post(`${apiBaseUrl}/v1/entities`, async ({ request }) => {
     const body = (await request.json()) as { entity_type_id: string; document: { name?: string } };
     return HttpResponse.json(buildSnapshot("new-entity", 1, body.document.name ?? "Created"), { status: 201 });
@@ -53,27 +56,11 @@ const renderWidget = (props?: Partial<ProfilesListWidgetProps>) =>
     </MantineProvider>,
   );
 
-const clickAction = (entityId: string, actionName: "Edit" | "Delete") => {
-  const rowCell = screen.getByText(entityId);
-  const row = rowCell.closest("tr");
-  if (!row) {
-    throw new Error(`Row for ${entityId} not found`);
-  }
-  const button = row.querySelector(`button[aria-label="${actionName}"],button`);
-  if (!button) {
-    throw new Error(`${actionName} button for ${entityId} not found`);
-  }
-  fireEvent.click(
-    Array.from(row.querySelectorAll("button")).find((candidate) =>
-      candidate.textContent?.match(new RegExp(actionName, "i")),
-    ) ?? button,
-  );
-};
-
 describe("ProfilesListWidget", () => {
-  it("renders list with pagination and search", async () => {
+  it("renders card list column with pagination and search", async () => {
     renderWidget({ pageSize: 2 });
 
+    expect(await screen.findByLabelText("widget-card-layout")).toBeInTheDocument();
     expect(await screen.findByText(e1)).toBeInTheDocument();
     expect(screen.getByText(e2)).toBeInTheDocument();
     expect(screen.queryByText(e3)).not.toBeInTheDocument();
@@ -87,30 +74,35 @@ describe("ProfilesListWidget", () => {
   });
 
   it(
-    "supports create, update and delete actions",
+    "supports create in modal and update/delete in profile card",
     async () => {
       const onAction = vi.fn();
       renderWidget({ onAction });
 
       expect(await screen.findByText(e1)).toBeInTheDocument();
 
-      fireEvent.change(screen.getByLabelText("Entity type ID"), { target: { value: entityTypeId } });
-      fireEvent.change(screen.getByLabelText("Document (JSON object)"), {
+      fireEvent.click(screen.getByRole("button", { name: "Open create profile modal" }));
+      fireEvent.change(await screen.findByLabelText("Entity type ID"), { target: { value: entityTypeId } });
+      fireEvent.change(await screen.findByLabelText("Document (JSON object)"), {
         target: { value: '{"name":"Created via test"}' },
       });
-      fireEvent.click(screen.getByRole("button", { name: /Create profile/i }));
+      fireEvent.click(screen.getByRole("button", { name: /^Create profile$/ }));
 
       expect(await screen.findByText("new-entity")).toBeInTheDocument();
+      expect(await screen.findByText("Entity: new-entity")).toBeInTheDocument();
 
-      clickAction(e1, "Edit");
-      expect(await screen.findByText(`Edit profile: ${e1}`)).toBeInTheDocument();
-      fireEvent.change(screen.getByLabelText("Updated document (JSON object)"), {
+      fireEvent.click(screen.getByLabelText(`Select ${e1}`));
+      expect(await screen.findByText(`Entity: ${e1}`)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /^Edit$/ }));
+      fireEvent.change(screen.getByLabelText("Profile document (edit JSON object)"), {
         target: { value: '{"name":"Updated via test"}' },
       });
       fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
-      await screen.findByText("Updated via test", {}, { timeout: 10_000 });
+      expect(await screen.findByText("Updated via test", {}, { timeout: 10_000 })).toBeInTheDocument();
 
-      clickAction(e2, "Delete");
+      fireEvent.click(screen.getByLabelText(`Select ${e2}`));
+      expect(await screen.findByText(`Entity: ${e2}`)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /^Delete$/ }));
       await waitFor(
         () => {
           expect(screen.queryByText(e2)).not.toBeInTheDocument();
@@ -141,16 +133,19 @@ describe("ProfilesListWidget", () => {
     renderWidget();
     expect(await screen.findByText(e1)).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Entity type ID"), { target: { value: entityTypeId } });
-    fireEvent.click(screen.getByRole("button", { name: /Create profile/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Open create profile modal" }));
+    fireEvent.change(await screen.findByLabelText("Entity type ID"), { target: { value: entityTypeId } });
+    fireEvent.click(screen.getByRole("button", { name: /^Create profile$/ }));
     expect(await screen.findByText(/Authentication required/i)).toBeInTheDocument();
 
-    clickAction(e1, "Edit");
-    expect(await screen.findByText(`Edit profile: ${e1}`)).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(`Select ${e1}`));
+    expect(await screen.findByText(`Entity: ${e1}`)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Edit$/ }));
     fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
     expect(await screen.findByText(/Access denied/i)).toBeInTheDocument();
 
-    clickAction(e2, "Delete");
+    fireEvent.click(screen.getByLabelText(`Select ${e2}`));
+    fireEvent.click(screen.getByRole("button", { name: /^Delete$/ }));
     expect(await screen.findByText(/conflicts with current profile state/i)).toBeInTheDocument();
   });
 });
