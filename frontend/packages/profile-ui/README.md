@@ -20,7 +20,7 @@ Props:
 - `onError?` — callback with a normalized error message.
 - `onObservability?` — единый контур событий (`view_loaded`, `save_*`), см. раздел «Observability».
 
-### `ProfilesListWidget`
+### `ProfilesWidget`
 
 Props:
 
@@ -32,6 +32,10 @@ Props:
 - `onAction?` — typed callback for CRUD actions (`created`, `updated`, `deleted`).
 - `onError?` — callback with normalized error payload (`401/403/409` are mapped to predictable UX text).
 - `onObservability?` — события наблюдаемости, см. раздел «Observability».
+
+Backward compatibility:
+
+- `ProfilesListWidget` remains available as a compatible alias for existing embeds.
 
 Behavior:
 
@@ -103,7 +107,7 @@ import {
   EntityProfileWidget,
   InstanceHistoryWidget,
   ProfileInstancesWidget,
-  ProfilesListWidget,
+  ProfilesWidget,
 } from "@april/profile-ui";
 
 <EntityProfileWidget
@@ -116,7 +120,7 @@ import {
   }}
 />;
 
-<ProfilesListWidget
+<ProfilesWidget
   hostContext={{ tenant: { id: "tenant-a" }, telemetry: { requestId: "req-2" } }}
   apiBaseUrl="/admin/profile/api"
   accessToken={accessToken}

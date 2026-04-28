@@ -4,7 +4,7 @@ import {
   EntityProfileWidget,
   InstanceHistoryWidget,
   ProfileInstancesWidget,
-  ProfilesListWidget,
+  ProfilesWidget,
 } from "@april/profile-ui";
 import { Affix, Alert, Anchor, Box, Button, Container, Stack, Text, Title, useMantineColorScheme } from "@mantine/core";
 import { useState } from "react";
@@ -39,7 +39,7 @@ function HomePage() {
         <Anchor component={Link} to="/profile-widget-demo">
           Открыть демо встраиваемого профиля
         </Anchor>
-        <Anchor component={Link} to="/profiles-list-widget-demo">
+        <Anchor component={Link} to="/profiles-widget-demo">
           Открыть демо списка профилей
         </Anchor>
         <Anchor component={Link} to="/profile-instances-widget-demo">
@@ -112,7 +112,7 @@ function ProfileWidgetDemoPage() {
   );
 }
 
-function ProfilesListWidgetDemoPage() {
+function ProfilesWidgetDemoPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const apiBaseUrl = import.meta.env.VITE_PROFILE_API_BASE_URL ?? "/admin/profile/api";
   const accessToken = import.meta.env.VITE_PROFILE_ACCESS_TOKEN;
@@ -132,13 +132,13 @@ function ProfilesListWidgetDemoPage() {
             April Profile
           </Anchor>
           <Text c="dimmed">/</Text>
-          <Text>Profiles list widget demo</Text>
+          <Text>Profiles widget demo</Text>
         </Box>
         <Text size="sm" c="dimmed">
           Embedded demo for list/search/filter/pagination with CRUD actions.
         </Text>
         {actionMessage ? <Alert color="green">{actionMessage}</Alert> : null}
-        <ProfilesListWidget
+        <ProfilesWidget
           hostContext={{ tenant: { id: "demo-tenant" }, telemetry: { requestId: "local-demo-req-list" } }}
           apiBaseUrl={apiBaseUrl}
           accessToken={accessToken}
@@ -272,7 +272,8 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/showcase" element={<ShowcasePage />} />
         <Route path="/profile-widget-demo" element={<ProfileWidgetDemoPage />} />
-        <Route path="/profiles-list-widget-demo" element={<ProfilesListWidgetDemoPage />} />
+        <Route path="/profiles-widget-demo" element={<ProfilesWidgetDemoPage />} />
+        <Route path="/profiles-list-widget-demo" element={<ProfilesWidgetDemoPage />} />
         <Route path="/profile-instances-widget-demo" element={<ProfileInstancesWidgetDemoPage />} />
         <Route path="/instance-history-widget-demo" element={<InstanceHistoryWidgetDemoPage />} />
         <Route path="/conflict-queue-widget-demo" element={<ConflictQueueWidgetDemoPage />} />

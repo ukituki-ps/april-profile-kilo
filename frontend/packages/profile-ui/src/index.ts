@@ -1,5 +1,7 @@
 export { EntityProfileWidget } from "./components/EntityProfileWidget";
 export type { EntityProfileWidgetProps } from "./components/EntityProfileWidget";
+export { ProfilesWidget } from "./components/ProfilesWidget";
+export type { ProfilesWidgetProps } from "./components/ProfilesWidget";
 export { ProfilesListWidget } from "./components/ProfilesListWidget";
 export type { ProfilesListWidgetProps } from "./components/ProfilesListWidget";
 export { ProfileInstancesWidget } from "./components/ProfileInstancesWidget";

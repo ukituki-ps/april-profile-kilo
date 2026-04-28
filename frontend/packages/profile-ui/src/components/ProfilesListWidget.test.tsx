@@ -5,8 +5,8 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { ProfilesListWidget } from "./ProfilesListWidget";
-import type { ProfilesListWidgetProps } from "./ProfilesListWidget";
+import { ProfilesWidget } from "./ProfilesWidget";
+import type { ProfilesWidgetProps } from "./ProfilesWidget";
 
 vi.mock("@mantine/core", async () => {
   const actual = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
@@ -90,10 +90,10 @@ beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-const renderWidget = (props?: Partial<ProfilesListWidgetProps>) =>
+const renderWidget = (props?: Partial<ProfilesWidgetProps>) =>
   render(
     <MantineProvider>
-      <ProfilesListWidget
+      <ProfilesWidget
         hostContext={{ tenant: { id: "tenant-a" }, telemetry: { requestId: "req-1" } }}
         apiBaseUrl={apiBaseUrl}
         entityIds={[e1, e2, e3]}
@@ -117,7 +117,7 @@ const fillCreateModal = (typeId: string, documentJson: string) => {
   fireEvent.change(createDocumentInput, { target: { value: documentJson } });
 };
 
-describe("ProfilesListWidget", () => {
+describe("ProfilesWidget", () => {
   it("renders list with incremental loading and search", async () => {
     renderWidget({ pageSize: 2 });
 
