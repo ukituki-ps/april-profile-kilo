@@ -6,9 +6,27 @@ import {
   ProfileInstancesWidget,
   ProfilesListWidget,
 } from "@april/profile-ui";
-import { Alert, Anchor, Container, Group, Stack, Text, Title } from "@mantine/core";
+import { Affix, Alert, Anchor, Box, Button, Container, Stack, Text, Title, useMantineColorScheme } from "@mantine/core";
 import { useState } from "react";
 import { Link, Route, Routes } from "react-router-dom";
+
+function ColorSchemeToggle() {
+  const { colorScheme, setColorScheme } = useMantineColorScheme();
+
+  return (
+    <Affix position={{ top: 16, right: 16 }}>
+      <Button
+        size="xs"
+        variant="light"
+        onClick={() => {
+          setColorScheme(colorScheme === "dark" ? "light" : "dark");
+        }}
+      >
+        {colorScheme === "dark" ? "Light theme" : "Dark theme"}
+      </Button>
+    </Affix>
+  );
+}
 
 function HomePage() {
   return (
@@ -46,13 +64,13 @@ function ShowcasePage() {
   return (
     <>
       <Container py="md" size="lg">
-        <Group gap="md">
+        <Box style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <Anchor component={Link} to="/">
             April Profile
           </Anchor>
           <Text c="dimmed">/</Text>
           <Text>Showcase</Text>
-        </Group>
+        </Box>
       </Container>
       <UIKit />
     </>
@@ -69,13 +87,13 @@ function ProfileWidgetDemoPage() {
   return (
     <Container py="xl" size="md">
       <Stack gap="md">
-        <Group gap="sm">
+        <Box style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <Anchor component={Link} to="/">
             April Profile
           </Anchor>
           <Text c="dimmed">/</Text>
           <Text>Widget demo</Text>
-        </Group>
+        </Box>
         <Text size="sm" c="dimmed">
           Embedded demo for <code>@april/profile-ui</code> with `onSaveSuccess` callback.
         </Text>
@@ -109,13 +127,13 @@ function ProfilesListWidgetDemoPage() {
   return (
     <Container py="xl" size="lg">
       <Stack gap="md">
-        <Group gap="sm">
+        <Box style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <Anchor component={Link} to="/">
             April Profile
           </Anchor>
           <Text c="dimmed">/</Text>
           <Text>Profiles list widget demo</Text>
-        </Group>
+        </Box>
         <Text size="sm" c="dimmed">
           Embedded demo for list/search/filter/pagination with CRUD actions.
         </Text>
@@ -155,13 +173,13 @@ function ProfileInstancesWidgetDemoPage() {
   return (
     <Container py="xl" size="lg">
       <Stack gap="md">
-        <Group gap="sm">
+        <Box style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <Anchor component={Link} to="/">
             April Profile
           </Anchor>
           <Text c="dimmed">/</Text>
           <Text>Profile instances widget demo</Text>
-        </Group>
+        </Box>
         <Text size="sm" c="dimmed">
           Embedded demo for instances list in selected profile context with CRUD actions and ABAC UX.
         </Text>
@@ -195,13 +213,13 @@ function ConflictQueueWidgetDemoPage() {
   return (
     <Container py="xl" size="lg">
       <Stack gap="md">
-        <Group gap="sm">
+        <Box style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <Anchor component={Link} to="/">
             April Profile
           </Anchor>
           <Text c="dimmed">/</Text>
           <Text>Conflict queue widget demo</Text>
-        </Group>
+        </Box>
         <Text size="sm" c="dimmed">
           Admin-only demo: authority conflict queue, manual resolve, and duplicate merge. Requires realm admin role on
           the API.
@@ -225,13 +243,13 @@ function InstanceHistoryWidgetDemoPage() {
   return (
     <Container py="xl" size="lg">
       <Stack gap="md">
-        <Group gap="sm">
+        <Box style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <Anchor component={Link} to="/">
             April Profile
           </Anchor>
           <Text c="dimmed">/</Text>
           <Text>Instance history widget demo</Text>
-        </Group>
+        </Box>
         <Text size="sm" c="dimmed">
           Embedded demo for version timeline and JSON diff in read-only history mode.
         </Text>
@@ -248,14 +266,17 @@ function InstanceHistoryWidgetDemoPage() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/showcase" element={<ShowcasePage />} />
-      <Route path="/profile-widget-demo" element={<ProfileWidgetDemoPage />} />
-      <Route path="/profiles-list-widget-demo" element={<ProfilesListWidgetDemoPage />} />
-      <Route path="/profile-instances-widget-demo" element={<ProfileInstancesWidgetDemoPage />} />
-      <Route path="/instance-history-widget-demo" element={<InstanceHistoryWidgetDemoPage />} />
-      <Route path="/conflict-queue-widget-demo" element={<ConflictQueueWidgetDemoPage />} />
-    </Routes>
+    <>
+      <ColorSchemeToggle />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/showcase" element={<ShowcasePage />} />
+        <Route path="/profile-widget-demo" element={<ProfileWidgetDemoPage />} />
+        <Route path="/profiles-list-widget-demo" element={<ProfilesListWidgetDemoPage />} />
+        <Route path="/profile-instances-widget-demo" element={<ProfileInstancesWidgetDemoPage />} />
+        <Route path="/instance-history-widget-demo" element={<InstanceHistoryWidgetDemoPage />} />
+        <Route path="/conflict-queue-widget-demo" element={<ConflictQueueWidgetDemoPage />} />
+      </Routes>
+    </>
   );
 }
