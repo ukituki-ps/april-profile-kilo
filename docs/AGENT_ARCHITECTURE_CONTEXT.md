@@ -22,4 +22,6 @@
 
 Этот репозиторий — **AprilProfile**: централизованное версионируемое хранилище **профилей сущностей** расширяемых типов (не только HR), с мультитенантностью, REST и событиями. Инварианты и границы с экосистемой — в [`DESIGN_AprilProfile.md`](./DESIGN_AprilProfile.md); существенные решения — в [`adr/`](./adr/) (ADR-0002, ADR-0003). C4 (контекст и контейнеры) — [`structurizr/workspace.dsl`](../structurizr/workspace.dsl). Фронтенд (AprilHub, админка, пакеты UI) — [`FRONTEND_STRATEGY.md`](./FRONTEND_STRATEGY.md).
 
+Для файловой подсистемы целевая архитектура зафиксирована как **отдельный File Service (AprilFile)**: `AprilProfile` управляет доменными профилями и file-reference метаданными, а хранение бинарных объектов и lifecycle/presign-потоки находятся в отдельном сервисе (см. [`DESIGN_AprilProfile.md`](./DESIGN_AprilProfile.md) и [`структура сервиса.md`](./структура%20сервиса.md)).
+
 Версии инструментов и образов — в [`guides/VERSIONS.md`](./guides/VERSIONS.md). Форк репозитория под новый сервис — [`guides/FORK_AND_CUSTOMIZE.md`](./guides/FORK_AND_CUSTOMIZE.md).
