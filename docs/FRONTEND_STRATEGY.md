@@ -57,6 +57,14 @@
 
 ---
 
+## 3.1 Правило DS-first для реализации UI
+
+- Для новых экранов и виджетов приоритет — готовые компоненты/паттерны `@april/ui` (DisignApril).
+- Если паттерн покрыт частично, предпочтительна обёртка/расширение поверх DS-компонента, а не самостоятельная реализация с нуля.
+- Кастомный UI без DS-компонента допустим только как исключение с явной фиксацией причин и trade-off в task/report артефактах.
+
+---
+
 ## 4. HostContext, события и версионирование
 
 - **HostContext v1**, **Widget Props/Events v1** — единая формализация в [`WIDGET_CONTRACTS.md`](./WIDGET_CONTRACTS.md): минимум `tenant`, `auth`, `theme`, `locale`, `telemetry.requestId`; события `onSaveSuccess`, `onAction`, `onError` и навигационные **intent** (не прямой `navigate` из виджета).

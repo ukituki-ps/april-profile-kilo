@@ -45,7 +45,6 @@ sidebar_position: 20
 - [034 — AprilHub: релизные гейты smoke/e2e и semver для виджетов 4a](./task-story-034-phase-4a-hub-widget-release-gates-smoke)
 - [036 — Подготовка внедрения Sentry в AprilProfile (env, redaction, runbook)](./task-story-036-phase-4b-profile-sentry-rollout-preparation)
 - [039 — Отдельный File Service в архитектуре April](./task-story-039-file-service-architecture-docs)
-- [040 — `widget-card` в формате 25/75: Card List Column + карточка профиля](./task-story-040-phase-5-widget-card-layout-modernization)
 
 ## Быстрый статус
 
@@ -82,4 +81,3 @@ sidebar_position: 20
 | 034 Hub release gates 4a widgets | ✅ | [034](./task-story-034-phase-4a-hub-widget-release-gates-smoke) | Документированный P0 gate + semver-скрипт в CI hub-shell, runbook rollback; Playwright — nightly/ручной прогон перед релизом |
 | 036 Sentry rollout preparation (AprilProfile) | ✅ | [036](./task-story-036-phase-4b-profile-sentry-rollout-preparation) | Зафиксированы env-переменные, redaction/filtering policy, runbook rollout/rollback и cross-repo contract перед runtime внедрением |
 | 039 File Service architecture docs | ✅ | [039](./task-story-039-file-service-architecture-docs) | В архитектуре закреплён отдельный `AprilFile`; границы с `AprilProfile` описаны в каноничных docs и docs-site |
-| 040 widget-card master-detail 25/75 | ✅ | [040](./task-story-040-phase-5-widget-card-layout-modernization) | `ProfilesListWidget` перестроен в 25/75: слева `Card List Column`, справа карточка просмотра/редактирования, создание через модалку `+` |

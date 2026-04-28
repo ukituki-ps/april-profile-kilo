@@ -33,13 +33,6 @@ Props:
 - `onError?` — callback with normalized error payload (`401/403/409` are mapped to predictable UX text).
 - `onObservability?` — события наблюдаемости, см. раздел «Observability».
 
-Behavior:
-
-- Виджет работает как `widget-card` в схеме master-detail `25% / 75%`.
-- Слева `Card List Column`: поиск, фильтр по типу, пагинация и выбор активного профиля.
-- Справа карточка выбранного профиля: просмотр JSON и режим редактирования.
-- Создание профиля вынесено в модальное окно, которое открывается кнопкой `+`.
-
 ### `ProfileInstancesWidget`
 
 Props:
