@@ -43,6 +43,7 @@ sidebar_position: 20
 - [031 — `ConflictQueueWidget`: очередь конфликтов и merge дубликатов](./task-story-031-phase-4a-profile-conflicts-merge-admin-ui)
 - [032 — AprilHub: хостинг конфликтного UI, RBAC и e2e](./task-story-032-phase-4a-hub-conflicts-merge-host-rbac)
 - [034 — AprilHub: релизные гейты smoke/e2e и semver для виджетов 4a](./task-story-034-phase-4a-hub-widget-release-gates-smoke)
+- [036 — Подготовка внедрения Sentry в AprilProfile (env, redaction, runbook)](./task-story-036-phase-4b-profile-sentry-rollout-preparation)
 
 ## Быстрый статус
 
@@ -77,3 +78,4 @@ sidebar_position: 20
 | 031 ConflictQueueWidget + resolve/merge admin UI | ✅ | [031](./task-story-031-phase-4a-profile-conflicts-merge-admin-ui) | Очередь конфликтов authority с фильтрами, resolve и merge с подтверждением, UX для `401/403/409` и аудит-сводка после успеха |
 | 032 Hub host conflicts + RBAC + e2e | ✅ | [032](./task-story-032-phase-4a-hub-conflicts-merge-host-rbac) | Маршрут и host-экран в AprilHub, BFF-вызовы admin API, Playwright (позитив/негатив), dev-пользователи Keycloak |
 | 034 Hub release gates 4a widgets | ✅ | [034](./task-story-034-phase-4a-hub-widget-release-gates-smoke) | Документированный P0 gate + semver-скрипт в CI hub-shell, runbook rollback; Playwright — nightly/ручной прогон перед релизом |
+| 036 Sentry rollout preparation (AprilProfile) | ✅ | [036](./task-story-036-phase-4b-profile-sentry-rollout-preparation) | Зафиксированы env-переменные, redaction/filtering policy, runbook rollout/rollback и cross-repo contract перед runtime внедрением |
