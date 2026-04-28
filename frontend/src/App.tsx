@@ -6,9 +6,27 @@ import {
   ProfileInstancesWidget,
   ProfilesListWidget,
 } from "@april/profile-ui";
-import { Alert, Anchor, Container, Group, Stack, Text, Title } from "@mantine/core";
+import { Affix, Alert, Anchor, Button, Container, Group, Stack, Text, Title, useMantineColorScheme } from "@mantine/core";
 import { useState } from "react";
 import { Link, Route, Routes } from "react-router-dom";
+
+function ColorSchemeToggle() {
+  const { colorScheme, setColorScheme } = useMantineColorScheme();
+
+  return (
+    <Affix position={{ top: 16, right: 16 }}>
+      <Button
+        size="xs"
+        variant="light"
+        onClick={() => {
+          setColorScheme(colorScheme === "dark" ? "light" : "dark");
+        }}
+      >
+        {colorScheme === "dark" ? "Light theme" : "Dark theme"}
+      </Button>
+    </Affix>
+  );
+}
 
 function HomePage() {
   return (
@@ -248,14 +266,17 @@ function InstanceHistoryWidgetDemoPage() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/showcase" element={<ShowcasePage />} />
-      <Route path="/profile-widget-demo" element={<ProfileWidgetDemoPage />} />
-      <Route path="/profiles-list-widget-demo" element={<ProfilesListWidgetDemoPage />} />
-      <Route path="/profile-instances-widget-demo" element={<ProfileInstancesWidgetDemoPage />} />
-      <Route path="/instance-history-widget-demo" element={<InstanceHistoryWidgetDemoPage />} />
-      <Route path="/conflict-queue-widget-demo" element={<ConflictQueueWidgetDemoPage />} />
-    </Routes>
+    <>
+      <ColorSchemeToggle />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/showcase" element={<ShowcasePage />} />
+        <Route path="/profile-widget-demo" element={<ProfileWidgetDemoPage />} />
+        <Route path="/profiles-list-widget-demo" element={<ProfilesListWidgetDemoPage />} />
+        <Route path="/profile-instances-widget-demo" element={<ProfileInstancesWidgetDemoPage />} />
+        <Route path="/instance-history-widget-demo" element={<InstanceHistoryWidgetDemoPage />} />
+        <Route path="/conflict-queue-widget-demo" element={<ConflictQueueWidgetDemoPage />} />
+      </Routes>
+    </>
   );
 }

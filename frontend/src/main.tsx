@@ -7,7 +7,7 @@ import App from "./App";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
-    <AprilProviders>
+    <AprilProviders defaultColorScheme="dark">
       <App />
     </AprilProviders>
   </BrowserRouter>,
