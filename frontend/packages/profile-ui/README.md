@@ -28,10 +28,17 @@ Props:
 - `apiBaseUrl` — profile API base URL (for BFF flow usually `/admin/profile/api`).
 - `accessToken?` — Bearer token for OpenAPI client.
 - `entityIds` — initial entity IDs to load list rows (`GET /v1/entities/{entityID}` for each ID).
-- `pageSize?` — client-side pagination size (default: `5`).
+- `pageSize?` — incremental load step for list column (default: `5`).
 - `onAction?` — typed callback for CRUD actions (`created`, `updated`, `deleted`).
 - `onError?` — callback with normalized error payload (`401/403/409` are mapped to predictable UX text).
 - `onObservability?` — события наблюдаемости, см. раздел «Observability».
+
+Behavior:
+
+- Uses DS-first master-detail layout: left `CardListColumn` (search + current selection), right profile card.
+- Left side includes filter modal (type filter) + incremental loading via `CardListColumn` (`onReachListEnd`).
+- "Plus" action opens a modal create form; after successful create the new profile is selected on the right.
+- Right card supports view mode and edit mode with save through the existing profile API.
 
 ### `ProfileInstancesWidget`
 

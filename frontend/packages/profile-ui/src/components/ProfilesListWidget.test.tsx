@@ -3,19 +3,67 @@ import { fireEvent } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ProfilesListWidget } from "./ProfilesListWidget";
 import type { ProfilesListWidgetProps } from "./ProfilesListWidget";
 
+vi.mock("@mantine/core", async () => {
+  const actual = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
+  return {
+    ...actual,
+    Modal: ({ opened, children }: { opened: boolean; children: ReactNode }) => (opened ? <div>{children}</div> : null),
+  };
+});
+
+vi.mock("@april/ui", () => ({
+  CardListColumn: ({
+    items,
+    onSearchChange,
+    onReachListEnd,
+    onAddItem,
+    onFilterChange,
+    renderCard,
+  }: {
+    items: Array<{ id: string }>;
+    onSearchChange?: (value: string) => void;
+    onReachListEnd?: () => void;
+    onAddItem?: () => void;
+    onFilterChange?: (value: Record<string, string | undefined>) => void;
+    renderCard?: (item: { id: string }) => ReactNode;
+  }) => (
+    <div>
+      <input aria-label="Search cards" onChange={(event) => onSearchChange?.(event.currentTarget.value)} />
+      <button
+        type="button"
+        aria-label="Open filter options"
+        onClick={() => onFilterChange?.({ type: "7fd4f598-c6a7-4b44-9fd8-e8cb2e65d6ad" })}
+      >
+        Filter type-b
+      </button>
+      <button type="button" aria-label="Load more cards" onClick={onReachListEnd}>
+        Load more
+      </button>
+      <button type="button" aria-label="Add new item" onClick={onAddItem}>
+        Add
+      </button>
+      {items.map((item) => (
+        <div key={item.id}>{renderCard ? renderCard(item) : item.id}</div>
+      ))}
+    </div>
+  ),
+}));
+
 const apiBaseUrl = "http://localhost:8080/admin/profile/api";
 const entityTypeId = "89ac9958-fec8-43d7-8908-f0438e8e0e39";
+const entityTypeIdB = "7fd4f598-c6a7-4b44-9fd8-e8cb2e65d6ad";
 const e1 = "c7c5e6ea-8787-4ca0-a691-9f4fdc9830ff";
 const e2 = "4f18363d-70e8-4814-9d12-5236b18877d0";
 const e3 = "d6f55c6c-6ea8-4ad2-b42b-7e7eefaf55a3";
 
-const buildSnapshot = (entityId: string, version = 1, name = "Jane") => ({
+const buildSnapshot = (entityId: string, version = 1, name = "Jane", typeId = entityTypeId) => ({
   entity_id: entityId,
-  entity_type_id: entityTypeId,
+  entity_type_id: typeId,
   version,
   document: { name },
   created_at: "2026-04-24T10:00:00Z",
@@ -25,7 +73,8 @@ const buildSnapshot = (entityId: string, version = 1, name = "Jane") => ({
 const server = setupServer(
   http.get(`${apiBaseUrl}/v1/entities/${e1}`, () => HttpResponse.json(buildSnapshot(e1, 1, "Jane A"))),
   http.get(`${apiBaseUrl}/v1/entities/${e2}`, () => HttpResponse.json(buildSnapshot(e2, 1, "Jane B"))),
-  http.get(`${apiBaseUrl}/v1/entities/${e3}`, () => HttpResponse.json(buildSnapshot(e3, 1, "Jane C"))),
+  http.get(`${apiBaseUrl}/v1/entities/${e3}`, () => HttpResponse.json(buildSnapshot(e3, 1, "Jane C", entityTypeIdB))),
+  http.get(`${apiBaseUrl}/v1/entities/new-entity`, () => HttpResponse.json(buildSnapshot("new-entity", 1, "Created"))),
   http.post(`${apiBaseUrl}/v1/entities`, async ({ request }) => {
     const body = (await request.json()) as { entity_type_id: string; document: { name?: string } };
     return HttpResponse.json(buildSnapshot("new-entity", 1, body.document.name ?? "Created"), { status: 201 });
@@ -53,35 +102,39 @@ const renderWidget = (props?: Partial<ProfilesListWidgetProps>) =>
     </MantineProvider>,
   );
 
-const clickAction = (entityId: string, actionName: "Edit" | "Delete") => {
-  const rowCell = screen.getByText(entityId);
-  const row = rowCell.closest("tr");
-  if (!row) {
-    throw new Error(`Row for ${entityId} not found`);
+const selectCard = (entityId: string) => {
+  fireEvent.click(screen.getAllByText(entityId)[0]);
+};
+
+const fillCreateModal = (typeId: string, documentJson: string) => {
+  const textboxes = screen.getAllByRole("textbox");
+  const createTypeInput = textboxes.find((input) => input.getAttribute("placeholder") === "entity_type_id");
+  const createDocumentInput = textboxes.find((input) => (input as HTMLInputElement).value.includes("New profile"));
+  if (!createTypeInput || !createDocumentInput) {
+    throw new Error("Create modal inputs not found");
   }
-  const button = row.querySelector(`button[aria-label="${actionName}"],button`);
-  if (!button) {
-    throw new Error(`${actionName} button for ${entityId} not found`);
-  }
-  fireEvent.click(
-    Array.from(row.querySelectorAll("button")).find((candidate) =>
-      candidate.textContent?.match(new RegExp(actionName, "i")),
-    ) ?? button,
-  );
+  fireEvent.change(createTypeInput, { target: { value: typeId } });
+  fireEvent.change(createDocumentInput, { target: { value: documentJson } });
 };
 
 describe("ProfilesListWidget", () => {
-  it("renders list with pagination and search", async () => {
+  it("renders list with incremental loading and search", async () => {
     renderWidget({ pageSize: 2 });
 
     expect(await screen.findByText(e1)).toBeInTheDocument();
     expect(screen.getByText(e2)).toBeInTheDocument();
     expect(screen.queryByText(e3)).not.toBeInTheDocument();
+    expect(screen.getByText(/Profile card/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "2" }));
+    fireEvent.click(screen.getByRole("button", { name: /Load more cards/i }));
     expect(await screen.findByText(e3)).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "Jane C" } });
+    fireEvent.change(screen.getByLabelText("Search cards"), { target: { value: "Jane C" } });
+    expect(await screen.findByText(e3)).toBeInTheDocument();
+    expect(screen.queryByText(e1)).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Search cards"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: /Open filter options/i }));
     expect(await screen.findByText(e3)).toBeInTheDocument();
     expect(screen.queryByText(e1)).not.toBeInTheDocument();
   });
@@ -94,23 +147,22 @@ describe("ProfilesListWidget", () => {
 
       expect(await screen.findByText(e1)).toBeInTheDocument();
 
-      fireEvent.change(screen.getByLabelText("Entity type ID"), { target: { value: entityTypeId } });
-      fireEvent.change(screen.getByLabelText("Document (JSON object)"), {
-        target: { value: '{"name":"Created via test"}' },
-      });
+      fireEvent.click(screen.getByRole("button", { name: /Add new item/i }));
+      fillCreateModal(entityTypeId, '{"name":"Created via test"}');
       fireEvent.click(screen.getByRole("button", { name: /Create profile/i }));
 
       expect(await screen.findByText("new-entity")).toBeInTheDocument();
 
-      clickAction(e1, "Edit");
-      expect(await screen.findByText(`Edit profile: ${e1}`)).toBeInTheDocument();
+      selectCard(e1);
+      fireEvent.click(await screen.findByRole("button", { name: /Edit profile/i }));
       fireEvent.change(screen.getByLabelText("Updated document (JSON object)"), {
         target: { value: '{"name":"Updated via test"}' },
       });
       fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
-      await screen.findByText("Updated via test", {}, { timeout: 10_000 });
+      await screen.findByDisplayValue(/Updated via test/, {}, { timeout: 10_000 });
 
-      clickAction(e2, "Delete");
+      selectCard(e2);
+      fireEvent.click(screen.getByRole("button", { name: /Delete profile/i }));
       await waitFor(
         () => {
           expect(screen.queryByText(e2)).not.toBeInTheDocument();
@@ -133,7 +185,7 @@ describe("ProfilesListWidget", () => {
       http.put(`${apiBaseUrl}/v1/entities/${e1}`, () =>
         HttpResponse.json({ code: "forbidden", message: "raw backend message" }, { status: 403 }),
       ),
-      http.delete(`${apiBaseUrl}/v1/entities/${e2}`, () =>
+      http.delete(`${apiBaseUrl}/v1/entities/${e1}`, () =>
         HttpResponse.json({ code: "conflict", message: "raw backend message" }, { status: 409 }),
       ),
     );
@@ -141,16 +193,17 @@ describe("ProfilesListWidget", () => {
     renderWidget();
     expect(await screen.findByText(e1)).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Entity type ID"), { target: { value: entityTypeId } });
+    fireEvent.click(screen.getByRole("button", { name: /Add new item/i }));
+    fillCreateModal(entityTypeId, '{"name":"New profile"}');
     fireEvent.click(screen.getByRole("button", { name: /Create profile/i }));
     expect(await screen.findByText(/Authentication required/i)).toBeInTheDocument();
 
-    clickAction(e1, "Edit");
-    expect(await screen.findByText(`Edit profile: ${e1}`)).toBeInTheDocument();
+    selectCard(e1);
+    fireEvent.click(screen.getByRole("button", { name: /Edit profile/i }));
     fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
     expect(await screen.findByText(/Access denied/i)).toBeInTheDocument();
 
-    clickAction(e2, "Delete");
+    fireEvent.click(screen.getByRole("button", { name: /Delete profile/i }));
     expect(await screen.findByText(/conflicts with current profile state/i)).toBeInTheDocument();
   });
 });
