@@ -2,8 +2,8 @@
 - Статус: ✅ выполнено
 - Задача: 040 — переделка `widget-card` в двухколоночный master-detail UX
 - Ветка: `feature/task-040-widget-card-layout-modernization`
-- Коммиты: `<pending>`
-- PR: `<pending>`
+- Коммиты: `9447eb6`
+- PR: https://github.com/ukituki-ps/april-profile/pull/87
 
 ## 2) Что сделано
 - [backend] Изменений нет (задача полностью frontend/UI).
