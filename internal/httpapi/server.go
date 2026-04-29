@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ukituki-ps/april-profile/internal/abac"
@@ -51,6 +52,7 @@ type EntityTypeCatalog interface {
 // ProfileService описывает операции CRUD и версионирования профиля.
 type ProfileService interface {
 	Create(ctx context.Context, tenantID string, params profiles.CreateParams) (profiles.Snapshot, error)
+	List(ctx context.Context, tenantID string, params profiles.ListParams) (profiles.ListResult, error)
 	Update(ctx context.Context, tenantID, entityID string, params profiles.UpdateParams) (profiles.Snapshot, error)
 	GetCurrent(ctx context.Context, tenantID, entityID string) (profiles.Snapshot, error)
 	GetByVersion(ctx context.Context, tenantID, entityID string, version int64) (profiles.Snapshot, error)
@@ -81,6 +83,7 @@ func NewMux(v *auth.Validator, readiness ReadinessChecker, catalog EntityTypeCat
 	mux.Handle("GET /v1/entity-types", v.Middleware(http.HandlerFunc(handleListEntityTypes(catalog))))
 	mux.Handle("POST /v1/entity-types/{entityTypeID}/publish", v.Middleware(http.HandlerFunc(handlePublishEntityType(catalog))))
 	mux.Handle("POST /v1/entities", v.Middleware(http.HandlerFunc(handleCreateEntity(profileService))))
+	mux.Handle("GET /v1/entities", v.Middleware(http.HandlerFunc(handleListEntities(profileService))))
 	mux.Handle("GET /v1/entities/{entityID}", v.Middleware(http.HandlerFunc(handleGetEntityCurrent(profileService, abacPolicy))))
 	mux.Handle("PUT /v1/entities/{entityID}", v.Middleware(http.HandlerFunc(handleUpdateEntity(profileService))))
 	mux.Handle("DELETE /v1/entities/{entityID}", v.Middleware(http.HandlerFunc(handleDeleteEntity(profileService))))
@@ -371,6 +374,51 @@ func handleCreateEntity(service ProfileService) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(w).Encode(result)
+	}
+}
+
+func handleListEntities(service ProfileService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if service == nil {
+			writeServiceUnavailable(w, r)
+			return
+		}
+
+		limit := 20
+		if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+			parsed, err := strconv.Atoi(raw)
+			if err != nil || parsed <= 0 {
+				ErrorWithRequestID(w, http.StatusUnprocessableEntity, map[string]any{
+					"code":    "invalid_limit",
+					"message": "limit must be positive integer",
+				}, RequestIDFromContext(r.Context()))
+				return
+			}
+			limit = parsed
+		}
+
+		result, err := service.List(r.Context(), auth.TenantIDFromContext(r.Context()), profiles.ListParams{
+			Search:       r.URL.Query().Get("search"),
+			EntityTypeID: r.URL.Query().Get("entity_type_id"),
+			Limit:        limit,
+			Cursor:       r.URL.Query().Get("cursor"),
+			Sort:         r.URL.Query().Get("sort"),
+		})
+		if err != nil {
+			switch {
+			case errors.Is(err, profiles.ErrInvalidCursor):
+				ErrorWithRequestID(w, http.StatusUnprocessableEntity, map[string]any{
+					"code":    "invalid_cursor",
+					"message": "cursor is malformed or expired",
+				}, RequestIDFromContext(r.Context()))
+			default:
+				writeProfileError(w, r, err)
+			}
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		_ = json.NewEncoder(w).Encode(result)
 	}
 }

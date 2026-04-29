@@ -89,3 +89,51 @@ sidebar_position: 6
 ## 7. Версионирование контракта
 
 Изменения несовместимые с предыдущим props/events → **major** версии пакета `@april/*-ui` и запись в [Версионирование и совместимость](/docs/versioning-and-compatibility). Добавление optional полей в `HostContext` → обычно **minor** при сохранении поведения по умолчанию.
+
+---
+
+## 8. ProfilesWidget production-first baseline (Phase 6 / task 042)
+
+Этот раздел фиксирует обязательный baseline для перехода `ProfilesWidget` на архитектуру `Core + Api adapter + Facade`. Раздел используется как hard gate для задач 043/044.
+
+### 8.1 Целевое разбиение ответственности
+
+| Слой | Обязанности | Явно запрещено |
+|------|-------------|----------------|
+| `ProfilesWidgetCore` | UI + локальная state machine, lifecycle list/detail/mutations, рендер DS-first, callbacks (`onAction`, `onError`, `onObservability`) | Прямые вызовы OpenAPI/REST, знание `apiBaseUrl`/`accessToken`, чтение `VITE_*` |
+| `ProfilesApiWidget` | Создание API provider, wiring `hostContext` -> provider context, маппинг transport errors в normalized ошибки | Дублировать UI-логику `Core`, прокидывать demo-only входы |
+| `ProfilesWidget` (public facade) | Публичная точка встраивания, стабильный экспорт пакета | Отдельная логика поверх `ProfilesApiWidget` |
+
+### 8.2 Контракт данных (обязательный минимум)
+
+`ProfilesWidgetCore` работает только через provider-контракт (логическое имя: `ProfilesDataProvider`):
+
+- `list(query, ctx) -> { items, nextCursor?, totalCount? }`
+- `get(entityId, ctx) -> details`
+- `create(input, ctx) -> details`
+- `update(entityId, input, ctx) -> details`
+- `remove(entityId, ctx) -> void`
+
+Где:
+
+- `query` включает server-side параметры `search`, `entityTypeId`, `limit`, `cursor`, `sort`;
+- `ctx` включает `tenant`, опциональный auth/token ref, telemetry ids и `AbortSignal`.
+
+### 8.3 Обязательные UX/flow инварианты
+
+- Источник списка — только server-side list API; локальный `slice/filter` не может быть source of truth.
+- Для list/details запросов обязателен контроль гонок (`AbortController`/эквивалент).
+- После create/update/delete список и detail остаются консистентными в том же UI цикле.
+- Ошибки UI показываются только через безопасный mapping (`401/403/409/...`) без raw backend message.
+
+### 8.4 Запрещённые паттерны (anti-patterns)
+
+- Публичный контракт `ProfilesWidget`, где список подаётся как `entityIds`.
+- Смешивание transport config (`OpenAPI.BASE`, `OpenAPI.TOKEN`, fetch client) с UI-компонентом `Core`.
+- Использование demo env (`VITE_*_DEMO_*`) как runtime источника данных production-виджета.
+- Имитация server-side pagination полной предзагрузкой данных в клиент.
+
+### 8.5 Preconditions для старта следующих задач
+
+- **Task 043** стартует только после фиксации list/search/filter/pagination API контракта и error envelope (`code`, `message`, `request_id`).
+- **Task 044** стартует только после готовности generated SDK с list endpoint и подтверждённого baseline из этого раздела.

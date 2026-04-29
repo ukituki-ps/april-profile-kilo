@@ -27,15 +27,24 @@ Props:
 - `hostContext` — host/widget v1 context (`tenant`, optional `auth`, optional telemetry fields).
 - `apiBaseUrl` — profile API base URL (for BFF flow usually `/admin/profile/api`).
 - `accessToken?` — Bearer token for OpenAPI client.
-- `entityIds` — initial entity IDs to load list rows (`GET /v1/entities/{entityID}` for each ID).
-- `pageSize?` — incremental load step for list column (default: `5`).
+- `pageSize?` — list page size (server-side pagination step, default: `5`).
+- `initialSearch?` — initial server-side search query.
+- `initialTypeId?` — initial server-side type filter.
 - `onAction?` — typed callback for CRUD actions (`created`, `updated`, `deleted`).
 - `onError?` — callback with normalized error payload (`401/403/409` are mapped to predictable UX text).
 - `onObservability?` — события наблюдаемости, см. раздел «Observability».
 
-Backward compatibility:
+Architecture baseline (task 042):
 
-- `ProfilesListWidget` remains available as a compatible alias for existing embeds.
+- `ProfilesWidget` is a public facade.
+- `ProfilesApiWidget` is an API adapter/wiring layer.
+- `ProfilesWidgetCore` owns UI/state machine and works via provider contract.
+- Source of truth for list is server-side list/search/filter/pagination API (no `entityIds` input contract).
+
+Backward compatibility and migration note:
+
+- Legacy import `ProfilesListWidget` is kept as a compatibility alias to `ProfilesWidget`.
+- `entityIds` is removed from public props contract and must not be used in new integrations.
 
 Behavior:
 
@@ -124,11 +133,9 @@ import {
   hostContext={{ tenant: { id: "tenant-a" }, telemetry: { requestId: "req-2" } }}
   apiBaseUrl="/admin/profile/api"
   accessToken={accessToken}
-  entityIds={[
-    "c7c5e6ea-8787-4ca0-a691-9f4fdc9830ff",
-    "4f18363d-70e8-4814-9d12-5236b18877d0",
-  ]}
   pageSize={10}
+  initialSearch="Jane"
+  initialTypeId="89ac9958-fec8-43d7-8908-f0438e8e0e39"
   onAction={(action) => {
     console.log("profiles list action", action.type);
   }}
