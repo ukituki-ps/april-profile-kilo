@@ -82,6 +82,10 @@ jobs:
     name: Frontend (design system + shell)
     runs-on: [self-hosted, dev, april-profile]
     timeout-minutes: 20
+    # GitHub Packages (@april/*): read для NODE_AUTH_TOKEN при активных строках в frontend/.npmrc
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -105,4 +109,7 @@ jobs:
 
       - name: Lint, test and build frontend
         working-directory: frontend
+        env:
+          # Опционально: секрет APRIL_NPM_READ_TOKEN (PAT, read:packages) если GITHUB_TOKEN недостаточен (форки и т.п.).
+          NODE_AUTH_TOKEN: ${{ secrets.APRIL_NPM_READ_TOKEN || secrets.GITHUB_TOKEN }}
         run: npm ci --prefer-offline && npm run lint && npm run test && npm run build

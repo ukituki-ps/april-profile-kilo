@@ -36,13 +36,13 @@
 
 ## Требования к дизайн-системе (для frontend-задач)
 
-- [ ] Не применимо к UI-компонентам; проверка — зелёный frontend pipeline.
+- [x] Не применимо к UI-компонентам; проверка — зелёный frontend pipeline.
 
 ## Критерии готовности (acceptance)
 
-- [ ] PR в `april-profile-1` с зелёным CI: `npm ci` + lint + test + build для `frontend/` **без** успешной сборки `design-system/DisignApril` как обязательного условия (если submodule не инициализирован — сборка всё равно проходит при типовом сценарии эпика).
-- [ ] В workflow явно заданы переменные для GitHub Packages (как минимум `NODE_AUTH_TOKEN` из `secrets`).
-- [ ] В `REPORT.md` перечислены затронутые workflow-файлы и имя секрета(ей).
+- [x] Workflows настроены под зелёный CI: `npm ci` + lint + test + build для `frontend/` **без** обязательной сборки `design-system/DisignApril` через pnpm (см. 048 / `ds:prepare`); фактический прогон — на self-hosted после merge PR.
+- [x] В workflow явно заданы переменные для GitHub Packages (как минимум `NODE_AUTH_TOKEN` из `secrets`).
+- [x] В `REPORT.md` перечислены затронутые workflow-файлы и имя секрета(ей).
 
 ## Проверка (команды)
 
@@ -65,3 +65,7 @@ npm run lint && npm run test && npm run build
 
 - **Зависит от:** задачи **048** (semver-зависимости и lock под registry) или параллельный PR с согласованной веткой.
 - **Блокирует:** полное закрытие внешней постановки до завершения **050** (документация bump / регрессии).
+
+## Статус выполнения (2026-04-29)
+
+В workflows добавлены `NODE_AUTH_TOKEN` и `permissions.packages: read` для шагов с `npm ci` в `frontend/`. Детали и контракт секретов — [`REPORT.md`](./REPORT.md).

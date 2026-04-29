@@ -17,6 +17,9 @@ jobs:
   docs-and-compose:
     runs-on: [self-hosted, dev, april-profile]
     timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,4 +66,6 @@ jobs:
 
       - name: Frontend lint, test and build
         working-directory: frontend
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.APRIL_NPM_READ_TOKEN || secrets.GITHUB_TOKEN }}
         run: npm ci --prefer-offline && npm run lint && npm run test && npm run build

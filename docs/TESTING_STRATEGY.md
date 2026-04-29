@@ -11,7 +11,7 @@
 1. **`openapi-compatibility`** — `scripts/check-openapi-compat.sh` и [oasdiff](https://github.com/oasdiff/oasdiff): нет ломающих изменений относительно `origin/develop` для `openapi/openapi.yaml` (если ветки или файла на базе ещё нет, проверка пропускается).
 2. **`quality`** — `make openapi-lint` и `make docs-build` (Redocly + Docusaurus).
 3. **`backend`** — `go vet ./...`, `go build ./cmd/april-profile`, `docker run … arigaio/atlas migrate validate` (каталог `atlas/migrations/`).
-4. **`frontend`** — checkout с **submodules**, затем в `frontend/`: `npm ci`, `npm run lint`, `npm run test`, `npm run build` (перед сборкой выполняется `ds:prepare` для [DisignApril](https://github.com/ukituki-ps/DisignApril) через pnpm).
+4. **`frontend`** — checkout с **submodules** (для ассетов showcase и опциональной разработки DS), затем в `frontend/`: `npm ci`, `npm run lint`, `npm run test`, `npm run build`. Перед шагами выставляется `NODE_AUTH_TOKEN` (`secrets.APRIL_NPM_READ_TOKEN` или `secrets.GITHUB_TOKEN`) для чтения **GitHub Packages** scope `@april`, когда в `frontend/.npmrc` включён registry. `ds:prepare` больше **не** запускает `pnpm build` в submodule, если зависимости DS не привязаны `file:` к `design-system/DisignApril/packages/{ui,tokens}` (см. задачу 048 / `frontend/scripts/ds-prepare.sh`).
 
 Для веток `feature/*` и `fix/*` дополнительно можно опираться на [`.github/workflows/bootstrap-ci.yml`](../.github/workflows/bootstrap-ci.yml): сборка доков, lint OpenAPI, `docker compose config`, тот же прогон **frontend** (без oasdiff — быстрее обратная связь на ранних коммитах).
 
