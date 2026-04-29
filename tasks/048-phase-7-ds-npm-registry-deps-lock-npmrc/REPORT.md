@@ -58,12 +58,13 @@ cd .. && make frontend-build
 ## 7) Риски и ограничения
 
 - **Tarball’ы в git** (~145 KiB для ui) — дрейф относительно живого submodule, пока не обновляют через `repack-ds-vendor.sh`.
-- **Целевое состояние эпика 049** (semver + lock с `resolved` на GitHub Packages) не достигнуто: нужна публикация `@april/*` и затем замена `file:./vendor/...` на `^x.y.z`, раскомментирование `.npmrc`, `npm install` с токеном (задача **049** — CI; **050** — документация и docs-site).
+- **Целевое состояние эпика 049** (semver + lock с `resolved` на GitHub Packages) не достигнуто: нужна публикация `@april/*` и затем замена `file:./vendor/...` на `^x.y.z`, раскомментирование `.npmrc`, `npm install` с токеном. Задачи **049** (CI) и **050** (документация / docs-site) закрыты; остаётся публикация пакетов и финальный переход с vendor на registry.
 - Попытка `npm publish` в GitHub Packages из окружения: **403** (недостаточные scopes у `gh auth token`).
 
 ## 8) Что осталось
 
 - [ ] Опубликовать `@april/ui` и `@april/tokens` в GitHub Packages (DisignApril / политика org).
-- [ ] Задача **049**: перед `npm ci` в CI выставить `NODE_AUTH_TOKEN` (или эквивалент), убрать обязательность полной сборки submodule для DS.
-- [ ] Задача **050**: обновить `docs/guides/DESIGN_SYSTEM.md`, чеклист bump, страницу docs-site; удалить vendored tarball’ы после перехода на registry.
-- [ ] Уведомить владельца эпика 049 в `april-worker` после полного закрытия цепочки.
+- [x] Задача **049** — см. [`tasks/049-phase-7-ds-npm-registry-ci-workflows/REPORT.md`](../049-phase-7-ds-npm-registry-ci-workflows/REPORT.md).
+- [x] Задача **050** — см. [`tasks/050-phase-7-ds-npm-registry-docs-and-release-story/REPORT.md`](../050-phase-7-ds-npm-registry-docs-and-release-story/REPORT.md).
+- [ ] После публикации `@april/*`: раскомментировать `frontend/.npmrc`, убрать vendored tarball’ы, обновить lock.
+- [ ] Уведомить владельца эпика 049 в `april-worker` (опубликованные версии + ссылка на PR).

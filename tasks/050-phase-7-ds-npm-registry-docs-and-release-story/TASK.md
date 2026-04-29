@@ -37,14 +37,14 @@
 
 ## Требования к дизайн-системе (для frontend-задач)
 
-- [ ] В документации явно: DS-first и выравнивание версий с Hub.
+- [x] В документации явно: DS-first и выравнивание версий с Hub.
 
 ## Критерии готовности (acceptance)
 
-- [ ] Документирован порядок **bump** версии DS и **регрессии** UI (чеклист или runbook).
-- [ ] Зафиксирован минимальный **диапазон semver** или версии, согласованные с AprilHub (таблица / строка в `DESIGN_SYSTEM.md`).
-- [ ] Создана страница **`docs-site/docs/task-story-048-phase-7-ds-npm-registry-consumption.md`** (или согласованный slug), обновлён [`docs-site/docs/task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md).
-- [ ] В папках задач **048**–**050** оформлены актуальные `REPORT.md`; итог эпика можно собрать для зеркалирования в april-worker по запросу владельца.
+- [x] Документирован порядок **bump** версии DS и **регрессии** UI (чеклист или runbook).
+- [x] Зафиксирован минимальный **диапазон semver** или версии, согласованные с AprilHub (таблица / строка в `DESIGN_SYSTEM.md`).
+- [x] Создана страница **`docs-site/docs/task-story-048-phase-7-ds-npm-registry-consumption.md`** (или согласованный slug), обновлён [`docs-site/docs/task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md).
+- [x] В папках задач **048**–**050** оформлены актуальные `REPORT.md`; итог эпика можно собрать для зеркалирования в april-worker по запросу владельца.
 
 ## Проверка (команды)
 
@@ -59,9 +59,13 @@ make docs-build
 
 ## Человекопонятная история в docs-site (обязательно)
 
-- [ ] Создана/обновлена страница `docs-site/docs/task-story-048-phase-7-ds-npm-registry-consumption.md` (объединённая история для 048–050: что поменялось, зачем, как проверить без чтения кода).
-- [ ] В `docs-site/docs/task-stories-overview.md` добавлена ссылка и статус.
-- [ ] В конце страницы — ссылки на `tasks/048-.../TASK.md`, `049-.../TASK.md`, `050-.../TASK.md` и при наличии `PLAN.md` / `REPORT.md`.
+- [x] Создана/обновлена страница `docs-site/docs/task-story-048-phase-7-ds-npm-registry-consumption.md` (объединённая история для 048–050: что поменялось, зачем, как проверить без чтения кода).
+- [x] В `docs-site/docs/task-stories-overview.md` добавлена ссылка и статус.
+- [x] В конце страницы — ссылки на `tasks/048-.../TASK.md`, `049-.../TASK.md`, `050-.../TASK.md` и при наличии `PLAN.md` / `REPORT.md`.
+
+## Статус выполнения (2026-04-29)
+
+Документация и docs-site приведены в соответствие с фактическим состоянием после **048** и **049**. Детали — [`REPORT.md`](./REPORT.md).
 
 ## Зависимости
 

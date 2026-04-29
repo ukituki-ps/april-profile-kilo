@@ -1,6 +1,6 @@
 # April Profile
 
-**AprilProfile** — микросервис **централизованных версионируемых профилей сущностей** в экосистеме **April** (полиморфная модель: персонал, оргединицы, клиенты, проекты, договоры и др.; см. [`docs/DESIGN_AprilProfile.md`](docs/DESIGN_AprilProfile.md)). Репозиторий ведёт документацию Docusaurus, OpenAPI, Structurizr, Docker Compose, CI и сценарий деплоя. **Дизайн-система April** подключена через git submodule и минимальный shell в **`frontend/`** (см. [`docs/guides/DESIGN_SYSTEM.md`](docs/guides/DESIGN_SYSTEM.md)); прикладной backend добавляется по мере разработки.
+**AprilProfile** — микросервис **централизованных версионируемых профилей сущностей** в экосистеме **April** (полиморфная модель: персонал, оргединицы, клиенты, проекты, договоры и др.; см. [`docs/DESIGN_AprilProfile.md`](docs/DESIGN_AprilProfile.md)). Репозиторий ведёт документацию Docusaurus, OpenAPI, Structurizr, Docker Compose, CI и сценарий деплоя. **Дизайн-система April** — пакеты `@april/ui` / `@april/tokens` в **`frontend/`** (сейчас vendored tarball’ы + git submodule DisignApril для исходников и ассетов; далее — GitHub Packages по эпику Hub `049`, см. [`docs/guides/DESIGN_SYSTEM.md`](docs/guides/DESIGN_SYSTEM.md)); прикладной backend добавляется по мере разработки.
 
 Репозиторий создан из шаблона [april_template](https://github.com/ukituki-ps/april_template). Граница: **один репозиторий = один сервис**; внутри допустим **модульный монолит** (см. [`docs/AGENT_ARCHITECTURE_CONTEXT.md`](docs/AGENT_ARCHITECTURE_CONTEXT.md)).
 
