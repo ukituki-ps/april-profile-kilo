@@ -120,6 +120,14 @@
 - Для list/details запросов обязателен контроль гонок (`AbortController`/эквивалент).
 - После create/update/delete список и detail остаются консистентными в том же UI цикле.
 - Ошибки UI показываются только через безопасный mapping (`401/403/409/...`) без raw backend message.
+- Публичный и внутренний props-контракты `ProfilesWidget` включают:
+  - `initialSort?: "updated_desc" | "updated_asc"`;
+  - `autoSelectFirst?: boolean`;
+  - `onOpenEntity?: (entityId: string) => void`;
+  - `onError?: ({ message, requestId, code }) => void`.
+- При update-потоке `Core` передаёт `expectedVersion` в provider-контракт как optimistic concurrency hint.
+- `ProfilesApiWidget` формирует `ProviderContext` из `hostContext` (`tenantId`, auth, telemetry), а `Core` добавляет `signal` для request cancellation.
+- `Core` эмитит transport-события наблюдаемости: `list_requested/list_succeeded/list_failed`, `details_requested/details_failed` (в дополнение к `view_loaded` и `save_*`).
 
 ### 8.4 Запрещённые паттерны (anti-patterns)
 

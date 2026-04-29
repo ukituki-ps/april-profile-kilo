@@ -4,7 +4,7 @@ Embeddable React widget package for AprilProfile scenarios in AprilHub/host apps
 
 ## Observability (фаза 4a)
 
-Все виджеты ниже принимают опциональный **`onObservability`**: колбэк с типом `ProfileWidgetTelemetryEvent` (`widget`, `event`, `request_id`, `correlation_id`, опционально `api_request_id`, `meta`). События: **`view_loaded`**, **`save_submitted`**, **`save_succeeded`**, **`save_failed`**. Идентификаторы берутся из `hostContext.telemetry.requestId` и опционально `correlationId` (см. `docs/WIDGET_OBSERVABILITY_GUIDE.md` §3.1). Типы и `emitProfileWidgetTelemetry` экспортируются из пакета.
+Все виджеты ниже принимают опциональный **`onObservability`**: колбэк с типом `ProfileWidgetTelemetryEvent` (`widget`, `event`, `request_id`, `correlation_id`, опционально `api_request_id`, `meta`). События: **`view_loaded`**, **`list_requested`**, **`list_succeeded`**, **`list_failed`**, **`details_requested`**, **`details_failed`**, **`save_submitted`**, **`save_succeeded`**, **`save_failed`**. Идентификаторы берутся из `hostContext.telemetry.requestId` и опционально `correlationId` (см. `docs/WIDGET_OBSERVABILITY_GUIDE.md` §3.1). Типы и `emitProfileWidgetTelemetry` экспортируются из пакета.
 
 ## Public API
 
@@ -30,9 +30,18 @@ Props:
 - `pageSize?` — list page size (server-side pagination step, default: `5`).
 - `initialSearch?` — initial server-side search query.
 - `initialTypeId?` — initial server-side type filter.
+- `initialSort?` — initial server-side sort (`updated_desc` by default).
+- `autoSelectFirst?` — auto-select first row after list load (default: `false`).
 - `onAction?` — typed callback for CRUD actions (`created`, `updated`, `deleted`).
-- `onError?` — callback with normalized error payload (`401/403/409` are mapped to predictable UX text).
+- `onError?` — callback with normalized error payload (`message`, optional `requestId`, optional `code`).
+- `onOpenEntity?` — callback fired when user opens a profile card.
 - `onObservability?` — события наблюдаемости, см. раздел «Observability».
+
+Provider contract highlights (variant C hardening):
+
+- `ProfilesDataProvider` methods receive `ProviderContext` with `tenantId`, optional auth metadata, optional telemetry IDs and optional `AbortSignal`.
+- `ProfilesApiWidget` builds this context from `hostContext` + `accessToken`.
+- `ProfilesWidgetCore` drives request cancellation for list/details via `AbortController`.
 
 Architecture baseline (task 042):
 

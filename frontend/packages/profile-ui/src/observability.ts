@@ -11,6 +11,11 @@ export type ProfileWidgetTelemetryKind =
 /** Единый минимум событий фазы 4a для `@april/profile-ui`. */
 export type ProfileWidgetTelemetryEventName =
   | "view_loaded"
+  | "list_requested"
+  | "list_succeeded"
+  | "list_failed"
+  | "details_requested"
+  | "details_failed"
   | "save_submitted"
   | "save_succeeded"
   | "save_failed";
