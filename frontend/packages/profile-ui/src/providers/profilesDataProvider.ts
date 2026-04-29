@@ -1,4 +1,4 @@
-import type { ProfileWidgetHostContext, ProfilesListItem } from "../types";
+import type { ProfilesListItem } from "../types";
 
 export type ProfilesListSort = "updated_desc" | "updated_asc";
 
@@ -31,6 +31,7 @@ export type CreateProfileInput = {
 
 export type UpdateProfileInput = {
   document: Record<string, unknown>;
+  expectedVersion?: number;
 };
 
 export type ProfilesProviderErrorCode =
@@ -52,7 +53,17 @@ export type ProfilesProviderError = {
 };
 
 export type ProviderContext = {
-  hostContext: ProfileWidgetHostContext;
+  tenantId: string;
+  auth?: {
+    accessToken?: string;
+    subject?: string;
+    roles?: string[];
+  };
+  telemetry?: {
+    requestId?: string;
+    correlationId?: string;
+  };
+  signal?: AbortSignal;
 };
 
 export interface ProfilesDataProvider {

@@ -23,10 +23,14 @@
 - [ ] Линт и типизация проходят; нет «тихих» `any` на публичных пропсах.
 - [ ] Минимальные unit-тесты на эмиссию событий и обработку ошибок.
 - [ ] Peer dependencies (`react`, `@april/ui`, …) задекларированы корректно.
+- [ ] Для `ProfilesWidget` выполнен release-gate variant C из [`TESTING_STRATEGY.md`](./TESTING_STRATEGY.md): Core + provider integration + smoke.
+- [ ] Для `ProfilesWidget` есть тесты на `AbortSignal`/race и conflict UX (`401/403/409`).
+- [ ] Для `ProfilesWidget` есть evidence фактического прогона gate-команд в `tasks/<id>/REPORT.md`.
 
 ## Наблюдаемость
 
 - [ ] События ошибок и успеха содержат `requestId` из [`WIDGET_CONTRACTS.md`](./WIDGET_CONTRACTS.md) при наличии ([`WIDGET_OBSERVABILITY_GUIDE.md`](./WIDGET_OBSERVABILITY_GUIDE.md)).
+- [ ] Для `ProfilesWidget` transport-события `list_*`/`details_*` эмитятся и покрыты тестами.
 
 ## После публикации
 

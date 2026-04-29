@@ -50,6 +50,9 @@ sidebar_position: 20
 - [042 — Production-first baseline для `ProfilesWidget` (`Core + ApiWidget + Facade`)](./task-story-042-phase-6-profiles-widget-production-architecture)
 - [043 — API/SDK readiness для server-side списка `ProfilesWidget`](./task-story-043-phase-6-profiles-widget-api-list-contract-and-sdk)
 - [044 — Рефактор `ProfilesWidget` в `Core + ApiWidget`](./task-story-044-phase-6-profiles-widget-core-api-refactor)
+- [045 — Hardening контракта и Core для `ProfilesWidget` (вариант C)](./task-story-045-phase-6-profiles-widget-contract-and-core-hardening)
+- [046 — Provider context, abort и observability hardening для `ProfilesWidget`](./task-story-046-phase-6-profiles-widget-provider-context-abort-observability-hardening)
+- [047 — Тестовая матрица и release-gate для `ProfilesWidget` варианта C](./task-story-047-phase-6-profiles-widget-test-matrix-and-release-gate)
 
 ## Быстрый статус
 
@@ -91,3 +94,6 @@ sidebar_position: 20
 | 042 Profiles widget production-first baseline | ✅ | [042](./task-story-042-phase-6-profiles-widget-production-architecture) | Зафиксирован архитектурный hard-gate (`Core + ApiWidget + Facade`), provider-контракт и запрет demo-first anti-patterns для задач 043/044 |
 | 043 Profiles widget API/SDK readiness | ✅ | [043](./task-story-043-phase-6-profiles-widget-api-list-contract-and-sdk) | Добавлен server-side list контракт (`search/filter/cursor/sort`), backend-реализация и regenerated SDK как gate для задачи 044 |
 | 044 Profiles widget core/api refactor | ✅ | [044](./task-story-044-phase-6-profiles-widget-core-api-refactor) | `ProfilesWidget` переведён на архитектуру `Core + ApiWidget`, `entityIds` удалён из публичного контракта, демо и тесты мигрированы на server-side data flow |
+| 045 Profiles widget contract/core hardening | ✅ | [045](./task-story-045-phase-6-profiles-widget-contract-and-core-hardening) | Контракт варианта C доведён до кода: `initialSort`/`autoSelectFirst`/`onOpenEntity`/`onError.code`, update передаёт `expectedVersion`, docs и тесты синхронизированы |
+| 046 Profiles widget provider/abort/observability hardening | ✅ | [046](./task-story-046-phase-6-profiles-widget-provider-context-abort-observability-hardening) | `ProviderContext` стандартизирован, list/details запросы реально отменяются, убрана глобальная мутация OpenAPI runtime, добавлены transport telemetry события |
+| 047 Profiles widget test matrix + release gate | ✅ | [047](./task-story-047-phase-6-profiles-widget-test-matrix-and-release-gate) | Зафиксирован обязательный release-gate variant C, добавлены provider integration tests и блокирующие критерии релиза в testing/release docs |

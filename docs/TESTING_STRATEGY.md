@@ -123,3 +123,47 @@
 
 - **Хаос-инжиниринг** (kill node, latency injection) и долгие soak-тесты (сутки+).
 - Полное покрытие всех комбинаций ролей и edge-case UI — по мере стабилизации продукта.
+
+---
+
+## ProfilesWidget variant C: обязательная матрица (task 047)
+
+Этот раздел — release-blocking матрица для `ProfilesWidget` после фаз 045/046. Любой релиз виджета считается заблокированным, если не выполнен хотя бы один пункт из блока **Must pass**.
+
+### Must pass: Core unit/integration
+
+- `ProfilesWidgetCore`:
+  - первичная загрузка списка;
+  - search/filter/sort + cursor pagination;
+  - race/abort (list/details);
+  - create/update/delete transitions;
+  - `onError` payload (`message`, `requestId`, `code`);
+  - observability hooks (`list_*`, `details_*`, `save_*`, `view_loaded`).
+- `ProfilesWidget` smoke (через API adapter):
+  - базовый CRUD happy path;
+  - UX-мэппинг `401/403/409` на безопасные сообщения;
+  - API-first list/search/filter/pagination.
+- `openapiProfilesProvider` integration:
+  - DTO mapping list/get/create/update/delete;
+  - status->normalized error mapping;
+  - extraction `request_id`;
+  - wiring `baseUrl`/token/context;
+  - `AbortSignal` propagation.
+
+### Must pass: команды
+
+Из корня репозитория:
+
+```bash
+cd frontend && npm run lint -w @april/profile-ui
+cd frontend && npm run test -w @april/profile-ui
+cd frontend && npm run build -w @april/profile-ui
+go test ./...
+```
+
+### Blocking fail conditions
+
+- Любой красный тест/линтер/сборка из команд выше.
+- Отсутствие тестов provider integration для `openapiProfilesProvider`.
+- Отсутствие проверок race/abort/conflict для `ProfilesWidget`.
+- Несинхронность docs и фактического release-gate/checklist.

@@ -23,9 +23,9 @@
 
 Ключевые контрактные элементы (Phase 6 baseline):
 
-- Вход: `hostContext`, `apiBaseUrl` (или API adapter), опционально `accessToken`, `pageSize`, `initialSearch`, `initialFilter`.
+- Вход: `hostContext`, `apiBaseUrl` (или API adapter), опционально `accessToken`, `pageSize`, `initialSearch`, `initialTypeId`, `initialSort`, `autoSelectFirst`.
 - Источник данных: server-side list/search/filter/pagination через provider/API, без входного `entityIds` как source of truth.
-- Выход: `onAction` (`created`/`updated`/`deleted`), `onError` с безопасным сообщением и `requestId`.
+- Выход: `onAction` (`created`/`updated`/`deleted`), `onError` с безопасным сообщением + `requestId` + `code`, `onOpenEntity` для host-навигации.
 - Поведение: DS-first layout 25/75 (`CardListColumn` + профильная карточка), с консистентным list/detail lifecycle.
 
 ### Архитектурная схема ответственности (task 042)
@@ -43,6 +43,9 @@ flowchart LR
 - `ProfilesWidgetCore`: UI/state machine, без знания транспортного слоя.
 - `ProfilesApiWidget`: wiring host + OpenAPI provider.
 - `ProfilesWidget`: публичный фасад для embed.
+- `update` поток: `Core` передает `expectedVersion` в provider-контракт (optimistic concurrency hint).
+- `ProfilesApiWidget` формирует `ProviderContext` (`tenantId`, auth, telemetry) и передает его в `Core`.
+- `ProfilesWidgetCore` использует `AbortController` для реальной отмены list/details запросов при смене состояния.
 
 ## 4) Права доступа и безопасность
 
@@ -73,8 +76,20 @@ flowchart LR
 ## 6) Observability
 
 - Корреляция по `requestId`/`X-Request-Id`: [`../../WIDGET_OBSERVABILITY_GUIDE.md`](../../WIDGET_OBSERVABILITY_GUIDE.md).
-- События: `view_loaded`, `save_submitted`, `save_succeeded`, `save_failed` для `widget = profiles_list` (backward-compatible telemetry key).
+- События: `view_loaded`, `list_requested`, `list_succeeded`, `list_failed`, `details_requested`, `details_failed`, `save_submitted`, `save_succeeded`, `save_failed` для `widget = profiles_list` (backward-compatible telemetry key).
 - Минимальный smoke: загрузка списка, create/update/delete, обработка API-ошибок.
+
+### Release gate variant C (task 047)
+
+- Обязательный набор проверок:
+  - `cd frontend && npm run lint -w @april/profile-ui`
+  - `cd frontend && npm run test -w @april/profile-ui`
+  - `cd frontend && npm run build -w @april/profile-ui`
+  - `go test ./...`
+- Релиз блокируется, если отсутствуют тесты:
+  - `ProfilesWidgetCore` на race/abort/error payload/observability;
+  - `openapiProfilesProvider` на mapping/error/requestId/context/signal;
+  - smoke сценарии `ProfilesWidget` для CRUD + `401/403/409`.
 
 ## 7) Ограничения и known issues
 

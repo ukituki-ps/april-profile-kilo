@@ -34,6 +34,7 @@ export { createOpenApiProfilesProvider } from "./providers/openapiProfilesProvid
 export type {
   CreateProfileInput,
   ProfileDetails,
+  ProviderContext,
   ProfilesDataProvider,
   ProfilesListPage,
   ProfilesListQuery,

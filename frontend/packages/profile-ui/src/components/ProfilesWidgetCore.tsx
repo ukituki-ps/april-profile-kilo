@@ -4,18 +4,27 @@ import { Alert, Box, Button, Card, Loader, Modal, Stack, Text, TextInput, Textar
 import { emitProfileWidgetTelemetry } from "../observability";
 import type { ProfileWidgetObservabilityHandler } from "../observability";
 import type { ProfileWidgetHostContext, ProfilesListAction, ProfilesListItem } from "../types";
-import type { ProfilesDataProvider, ProfilesProviderErrorCode } from "../providers/profilesDataProvider";
+import type {
+  ProfilesDataProvider,
+  ProfilesListSort,
+  ProfilesProviderErrorCode,
+  ProviderContext,
+} from "../providers/profilesDataProvider";
 import { isProfilesProviderError } from "../providers/profilesDataProvider";
 
 export type ProfilesWidgetCoreProps = {
   hostContext: ProfileWidgetHostContext;
   provider: ProfilesDataProvider;
+  providerContext?: Omit<ProviderContext, "signal">;
   pageSize?: number;
   initialSearch?: string;
   initialTypeId?: string;
+  initialSort?: ProfilesListSort;
+  autoSelectFirst?: boolean;
   onAction?: (action: ProfilesListAction) => void;
-  onError?: (payload: { message: string; requestId?: string }) => void;
+  onError?: (payload: { message: string; requestId?: string; code?: string }) => void;
   onObservability?: ProfileWidgetObservabilityHandler;
+  onOpenEntity?: (entityId: string) => void;
 };
 
 const DEFAULT_PAGE_SIZE = 5;
@@ -57,12 +66,16 @@ const mapSecureMessage = (code: ProfilesProviderErrorCode): string => {
 export function ProfilesWidgetCore({
   hostContext,
   provider,
+  providerContext,
   pageSize = DEFAULT_PAGE_SIZE,
   initialSearch = "",
   initialTypeId = "all",
+  initialSort = "updated_desc",
+  autoSelectFirst = false,
   onAction,
   onError,
   onObservability,
+  onOpenEntity,
 }: ProfilesWidgetCoreProps) {
   const [listLoading, setListLoading] = useState(true);
   const [listLoadingMore, setListLoadingMore] = useState(false);
@@ -89,6 +102,24 @@ export function ProfilesWidgetCore({
   const preferredSelectionRef = useRef<string | null>(null);
   const listRequestIdRef = useRef(0);
   const detailsRequestIdRef = useRef(0);
+  const listAbortControllerRef = useRef<AbortController | null>(null);
+  const detailsAbortControllerRef = useRef<AbortController | null>(null);
+
+  const providerContextBase = useMemo<Omit<ProviderContext, "signal">>(
+    () =>
+      providerContext ?? {
+        tenantId: hostContext.tenant.id,
+        auth: {
+          subject: hostContext.auth?.subject,
+          roles: hostContext.auth?.roles,
+        },
+        telemetry: {
+          requestId: hostContext.telemetry?.requestId,
+          correlationId: hostContext.telemetry?.correlationId,
+        },
+      },
+    [hostContext, providerContext],
+  );
 
   const typeOptions = useMemo(() => {
     const unique = [...new Set(items.map((item) => item.entityTypeId))];
@@ -101,16 +132,20 @@ export function ProfilesWidgetCore({
     if (isProfilesProviderError(error)) {
       const message = mapSecureMessage(error.code);
       setter(message);
-      onError?.({ message, requestId: error.requestId ?? requestId });
+      onError?.({ message, requestId: error.requestId ?? requestId, code: error.code });
       return;
     }
     const fallback = "Profile operation failed. Please try again.";
     setter(fallback);
-    onError?.({ message: fallback, requestId });
+    onError?.({ message: fallback, requestId, code: "unknown" });
   };
 
   const loadList = async ({ cursor, append }: { cursor?: string; append: boolean }) => {
     const requestIdRef = ++listRequestIdRef.current;
+    listAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    listAbortControllerRef.current = abortController;
+    const startedAt = performance.now();
     if (append) {
       setListLoadingMore(true);
     } else {
@@ -118,6 +153,15 @@ export function ProfilesWidgetCore({
       setListErrorMessage(null);
       setMutationErrorMessage(null);
     }
+    emitProfileWidgetTelemetry(onObservability, hostContext, {
+      widget: "profiles_list",
+      event: "list_requested",
+      meta: {
+        operation: "list_profiles",
+        phase: "api",
+        has_cursor: Boolean(cursor),
+      },
+    });
     try {
       const page = await provider.list(
         {
@@ -125,9 +169,9 @@ export function ProfilesWidgetCore({
           entityTypeId: filterTypeId === "all" ? undefined : filterTypeId,
           limit: pageSize,
           cursor,
-          sort: "updated_desc",
+          sort: initialSort,
         },
-        { hostContext },
+        { ...providerContextBase, signal: abortController.signal },
       );
       if (requestIdRef !== listRequestIdRef.current) {
         return;
@@ -154,7 +198,20 @@ export function ProfilesWidgetCore({
         if (prev && nextItems.some((item) => item.entityId === prev)) {
           return prev;
         }
-        return nextItems[0]?.entityId ?? null;
+        if (autoSelectFirst) {
+          return nextItems[0]?.entityId ?? null;
+        }
+        return null;
+      });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profiles_list",
+        event: "list_succeeded",
+        meta: {
+          operation: "list_profiles",
+          row_count: page.items.length,
+          has_next_cursor: Boolean(page.nextCursor),
+          latency_ms: Math.round(performance.now() - startedAt),
+        },
       });
       if (!append) {
         emitProfileWidgetTelemetry(onObservability, hostContext, {
@@ -167,6 +224,19 @@ export function ProfilesWidgetCore({
       if (requestIdRef !== listRequestIdRef.current) {
         return;
       }
+      if (abortController.signal.aborted) {
+        return;
+      }
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profiles_list",
+        event: "list_failed",
+        meta: {
+          operation: "list_profiles",
+          phase: "api",
+          latency_ms: Math.round(performance.now() - startedAt),
+          error_code: isProfilesProviderError(error) ? error.code : "unknown",
+        },
+      });
       reportError(error, (message) => setListErrorMessage(message));
     } finally {
       if (requestIdRef === listRequestIdRef.current) {
@@ -179,7 +249,10 @@ export function ProfilesWidgetCore({
   useEffect(() => {
     void loadList({ append: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provider, hostContext, pageSize, query, filterTypeId]);
+    return () => {
+      listAbortControllerRef.current?.abort();
+    };
+  }, [provider, hostContext, pageSize, query, filterTypeId, initialSort, autoSelectFirst, providerContextBase]);
 
   useEffect(() => {
     if (!selectedEntityId) {
@@ -190,10 +263,23 @@ export function ProfilesWidgetCore({
       return;
     }
     const requestIdRef = ++detailsRequestIdRef.current;
+    detailsAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    detailsAbortControllerRef.current = abortController;
+    const startedAt = performance.now();
     setDetailsLoading(true);
     setDetailsErrorMessage(null);
+    emitProfileWidgetTelemetry(onObservability, hostContext, {
+      widget: "profiles_list",
+      event: "details_requested",
+      meta: {
+        operation: "get_profile",
+        phase: "api",
+        entity_id: selectedEntityId,
+      },
+    });
     void provider
-      .get(selectedEntityId, { hostContext })
+      .get(selectedEntityId, { ...providerContextBase, signal: abortController.signal })
       .then((snapshot) => {
         if (requestIdRef !== detailsRequestIdRef.current) {
           return;
@@ -206,6 +292,20 @@ export function ProfilesWidgetCore({
         if (requestIdRef !== detailsRequestIdRef.current) {
           return;
         }
+        if (abortController.signal.aborted) {
+          return;
+        }
+        emitProfileWidgetTelemetry(onObservability, hostContext, {
+          widget: "profiles_list",
+          event: "details_failed",
+          meta: {
+            operation: "get_profile",
+            phase: "api",
+            entity_id: selectedEntityId,
+            latency_ms: Math.round(performance.now() - startedAt),
+            error_code: isProfilesProviderError(error) ? error.code : "unknown",
+          },
+        });
         reportError(error, (message) => setDetailsErrorMessage(message));
       })
       .finally(() => {
@@ -213,7 +313,10 @@ export function ProfilesWidgetCore({
           setDetailsLoading(false);
         }
       });
-  }, [hostContext, provider, requestId, selectedEntityId]);
+    return () => {
+      abortController.abort();
+    };
+  }, [hostContext, provider, requestId, selectedEntityId, onObservability, providerContextBase]);
 
   const handleCreate = async () => {
     setMutationErrorMessage(null);
@@ -238,7 +341,7 @@ export function ProfilesWidgetCore({
     try {
       const created = await provider.create(
         { entityTypeId: createTypeId.trim(), document: parsed },
-        { hostContext },
+        { ...providerContextBase },
       );
       const createdItem: ProfilesListItem = {
         entityId: created.entityId,
@@ -292,7 +395,11 @@ export function ProfilesWidgetCore({
     });
 
     try {
-      const updated = await provider.update(selectedEntityId, { document: parsed }, { hostContext });
+      const updated = await provider.update(
+        selectedEntityId,
+        { document: parsed, expectedVersion: selectedVersion ?? undefined },
+        { ...providerContextBase },
+      );
       const updatedItem: ProfilesListItem = {
         entityId: updated.entityId,
         entityTypeId: updated.entityTypeId,
@@ -332,7 +439,7 @@ export function ProfilesWidgetCore({
     });
 
     try {
-      await provider.remove(entityId, { hostContext });
+      await provider.remove(entityId, { ...providerContextBase });
       onAction?.({ type: "deleted", entityId });
       emitProfileWidgetTelemetry(onObservability, hostContext, {
         widget: "profiles_list",
@@ -419,6 +526,7 @@ export function ProfilesWidgetCore({
                   onClick={() => {
                     setSelectedEntityId(item.id);
                     setEditMode(false);
+                    onOpenEntity?.(item.id);
                   }}
                 >
                   <Text fw={600} lineClamp={1}>

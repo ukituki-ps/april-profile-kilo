@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { ProfilesWidgetCore } from "./ProfilesWidgetCore";
 import type { ProfilesWidgetCoreProps } from "./ProfilesWidgetCore";
 import { createOpenApiProfilesProvider } from "../providers/openapiProfilesProvider";
+import type { ProviderContext } from "../providers/profilesDataProvider";
 
 export type ProfilesApiWidgetProps = Omit<ProfilesWidgetCoreProps, "provider"> & {
   apiBaseUrl: string;
@@ -15,25 +16,47 @@ export function ProfilesApiWidget({
   pageSize,
   initialSearch,
   initialTypeId,
+  initialSort,
+  autoSelectFirst,
   onAction,
   onError,
   onObservability,
+  onOpenEntity,
 }: ProfilesApiWidgetProps) {
   const provider = useMemo(
     () => createOpenApiProfilesProvider({ apiBaseUrl, accessToken }),
     [accessToken, apiBaseUrl],
+  );
+  const providerContext = useMemo<Omit<ProviderContext, "signal">>(
+    () => ({
+      tenantId: hostContext.tenant.id,
+      auth: {
+        accessToken,
+        subject: hostContext.auth?.subject,
+        roles: hostContext.auth?.roles,
+      },
+      telemetry: {
+        requestId: hostContext.telemetry?.requestId,
+        correlationId: hostContext.telemetry?.correlationId,
+      },
+    }),
+    [accessToken, hostContext],
   );
 
   return (
     <ProfilesWidgetCore
       hostContext={hostContext}
       provider={provider}
+      providerContext={providerContext}
       pageSize={pageSize}
       initialSearch={initialSearch}
       initialTypeId={initialTypeId}
+      initialSort={initialSort}
+      autoSelectFirst={autoSelectFirst}
       onAction={onAction}
       onError={onError}
       onObservability={onObservability}
+      onOpenEntity={onOpenEntity}
     />
   );
 }

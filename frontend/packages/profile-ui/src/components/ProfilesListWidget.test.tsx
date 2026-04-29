@@ -141,6 +141,7 @@ const renderWidget = (props?: Partial<ProfilesWidgetProps>) =>
       <ProfilesWidget
         hostContext={{ tenant: { id: "tenant-a" }, telemetry: { requestId: "req-1" } }}
         apiBaseUrl={apiBaseUrl}
+        autoSelectFirst
         {...props}
       />
     </MantineProvider>,
