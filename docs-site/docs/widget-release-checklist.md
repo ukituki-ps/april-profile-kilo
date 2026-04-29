@@ -27,7 +27,7 @@ sidebar_position: 9
 - [ ] Линт и типизация проходят; нет «тихих» `any` на публичных пропсах.
 - [ ] Минимальные unit-тесты на эмиссию событий и обработку ошибок.
 - [ ] Peer dependencies (`react`, `@april/ui`, …) задекларированы корректно.
-- [ ] Для `ProfilesWidget` выполнен release-gate variant C из [TESTING_STRATEGY](/docs/testing-strategy): Core + provider integration + smoke.
+- [ ] Для `ProfilesWidget` выполнен release-gate variant C из [TESTING_STRATEGY](https://github.com/ukituki-ps/april-profile/blob/develop/docs/TESTING_STRATEGY.md): Core + provider integration + smoke.
 - [ ] Для `ProfilesWidget` есть тесты на `AbortSignal`/race и conflict UX (`401/403/409`).
 - [ ] Для `ProfilesWidget` есть evidence фактического прогона gate-команд в `tasks/<id>/REPORT.md`.
 

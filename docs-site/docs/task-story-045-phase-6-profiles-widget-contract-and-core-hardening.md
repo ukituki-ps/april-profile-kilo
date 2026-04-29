@@ -64,6 +64,6 @@ npm run build -w @april/profile-ui
 
 ## Артефакты
 
-- [`tasks/045-phase-6-profiles-widget-contract-and-core-hardening/TASK.md`](../../tasks/045-phase-6-profiles-widget-contract-and-core-hardening/TASK.md)
-- [`tasks/045-phase-6-profiles-widget-contract-and-core-hardening/PLAN.md`](../../tasks/045-phase-6-profiles-widget-contract-and-core-hardening/PLAN.md)
-- [`tasks/045-phase-6-profiles-widget-contract-and-core-hardening/REPORT.md`](../../tasks/045-phase-6-profiles-widget-contract-and-core-hardening/REPORT.md)
+- [`tasks/045-phase-6-profiles-widget-contract-and-core-hardening/TASK.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/045-phase-6-profiles-widget-contract-and-core-hardening/TASK.md)
+- [`tasks/045-phase-6-profiles-widget-contract-and-core-hardening/PLAN.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/045-phase-6-profiles-widget-contract-and-core-hardening/PLAN.md)
+- [`tasks/045-phase-6-profiles-widget-contract-and-core-hardening/REPORT.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/045-phase-6-profiles-widget-contract-and-core-hardening/REPORT.md)

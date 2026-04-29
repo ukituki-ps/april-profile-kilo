@@ -57,6 +57,6 @@ go test ./...
 
 ## Артефакты
 
-- [`tasks/047-phase-6-profiles-widget-test-matrix-and-release-gate/TASK.md`](../../tasks/047-phase-6-profiles-widget-test-matrix-and-release-gate/TASK.md)
-- [`tasks/047-phase-6-profiles-widget-test-matrix-and-release-gate/PLAN.md`](../../tasks/047-phase-6-profiles-widget-test-matrix-and-release-gate/PLAN.md)
-- [`tasks/047-phase-6-profiles-widget-test-matrix-and-release-gate/REPORT.md`](../../tasks/047-phase-6-profiles-widget-test-matrix-and-release-gate/REPORT.md)
+- [`tasks/047-phase-6-profiles-widget-test-matrix-and-release-gate/TASK.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/047-phase-6-profiles-widget-test-matrix-and-release-gate/TASK.md)
+- [`tasks/047-phase-6-profiles-widget-test-matrix-and-release-gate/PLAN.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/047-phase-6-profiles-widget-test-matrix-and-release-gate/PLAN.md)
+- [`tasks/047-phase-6-profiles-widget-test-matrix-and-release-gate/REPORT.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/047-phase-6-profiles-widget-test-matrix-and-release-gate/REPORT.md)

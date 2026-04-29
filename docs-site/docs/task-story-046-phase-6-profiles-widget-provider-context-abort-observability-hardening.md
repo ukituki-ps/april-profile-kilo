@@ -62,6 +62,6 @@ npm run build -w @april/profile-ui
 
 ## Артефакты
 
-- [`tasks/046-phase-6-profiles-widget-provider-context-abort-observability-hardening/TASK.md`](../../tasks/046-phase-6-profiles-widget-provider-context-abort-observability-hardening/TASK.md)
-- [`tasks/046-phase-6-profiles-widget-provider-context-abort-observability-hardening/PLAN.md`](../../tasks/046-phase-6-profiles-widget-provider-context-abort-observability-hardening/PLAN.md)
-- [`tasks/046-phase-6-profiles-widget-provider-context-abort-observability-hardening/REPORT.md`](../../tasks/046-phase-6-profiles-widget-provider-context-abort-observability-hardening/REPORT.md)
+- [`tasks/046-phase-6-profiles-widget-provider-context-abort-observability-hardening/TASK.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/046-phase-6-profiles-widget-provider-context-abort-observability-hardening/TASK.md)
+- [`tasks/046-phase-6-profiles-widget-provider-context-abort-observability-hardening/PLAN.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/046-phase-6-profiles-widget-provider-context-abort-observability-hardening/PLAN.md)
+- [`tasks/046-phase-6-profiles-widget-provider-context-abort-observability-hardening/REPORT.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/046-phase-6-profiles-widget-provider-context-abort-observability-hardening/REPORT.md)
