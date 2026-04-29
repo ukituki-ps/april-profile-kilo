@@ -6,7 +6,9 @@ sidebar_position: 4
 
 Исходники, витрина и полные соглашения — в репозитории **[DisignApril](https://github.com/ukituki-ps/DisignApril)** (pnpm workspace: `packages/tokens`, `packages/ui`, при необходимости `apps/showcase`).
 
-В этом шаблоне дизайн-система **подключена как git submodule** `design-system/DisignApril`, а прикладной **минимальный shell** — в каталоге **`frontend/`** (Vite + React + `AprilProviders` из `@april/ui`). Так все микросервисы на базе шаблона **сразу строятся на одной и той же DS**, без расхождения версий «из головы».
+В этом репозитории дизайн-система **по-прежнему доступна как git submodule** `design-system/DisignApril` (исходники, витрина, копирование SVG в shell), а прикладной **минимальный shell** — в каталоге **`frontend/`** (Vite + React + `AprilProviders` из `@april/ui`). Зависимости `@april/ui` и `@april/tokens` в **`frontend/package.json`** сейчас резолвятся через **иммутабельные tarball’ы** `frontend/vendor/ds-packs/*.tgz` (версия **0.1.0**) — до публикации пакетов в **GitHub Packages**; это устраняет обязательность сборки `dist` в submodule на каждом `npm ci` (см. задачи **048**–**050** и эпик `049` в april-worker).
+
+Архитектурное решение по registry для экосистемы April фиксируется в **AprilHub** ([репозиторий april-worker](https://github.com/ukituki-ps/april-worker), эпик `049-april-ds-registry-consumption-epic`; по мере merge — раздел `docs/architecture/` с ADR).
 
 ## 1. Первый клон
 
@@ -16,19 +18,26 @@ git clone --recurse-submodules <url>
 git submodule update --init --recursive
 ```
 
-## 2. Сборка DS и приложения
+Submodule нужен для **ассетов** (`ds:prepare` → `frontend/public`) и для пересборки vendored tarball’ов; при отсутствии каталога `design-system/DisignApril` shell всё равно может собраться с fallback-токенами (см. `frontend/scripts/ds-prepare.sh`).
 
-Из корня репозитория или из `frontend/`:
+## 2. Локальная разработка и CI
+
+Из каталога `frontend/`:
 
 ```bash
-cd frontend
 npm ci
-npm run ds:prepare   # pnpm install + build в design-system/DisignApril
-npm run dev          # разработка
-npm run build        # prebuild вызывает ds:prepare
+npm run dev    # pre* вызывают ds:prepare
+npm run build
 ```
 
-`ds:prepare` собирает пакеты `@april/tokens` и `@april/ui` в submodule; зависимости в `frontend/package.json` указывают на `file:../design-system/DisignApril/packages/...` (как в AprilHub `hub-shell`).
+`ds:prepare` **не** запускает `pnpm install` / `pnpm build` внутри submodule, если в `frontend/package.json` **нет** `file:`-путей к `design-system/DisignApril/packages/ui` или `.../tokens` (текущая модель с `vendor/ds-packs`). При наличии submodule по-прежнему копируются SVG из `apps/showcase/public`.
+
+Обновить vendored DS после изменений в DisignApril:
+
+```bash
+sh frontend/scripts/repack-ds-vendor.sh
+cd frontend && npm install
+```
 
 ## 3. Пакеты
 
@@ -47,7 +56,7 @@ npm run build        # prebuild вызывает ds:prepare
 2. Если не хватает поведения — сначала сделать тонкую обёртку вокруг DS-компонента.
 3. Кастомный UI с нуля — только как исключение, с фиксацией причин в `TASK.md` и `REPORT.md`.
 
-Это правило нужно, чтобы не плодить визуальные и поведенческие расхождения между сервисами April.
+Версии **`@april/ui` и `@april/tokens` должны быть согласованы с AprilHub** (`hub-shell`): одна линия минорных релизов после перехода обоих репозиториев на registry; до этого зафиксированная пара — **0.1.0** (см. lock / `vendor/ds-packs`).
 
 ## 4. Минимальный shell (корень приложения)
 
@@ -66,15 +75,26 @@ export function App() {
 
 При экранах с `@xyflow/react` добавьте `import '@xyflow/react/dist/style.css'`.
 
-## 5. Продакшен: пакеты из registry
+## 5. GitHub Packages и `.npmrc`
 
-Когда `@april/tokens` и `@april/ui` публикуются в npm-совместимый registry, в форке можно заменить `file:` на semver-версии в `frontend/package.json` и убрать submodule (или оставить submodule только для локальной разработки — по политике команды).
+Целевой потребительский поток — **semver** в `frontend/package.json` и установка через **npm.pkg.github.com** (scope `@april`). В репозитории лежит `frontend/.npmrc` с **закомментированными** строками `@april:registry=…` и `NODE_AUTH_TOKEN`; для локального `npm ci` после раскомментирования задайте в окружении `NODE_AUTH_TOKEN` (PAT с `read:packages` или CI-токен). В GitHub Actions см. секрет **`APRIL_NPM_READ_TOKEN`** (опционально) и переменную шага **`NODE_AUTH_TOKEN`** в `.github/workflows/ci.yml` и `bootstrap-ci.yml` (задача **049**).
 
-## 6. Важно: не тяните витрину в релиз
+## 6. Bump версии DS и регрессия UI (чеклист)
+
+| Шаг | Действие |
+|-----|----------|
+| 1 | Согласовать целевые версии `@april/ui` / `@april/tokens` с владельцем AprilHub (`hub-shell`, эпик 049). |
+| 2 | Обновить зависимости и lock в `frontend/` (`npm install` / `npm ci` с рабочим `NODE_AUTH_TOKEN` при установке из registry). |
+| 3 | `npm run lint`, `npm run test`, `npm run build` в `frontend/`. |
+| 4 | Smoke вручную: админский shell, список профилей / виджеты, переключение темы (светлая/тёмная), локаль с RTL при наличии сценариев. |
+| 5 | При использовании vendored tarball’ов между релизами DS: `sh frontend/scripts/repack-ds-vendor.sh` и коммит обновлённых архивов. |
+
+## 7. Важно: не тяните витрину в релиз
 
 Компонент **`UIKit`** в `@april/ui` — для разработки и ревью. В продакшене не импортируйте `UIKit`; витрина — `pnpm dev` в DisignApril или внутренний стенд.
 
-## 7. Связка с репозиторием
+## 8. Связка с репозиторием
 
-- Подсказки по структуре — файл `frontend/README.md` в корне репозитория.
+- Подсказки по структуре — `frontend/vendor/ds-packs/README.md`, `frontend/README.md` (если есть).
 - Версии инструментов — [`VERSIONS.md`](./VERSIONS.md).
+- Деплой и секреты CI — в репозитории файл `docs/DEPLOYMENT_STRATEGY.md` (§3a: `APRIL_NPM_READ_TOKEN`, `NODE_AUTH_TOKEN` для `frontend/`). На сайте Docusaurus этот файл не в плагине `guides/` — открывайте из корня репозитория или через основную документацию продукта.

@@ -179,7 +179,7 @@ Host собирает страницу из layout, провайдеров (те
 
 ## 11. На что смотреть, чтобы гибрид не ломался (чеклист)
 
-1. **Дизайн-система:** все зоны (админка и встраиваемые блоки) используют **одни** `@april/tokens` / `@april/ui`; версии согласованы с Hub.
+1. **Дизайн-система:** все зоны (админка и встраиваемые блоки) используют **одни** `@april/tokens` / `@april/ui`; версии согласованы с Hub (см. [`guides/DESIGN_SYSTEM.md`](./guides/DESIGN_SYSTEM.md) — vendored **0.1.0** до registry, затем semver из GitHub Packages).
 2. **Аутентификация и tenant:** токен и `tenant_id` только из **доверенного** контекста (Keycloak / BFF); UI не подставляет tenant из недоверенных полей формы.
 3. **Дублирование логики:** запросы к AprilProfile API — через **общий слой** (сгенерированный клиент, хуки), а не отдельные копии `fetch` в админке и в Hub.
 4. **Два Router / два React:** запрещено для встраиваемого режима; для MF — жёсткий `shared` и отсутствие второго корня провайдеров в remote.
@@ -192,7 +192,7 @@ Host собирает страницу из layout, провайдеров (те
 
 ## 12. Каркас в этом репозитории
 
-Каталог **`frontend/`** — Vite + React + Mantine + submodule DisignApril; предназначен для развития UI и последующей упаковки в библиотеку или артефакт, потребляемый Hub. До появления отдельного пайплайна публикации пакета достаточно согласовать с командой Hub **имя пакета и поток версий**.
+Каталог **`frontend/`** — Vite + React + Mantine; дизайн-система — пакеты **`@april/ui`** / **`@april/tokens`** (сейчас через `frontend/vendor/ds-packs`, далее — **GitHub Packages** по эпику Hub `049`), плюс **git submodule** `design-system/DisignApril` для исходников и ассетов. Пакет **`@april/profile-ui`** и сценарии Hub — см. [`guides/DESIGN_SYSTEM.md`](./guides/DESIGN_SYSTEM.md) и [`VERSIONING_AND_COMPATIBILITY.md`](./VERSIONING_AND_COMPATIBILITY.md).
 
 ---
 

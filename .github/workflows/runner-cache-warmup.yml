@@ -15,6 +15,9 @@ jobs:
     name: Warmup Go and Node local caches
     runs-on: [self-hosted, dev, april-profile]
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,4 +63,6 @@ jobs:
 
       - name: Warmup frontend dependencies
         working-directory: frontend
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.APRIL_NPM_READ_TOKEN || secrets.GITHUB_TOKEN }}
         run: npm ci --prefer-offline

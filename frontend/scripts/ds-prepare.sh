@@ -62,6 +62,14 @@ fi
 
 prepare_showcase_assets
 
+# Если @april/ui и @april/tokens ставятся из npm registry (или vendored .tgz через overrides),
+# в package.json нет file: на исходники submodule — сборка pnpm внутри DisignApril не нужна для shell.
+PKG_JSON="${SCRIPT_DIR}/../package.json"
+if ! grep -q 'file:.*design-system/DisignApril/packages/\(ui\|tokens\)' "${PKG_JSON}" 2>/dev/null; then
+  echo "[ds:prepare] no file: path to DisignApril packages/ui|tokens in package.json, skip submodule pnpm install/build"
+  exit 0
+fi
+
 if [ -d "${DS_DIR}/node_modules" ] && [ ! -w "${DS_DIR}/node_modules" ]; then
   echo "[ds:prepare] ${DS_DIR}/node_modules is read-only, skip install/build"
   exit 0
