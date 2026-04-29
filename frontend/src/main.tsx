@@ -1,4 +1,5 @@
 import "@mantine/core/styles.css";
+import "./styles/shell-layout-overrides.css";
 import "@xyflow/react/dist/style.css";
 import ReactDOM from "react-dom/client";
 import { AprilProviders } from "@april/ui";

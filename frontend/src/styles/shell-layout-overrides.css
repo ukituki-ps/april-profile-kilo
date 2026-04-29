@@ -1,0 +1,4 @@
+/* Hub / host shell: align top gutter with lateral padding (default Mantine xl = 24px). */
+.shell-layout.shell-layout-fill {
+  padding-top: var(--mantine-spacing-xl, 24px);
+}
