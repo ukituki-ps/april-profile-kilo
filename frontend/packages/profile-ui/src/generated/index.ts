@@ -18,6 +18,8 @@ export type { MergeEntityProfilesRequest } from './models/MergeEntityProfilesReq
 export type { MergeEntityProfilesResponse } from './models/MergeEntityProfilesResponse';
 export type { ProfileConflictListResponse } from './models/ProfileConflictListResponse';
 export type { ProfileFieldConflict } from './models/ProfileFieldConflict';
+export type { ProfileListItem } from './models/ProfileListItem';
+export type { ProfileListResponse } from './models/ProfileListResponse';
 export type { ProfileSnapshot } from './models/ProfileSnapshot';
 export type { ReadyzResponse } from './models/ReadyzResponse';
 export type { ResolveProfileConflictRequest } from './models/ResolveProfileConflictRequest';

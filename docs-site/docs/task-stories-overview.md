@@ -47,6 +47,9 @@ sidebar_position: 20
 - [039 — Отдельный File Service в архитектуре April](./task-story-039-file-service-architecture-docs)
 - [040 — Двухколоночный `widget-card` (master-detail + modal create)](./task-story-040-phase-5-widget-card-layout-modernization)
 - [041 — Отдельный виджет `Profiles` на базе `widget-card`](./task-story-041-phase-5-widget-card-to-profiles-widget)
+- [042 — Production-first baseline для `ProfilesWidget` (`Core + ApiWidget + Facade`)](./task-story-042-phase-6-profiles-widget-production-architecture)
+- [043 — API/SDK readiness для server-side списка `ProfilesWidget`](./task-story-043-phase-6-profiles-widget-api-list-contract-and-sdk)
+- [044 — Рефактор `ProfilesWidget` в `Core + ApiWidget`](./task-story-044-phase-6-profiles-widget-core-api-refactor)
 
 ## Быстрый статус
 
@@ -85,3 +88,6 @@ sidebar_position: 20
 | 039 File Service architecture docs | ✅ | [039](./task-story-039-file-service-architecture-docs) | В архитектуре закреплён отдельный `AprilFile`; границы с `AprilProfile` описаны в каноничных docs и docs-site |
 | 040 widget-card layout modernization | ✅ | [040](./task-story-040-phase-5-widget-card-layout-modernization) | `ProfilesListWidget` переведён в 25/75 master-detail: `CardListColumn` слева, карточка справа, create через модалку, обновлены тесты |
 | 041 Profiles widget extraction | ✅ | [041](./task-story-041-phase-5-widget-card-to-profiles-widget) | Из `widget-card` выделен продуктовый `ProfilesWidget` с отдельным экспортом, демо-маршрутом и обратной совместимостью через alias |
+| 042 Profiles widget production-first baseline | ✅ | [042](./task-story-042-phase-6-profiles-widget-production-architecture) | Зафиксирован архитектурный hard-gate (`Core + ApiWidget + Facade`), provider-контракт и запрет demo-first anti-patterns для задач 043/044 |
+| 043 Profiles widget API/SDK readiness | ✅ | [043](./task-story-043-phase-6-profiles-widget-api-list-contract-and-sdk) | Добавлен server-side list контракт (`search/filter/cursor/sort`), backend-реализация и regenerated SDK как gate для задачи 044 |
+| 044 Profiles widget core/api refactor | ✅ | [044](./task-story-044-phase-6-profiles-widget-core-api-refactor) | `ProfilesWidget` переведён на архитектуру `Core + ApiWidget`, `entityIds` удалён из публичного контракта, демо и тесты мигрированы на server-side data flow |

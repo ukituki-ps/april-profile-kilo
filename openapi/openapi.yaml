@@ -184,6 +184,86 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
   /v1/entities:
+    get:
+      summary: Список текущих профилей (server-side search/filter/pagination)
+      operationId: listEntityProfiles
+      tags: [Profiles]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: search
+          required: false
+          schema:
+            type: string
+          description: Поиск по `entity_id` и текстовым фрагментам текущего `document`.
+        - in: query
+          name: entity_type_id
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Фильтр по типу сущности.
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Размер страницы.
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+          description: Непрозрачный курсор следующей страницы.
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+            enum: [updated_desc, updated_asc]
+            default: updated_desc
+          description: Детерминированная сортировка по `created_at` текущей версии + `entity_id`.
+      responses:
+        '200':
+          description: Страница списка профилей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileListResponse'
+        '401':
+          description: Нет или невалидный Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: В токене нет claim с tenant_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Невалидный `cursor`/`limit`/query-параметры
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Слишком много запросов (rate limit, если включён)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     post:
       summary: Создать профиль сущности (version=1)
       operationId: createEntityProfile
@@ -811,6 +891,42 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ExternalRef'
+    ProfileListItem:
+      type: object
+      required: [entity_id, entity_type_id, version, created_at, preview]
+      properties:
+        entity_id:
+          type: string
+          format: uuid
+        entity_type_id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        preview:
+          type: string
+          description: Короткий preview текущего документа (для list UI).
+    ProfileListResponse:
+      type: object
+      required: [items, total_count]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileListItem'
+        next_cursor:
+          oneOf:
+            - type: string
+            - type: 'null'
+          description: Курсор следующей страницы, `null` на конце списка.
+        total_count:
+          type: integer
+          format: int64
+          minimum: 0
     ProfileConflictListResponse:
       type: object
       required: [items]

@@ -2,6 +2,7 @@ package profiles
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,6 +25,7 @@ var (
 	ErrConflictNotFound        = errors.New("conflict not found")
 	ErrMergeInvalid            = errors.New("merge: invalid entity pair")
 	ErrMergeExternalCollision  = errors.New("merge: external mapping collision between profiles")
+	ErrInvalidCursor           = errors.New("invalid cursor")
 )
 
 type ExternalRef struct {
@@ -53,6 +55,33 @@ type UpdateParams struct {
 	ExternalRefs []ExternalRef
 	// WriteSource — источник входящего изменения (по умолчанию api).
 	WriteSource string
+}
+
+type ListParams struct {
+	Search       string
+	EntityTypeID string
+	Limit        int
+	Cursor       string
+	Sort         string
+}
+
+type ListItem struct {
+	EntityID     string    `json:"entity_id"`
+	EntityTypeID string    `json:"entity_type_id"`
+	Version      int64     `json:"version"`
+	CreatedAt    time.Time `json:"created_at"`
+	Preview      string    `json:"preview"`
+}
+
+type ListResult struct {
+	Items      []ListItem `json:"items"`
+	NextCursor *string    `json:"next_cursor,omitempty"`
+	TotalCount int64      `json:"total_count"`
+}
+
+type listCursor struct {
+	CreatedAt time.Time `json:"created_at"`
+	EntityID  string    `json:"entity_id"`
 }
 
 type Service struct {
@@ -305,6 +334,125 @@ func (s *Service) Delete(ctx context.Context, tenantID, entityID string) error {
 	return nil
 }
 
+func (s *Service) List(ctx context.Context, tenantID string, params ListParams) (ListResult, error) {
+	limit := params.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	sort := strings.TrimSpace(strings.ToLower(params.Sort))
+	if sort == "" {
+		sort = "updated_desc"
+	}
+	if sort != "updated_desc" && sort != "updated_asc" {
+		return ListResult{}, fmt.Errorf("sort must be updated_desc or updated_asc")
+	}
+
+	entityTypeID := strings.TrimSpace(params.EntityTypeID)
+	if entityTypeID != "" {
+		validated, err := validateUUID(entityTypeID)
+		if err != nil {
+			return ListResult{}, fmt.Errorf("invalid entity_type_id: %w", err)
+		}
+		entityTypeID = validated
+	}
+
+	search := strings.TrimSpace(params.Search)
+	cursor, err := decodeListCursor(params.Cursor)
+	if err != nil {
+		return ListResult{}, err
+	}
+
+	baseWhere := `
+		e.tenant_id = $1
+		AND ($2 = '' OR e.entity_type_id = $2::uuid)
+		AND ($3 = '' OR e.entity_id::text ILIKE '%' || $3 || '%' OR pv.document::text ILIKE '%' || $3 || '%')
+	`
+	baseArgs := []any{tenantID, entityTypeID, search}
+	cursorFilter := ""
+	if cursor != nil {
+		if sort == "updated_desc" {
+			cursorFilter = "AND (pv.created_at < $4 OR (pv.created_at = $4 AND e.entity_id > $5::uuid))"
+		} else {
+			cursorFilter = "AND (pv.created_at > $4 OR (pv.created_at = $4 AND e.entity_id > $5::uuid))"
+		}
+		baseArgs = append(baseArgs, cursor.CreatedAt, cursor.EntityID)
+	}
+
+	orderBy := "pv.created_at DESC, e.entity_id ASC"
+	if sort == "updated_asc" {
+		orderBy = "pv.created_at ASC, e.entity_id ASC"
+	}
+
+	limitArgPos := len(baseArgs) + 1
+	query := fmt.Sprintf(`
+		SELECT
+			e.entity_id,
+			e.entity_type_id,
+			pv.version,
+			pv.document,
+			pv.created_at
+		FROM entities e
+		JOIN LATERAL (
+			SELECT version, document, created_at
+			FROM profile_versions
+			WHERE tenant_id = e.tenant_id AND entity_id = e.entity_id
+			ORDER BY version DESC
+			LIMIT 1
+		) pv ON true
+		WHERE %s
+		%s
+		ORDER BY %s
+		LIMIT $%d
+	`, baseWhere, cursorFilter, orderBy, limitArgPos)
+	args := append(baseArgs, limit+1)
+
+	rows, err := s.pool.Query(ctx, query, args...)
+	if err != nil {
+		return ListResult{}, fmt.Errorf("query list entities: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]ListItem, 0, limit+1)
+	for rows.Next() {
+		var item ListItem
+		var rawDocument []byte
+		if err := rows.Scan(&item.EntityID, &item.EntityTypeID, &item.Version, &rawDocument, &item.CreatedAt); err != nil {
+			return ListResult{}, fmt.Errorf("scan list entity: %w", err)
+		}
+		var doc map[string]any
+		if err := json.Unmarshal(rawDocument, &doc); err != nil {
+			return ListResult{}, fmt.Errorf("decode list document: %w", err)
+		}
+		item.Preview = previewFromDocument(doc)
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return ListResult{}, fmt.Errorf("iterate list entities: %w", err)
+	}
+
+	var nextCursor *string
+	if len(items) > limit {
+		last := items[limit-1]
+		encoded, err := encodeListCursor(listCursor{CreatedAt: last.CreatedAt, EntityID: last.EntityID})
+		if err != nil {
+			return ListResult{}, fmt.Errorf("encode next cursor: %w", err)
+		}
+		nextCursor = &encoded
+		items = items[:limit]
+	}
+
+	totalCount, err := s.countCurrentProfiles(ctx, tenantID, entityTypeID, search)
+	if err != nil {
+		return ListResult{}, err
+	}
+
+	return ListResult{Items: items, NextCursor: nextCursor, TotalCount: totalCount}, nil
+}
+
 func (s *Service) getByQuery(ctx context.Context, sql string, args ...any) (Snapshot, error) {
 	var out Snapshot
 	var rawDocument []byte
@@ -482,4 +630,72 @@ func validateUUID(value string) (string, error) {
 		return "", err
 	}
 	return id.String(), nil
+}
+
+func previewFromDocument(document map[string]any) string {
+	for _, value := range document {
+		text, ok := value.(string)
+		if ok && strings.TrimSpace(text) != "" {
+			return text
+		}
+	}
+	payload, err := json.Marshal(document)
+	if err != nil {
+		return "{}"
+	}
+	return string(payload)
+}
+
+func encodeListCursor(cursor listCursor) (string, error) {
+	raw, err := json.Marshal(cursor)
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(raw), nil
+}
+
+func decodeListCursor(value string) (*listCursor, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil, nil
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(value)
+	if err != nil {
+		return nil, ErrInvalidCursor
+	}
+	var cursor listCursor
+	if err := json.Unmarshal(raw, &cursor); err != nil {
+		return nil, ErrInvalidCursor
+	}
+	if cursor.CreatedAt.IsZero() {
+		return nil, ErrInvalidCursor
+	}
+	entityID, err := validateUUID(cursor.EntityID)
+	if err != nil {
+		return nil, ErrInvalidCursor
+	}
+	cursor.EntityID = entityID
+	return &cursor, nil
+}
+
+func (s *Service) countCurrentProfiles(ctx context.Context, tenantID, entityTypeID, search string) (int64, error) {
+	var total int64
+	if err := s.pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM entities e
+		JOIN LATERAL (
+			SELECT document
+			FROM profile_versions
+			WHERE tenant_id = e.tenant_id AND entity_id = e.entity_id
+			ORDER BY version DESC
+			LIMIT 1
+		) pv ON true
+		WHERE
+			e.tenant_id = $1
+			AND ($2 = '' OR e.entity_type_id = $2::uuid)
+			AND ($3 = '' OR e.entity_id::text ILIKE '%' || $3 || '%' OR pv.document::text ILIKE '%' || $3 || '%')
+	`, tenantID, entityTypeID, search).Scan(&total); err != nil {
+		return 0, fmt.Errorf("count list entities: %w", err)
+	}
+	return total, nil
 }

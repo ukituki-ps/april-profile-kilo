@@ -116,13 +116,6 @@ function ProfilesWidgetDemoPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const apiBaseUrl = import.meta.env.VITE_PROFILE_API_BASE_URL ?? "/admin/profile/api";
   const accessToken = import.meta.env.VITE_PROFILE_ACCESS_TOKEN;
-  const rawDemoEntityIds: string =
-    import.meta.env.VITE_PROFILE_LIST_DEMO_ENTITY_IDS ??
-    "00000000-0000-0000-0000-000000000001,00000000-0000-0000-0000-000000000002";
-  const demoEntityIds = rawDemoEntityIds
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
 
   return (
     <Container py="xl" size="lg">
@@ -142,7 +135,6 @@ function ProfilesWidgetDemoPage() {
           hostContext={{ tenant: { id: "demo-tenant" }, telemetry: { requestId: "local-demo-req-list" } }}
           apiBaseUrl={apiBaseUrl}
           accessToken={accessToken}
-          entityIds={demoEntityIds}
           onAction={(action) => {
             if (action.type === "deleted") {
               setActionMessage(`Deleted entity ${action.entityId}`);

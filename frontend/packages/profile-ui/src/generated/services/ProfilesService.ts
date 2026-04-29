@@ -3,12 +3,49 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CreateEntityRequest } from '../models/CreateEntityRequest';
+import type { ProfileListResponse } from '../models/ProfileListResponse';
 import type { ProfileSnapshot } from '../models/ProfileSnapshot';
 import type { UpdateEntityRequest } from '../models/UpdateEntityRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class ProfilesService {
+    /**
+     * Список текущих профилей (server-side search/filter/pagination)
+     * @param search Поиск по `entity_id` и текстовым фрагментам текущего `document`.
+     * @param entityTypeId Фильтр по типу сущности.
+     * @param limit Размер страницы.
+     * @param cursor Непрозрачный курсор следующей страницы.
+     * @param sort Детерминированная сортировка по `created_at` текущей версии + `entity_id`.
+     * @returns ProfileListResponse Страница списка профилей
+     * @throws ApiError
+     */
+    public static listEntityProfiles(
+        search?: string,
+        entityTypeId?: string,
+        limit: number = 20,
+        cursor?: string,
+        sort: 'updated_desc' | 'updated_asc' = 'updated_desc',
+    ): CancelablePromise<ProfileListResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/v1/entities',
+            query: {
+                'search': search,
+                'entity_type_id': entityTypeId,
+                'limit': limit,
+                'cursor': cursor,
+                'sort': sort,
+            },
+            errors: {
+                401: `Нет или невалидный Bearer`,
+                403: `В токене нет claim с tenant_id`,
+                422: `Невалидный \`cursor\`/\`limit\`/query-параметры`,
+                429: `Слишком много запросов (rate limit, если включён)`,
+                500: `Внутренняя ошибка`,
+            },
+        });
+    }
     /**
      * Создать профиль сущности (version=1)
      * @param requestBody

@@ -234,6 +234,115 @@ func TestProfilesService_AppendOnlyVersioningAndExternalMappings(t *testing.T) {
 	}
 }
 
+func TestProfilesService_ListSupportsSearchFilterAndCursor(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	pgURL, cleanup := startPostgresWithAtlasMigrations(t, ctx)
+	defer cleanup()
+
+	pool, err := pgxpool.New(ctx, pgURL)
+	if err != nil {
+		t.Fatalf("pgxpool new: %v", err)
+	}
+	defer pool.Close()
+
+	tenantID := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	typeA := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	typeB := "cccccccc-cccc-cccc-cccc-cccccccccccc"
+	if _, err := pool.Exec(ctx, `INSERT INTO tenants (id) VALUES ($1)`, tenantID); err != nil {
+		t.Fatalf("insert tenant: %v", err)
+	}
+	for idx, typeID := range []string{typeA, typeB} {
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO entity_types (
+				id, tenant_id, namespace, code, schema_json, schema_version, status,
+				published_schema_json, published_schema_version, published_at
+			) VALUES (
+				$1, $2, 'hr', $3,
+				'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
+				1, 'published',
+				'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
+				1, now()
+			)
+		`, typeID, tenantID, fmt.Sprintf("employee_%d", idx)); err != nil {
+			t.Fatalf("insert entity type: %v", err)
+		}
+	}
+
+	service := profiles.NewService(pool)
+	for _, tc := range []struct {
+		entityType string
+		name       string
+	}{
+		{typeA, "Alice Johnson"},
+		{typeA, "Alice Cooper"},
+		{typeB, "Bob Stone"},
+	} {
+		if _, err := service.Create(ctx, tenantID, profiles.CreateParams{
+			EntityTypeID: tc.entityType,
+			Document: map[string]any{
+				"name": tc.name,
+			},
+		}); err != nil {
+			t.Fatalf("create profile: %v", err)
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	firstPage, err := service.List(ctx, tenantID, profiles.ListParams{
+		Search: "alice",
+		Limit:  1,
+		Sort:   "updated_desc",
+	})
+	if err != nil {
+		t.Fatalf("list first page: %v", err)
+	}
+	if firstPage.TotalCount != 2 {
+		t.Fatalf("want total_count=2, got %d", firstPage.TotalCount)
+	}
+	if len(firstPage.Items) != 1 {
+		t.Fatalf("want one item on first page, got %d", len(firstPage.Items))
+	}
+	if firstPage.NextCursor == nil || *firstPage.NextCursor == "" {
+		t.Fatal("want next cursor for first page")
+	}
+	if firstPage.Items[0].Preview == "" {
+		t.Fatal("preview must be set")
+	}
+
+	secondPage, err := service.List(ctx, tenantID, profiles.ListParams{
+		Search: "alice",
+		Limit:  1,
+		Sort:   "updated_desc",
+		Cursor: *firstPage.NextCursor,
+	})
+	if err != nil {
+		t.Fatalf("list second page: %v", err)
+	}
+	if len(secondPage.Items) != 1 {
+		t.Fatalf("want one item on second page, got %d", len(secondPage.Items))
+	}
+	if secondPage.NextCursor != nil {
+		t.Fatalf("next cursor must be nil on last page, got %q", *secondPage.NextCursor)
+	}
+
+	filtered, err := service.List(ctx, tenantID, profiles.ListParams{
+		EntityTypeID: typeB,
+		Limit:        10,
+		Sort:         "updated_desc",
+	})
+	if err != nil {
+		t.Fatalf("list filtered: %v", err)
+	}
+	if filtered.TotalCount != 1 || len(filtered.Items) != 1 {
+		t.Fatalf("want exactly one typeB item, got total=%d len=%d", filtered.TotalCount, len(filtered.Items))
+	}
+	if filtered.Items[0].EntityTypeID != typeB {
+		t.Fatalf("unexpected entity type in filtered list: %s", filtered.Items[0].EntityTypeID)
+	}
+}
+
 func TestProfileOutbox_eventContractAndIdempotency(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()

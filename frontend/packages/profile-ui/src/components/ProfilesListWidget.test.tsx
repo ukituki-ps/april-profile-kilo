@@ -70,13 +70,51 @@ const buildSnapshot = (entityId: string, version = 1, name = "Jane", typeId = en
   external_refs: [],
 });
 
+let listItems = [
+  { entity_id: e1, entity_type_id: entityTypeId, version: 1, created_at: "2026-04-24T10:00:00Z", preview: "Jane A" },
+  { entity_id: e2, entity_type_id: entityTypeId, version: 1, created_at: "2026-04-24T10:01:00Z", preview: "Jane B" },
+  { entity_id: e3, entity_type_id: entityTypeIdB, version: 1, created_at: "2026-04-24T10:02:00Z", preview: "Jane C" },
+];
+
 const server = setupServer(
+  http.get(`${apiBaseUrl}/v1/entities`, ({ request }) => {
+    const url = new URL(request.url);
+    const search = (url.searchParams.get("search") ?? "").toLowerCase();
+    const type = url.searchParams.get("entity_type_id") ?? "";
+    const limit = Number(url.searchParams.get("limit") ?? "5");
+    const cursor = url.searchParams.get("cursor");
+
+    const filtered = listItems.filter((item) => {
+      const searchHit = !search || item.entity_id.toLowerCase().includes(search) || item.preview.toLowerCase().includes(search);
+      const typeHit = !type || item.entity_type_id === type;
+      return searchHit && typeHit;
+    });
+
+    const start = cursor === "cursor-2" ? 2 : 0;
+    const page = filtered.slice(start, start + limit);
+    const nextCursor = start + limit < filtered.length ? "cursor-2" : null;
+    return HttpResponse.json({
+      items: page,
+      next_cursor: nextCursor,
+      total_count: filtered.length,
+    });
+  }),
   http.get(`${apiBaseUrl}/v1/entities/${e1}`, () => HttpResponse.json(buildSnapshot(e1, 1, "Jane A"))),
   http.get(`${apiBaseUrl}/v1/entities/${e2}`, () => HttpResponse.json(buildSnapshot(e2, 1, "Jane B"))),
   http.get(`${apiBaseUrl}/v1/entities/${e3}`, () => HttpResponse.json(buildSnapshot(e3, 1, "Jane C", entityTypeIdB))),
   http.get(`${apiBaseUrl}/v1/entities/new-entity`, () => HttpResponse.json(buildSnapshot("new-entity", 1, "Created"))),
   http.post(`${apiBaseUrl}/v1/entities`, async ({ request }) => {
     const body = (await request.json()) as { entity_type_id: string; document: { name?: string } };
+    listItems = [
+      {
+        entity_id: "new-entity",
+        entity_type_id: body.entity_type_id,
+        version: 1,
+        created_at: "2026-04-24T10:03:00Z",
+        preview: body.document.name ?? "Created",
+      },
+      ...listItems,
+    ];
     return HttpResponse.json(buildSnapshot("new-entity", 1, body.document.name ?? "Created"), { status: 201 });
   }),
   http.put(`${apiBaseUrl}/v1/entities/${e1}`, async ({ request }) => {
@@ -87,7 +125,14 @@ const server = setupServer(
 );
 
 beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  listItems = [
+    { entity_id: e1, entity_type_id: entityTypeId, version: 1, created_at: "2026-04-24T10:00:00Z", preview: "Jane A" },
+    { entity_id: e2, entity_type_id: entityTypeId, version: 1, created_at: "2026-04-24T10:01:00Z", preview: "Jane B" },
+    { entity_id: e3, entity_type_id: entityTypeIdB, version: 1, created_at: "2026-04-24T10:02:00Z", preview: "Jane C" },
+  ];
+  server.resetHandlers();
+});
 afterAll(() => server.close());
 
 const renderWidget = (props?: Partial<ProfilesWidgetProps>) =>
@@ -96,7 +141,6 @@ const renderWidget = (props?: Partial<ProfilesWidgetProps>) =>
       <ProfilesWidget
         hostContext={{ tenant: { id: "tenant-a" }, telemetry: { requestId: "req-1" } }}
         apiBaseUrl={apiBaseUrl}
-        entityIds={[e1, e2, e3]}
         {...props}
       />
     </MantineProvider>,

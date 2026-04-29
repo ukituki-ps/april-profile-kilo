@@ -592,6 +592,125 @@ func TestEntitiesByVersion_returnsSnapshot(t *testing.T) {
 	}
 }
 
+func TestListEntities_returnsPageAndPassesQuery(t *testing.T) {
+	t.Parallel()
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kid := "kid-list-entities"
+	jwks := mustRSAJWKS(t, &priv.PublicKey, kid)
+	const iss = "http://kc.example/auth/realms/april"
+	const aud = "april-profile-api"
+	v, err := auth.NewValidatorFromJWKSJSON(jwks, iss, aud, "tenant_id")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	service := &stubProfileService{
+		listFn: func(_ context.Context, tenantID string, params profiles.ListParams) (profiles.ListResult, error) {
+			if tenantID != "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" {
+				t.Fatalf("unexpected tenant: %s", tenantID)
+			}
+			if params.Search != "alice" || params.EntityTypeID != "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" {
+				t.Fatalf("unexpected filters: %+v", params)
+			}
+			if params.Limit != 2 || params.Sort != "updated_desc" || params.Cursor != "cursor-1" {
+				t.Fatalf("unexpected paging params: %+v", params)
+			}
+			next := "cursor-2"
+			return profiles.ListResult{
+				Items: []profiles.ListItem{
+					{
+						EntityID:     "11111111-1111-1111-1111-111111111111",
+						EntityTypeID: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+						Version:      7,
+						CreatedAt:    time.Date(2026, 4, 29, 9, 0, 0, 0, time.UTC),
+						Preview:      "Alice",
+					},
+				},
+				NextCursor: &next,
+				TotalCount: 11,
+			}, nil
+		},
+	}
+
+	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
+		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
+	}, nil, service, nil, "", nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	t.Cleanup(ts.Close)
+
+	token := signedToken(t, priv, kid, iss, aud)
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		ts.URL+"/v1/entities?search=alice&entity_type_id=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb&limit=2&cursor=cursor-1&sort=updated_desc",
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	res, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(res.Body)
+		t.Fatalf("want 200, got %d: %s", res.StatusCode, body)
+	}
+	body, _ := io.ReadAll(res.Body)
+	if !strings.Contains(string(body), `"total_count":11`) || !strings.Contains(string(body), `"next_cursor":"cursor-2"`) {
+		t.Fatalf("unexpected body: %s", body)
+	}
+}
+
+func TestListEntities_invalidCursor_returns422WithRequestID(t *testing.T) {
+	t.Parallel()
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kid := "kid-list-invalid-cursor"
+	jwks := mustRSAJWKS(t, &priv.PublicKey, kid)
+	const iss = "http://kc.example/auth/realms/april"
+	const aud = "april-profile-api"
+	v, err := auth.NewValidatorFromJWKSJSON(jwks, iss, aud, "tenant_id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := &stubProfileService{
+		listFn: func(_ context.Context, _ string, _ profiles.ListParams) (profiles.ListResult, error) {
+			return profiles.ListResult{}, profiles.ErrInvalidCursor
+		},
+	}
+	ts := httptest.NewServer(NewMux(v, staticReadinessChecker{
+		result: ReadinessResult{Ready: true, DatabaseOK: true, RedisOK: true},
+	}, nil, service, nil, "", nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	t.Cleanup(ts.Close)
+
+	token := signedToken(t, priv, kid, iss, aud)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, ts.URL+"/v1/entities?cursor=bad", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	res, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusUnprocessableEntity {
+		body, _ := io.ReadAll(res.Body)
+		t.Fatalf("want 422, got %d: %s", res.StatusCode, body)
+	}
+	body, _ := io.ReadAll(res.Body)
+	if !strings.Contains(string(body), `"code":"invalid_cursor"`) || !strings.Contains(string(body), `"request_id":"`) {
+		t.Fatalf("unexpected body: %s", body)
+	}
+}
+
 func signedToken(t *testing.T, priv *rsa.PrivateKey, kid, iss, aud string) string {
 	t.Helper()
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
@@ -611,11 +730,19 @@ func signedToken(t *testing.T, priv *rsa.PrivateKey, kid, iss, aud string) strin
 
 type stubProfileService struct {
 	createFn       func(ctx context.Context, tenantID string, params profiles.CreateParams) (profiles.Snapshot, error)
+	listFn         func(ctx context.Context, tenantID string, params profiles.ListParams) (profiles.ListResult, error)
 	updateFn       func(ctx context.Context, tenantID, entityID string, params profiles.UpdateParams) (profiles.Snapshot, error)
 	getCurrentFn   func(ctx context.Context, tenantID, entityID string) (profiles.Snapshot, error)
 	getByVersionFn func(ctx context.Context, tenantID, entityID string, version int64) (profiles.Snapshot, error)
 	getByExtFn     func(ctx context.Context, tenantID string, ref profiles.ExternalRef) (profiles.Snapshot, error)
 	deleteFn       func(ctx context.Context, tenantID, entityID string) error
+}
+
+func (s *stubProfileService) List(ctx context.Context, tenantID string, params profiles.ListParams) (profiles.ListResult, error) {
+	if s.listFn == nil {
+		return profiles.ListResult{Items: []profiles.ListItem{}, TotalCount: 0}, nil
+	}
+	return s.listFn(ctx, tenantID, params)
 }
 
 func (s *stubProfileService) Create(ctx context.Context, tenantID string, params profiles.CreateParams) (profiles.Snapshot, error) {

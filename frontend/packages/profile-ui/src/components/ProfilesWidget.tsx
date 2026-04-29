@@ -1,8 +1,8 @@
-import { ProfilesListWidget } from "./ProfilesListWidget";
-import type { ProfilesListWidgetProps } from "./ProfilesListWidget";
+import { ProfilesApiWidget } from "./ProfilesApiWidget";
+import type { ProfilesApiWidgetProps } from "./ProfilesApiWidget";
 
-export type ProfilesWidgetProps = ProfilesListWidgetProps;
+export type ProfilesWidgetProps = ProfilesApiWidgetProps;
 
 export function ProfilesWidget(props: ProfilesWidgetProps) {
-  return <ProfilesListWidget {...props} />;
+  return <ProfilesApiWidget {...props} />;
 }
