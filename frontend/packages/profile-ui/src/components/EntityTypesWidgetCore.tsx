@@ -210,7 +210,7 @@ export function EntityTypesWidgetCore({
         setListLoading(false);
       }
     }
-  }, [hostContext, onObservability, provider, providerContextBase, reportError]);
+  }, [hostContext.tenant.id, onObservability, provider, providerContextBase, reportError]);
 
   useEffect(() => {
     void loadFamilies();
@@ -275,7 +275,7 @@ export function EntityTypesWidgetCore({
         }
       }
     },
-    [applyFamilyDetail, hostContext, onObservability, provider, providerContextBase, reportError],
+    [applyFamilyDetail, hostContext.tenant.id, onObservability, provider, providerContextBase, reportError],
   );
 
   useEffect(() => {

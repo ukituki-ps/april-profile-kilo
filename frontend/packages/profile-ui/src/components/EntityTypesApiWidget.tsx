@@ -37,7 +37,15 @@ export function EntityTypesApiWidget({
           correlationId: hostContext.telemetry?.correlationId,
         },
       },
-    [accessToken, hostContext, providerContext],
+    [
+      accessToken,
+      hostContext.tenant.id,
+      hostContext.auth?.subject,
+      hostContext.auth?.roles,
+      hostContext.telemetry?.requestId,
+      hostContext.telemetry?.correlationId,
+      providerContext,
+    ],
   );
 
   return (
