@@ -3,6 +3,7 @@ import {
   IconDeviceFloppy,
   IconEdit,
   IconRotateClockwise,
+  IconSparkles,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
@@ -60,7 +61,7 @@ export type ProfilesWidgetCoreProps = {
   onOpenEntity?: (entityId: string) => void;
 };
 
-const DEFAULT_PAGE_SIZE = 5;
+const DEFAULT_PAGE_SIZE = 20;
 
 const parseJsonObject = (value: string): Record<string, unknown> | null => {
   try {
@@ -138,6 +139,7 @@ export function ProfilesWidgetCore({
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [busyEntityId, setBusyEntityId] = useState<string | null>(null);
   const [entityTypeOptions, setEntityTypeOptions] = useState<{ value: string; label: string }[]>([]);
+  const [listCollapsed, setListCollapsed] = useState(false);
 
   const requestId = hostContext.telemetry?.requestId;
   const preferredSelectionRef = useRef<string | null>(null);
@@ -714,10 +716,21 @@ export function ProfilesWidgetCore({
       >
         <Stack
           gap="xs"
+          onClickCapture={(event) => {
+            const target = event.target as HTMLElement | null;
+            if (target?.closest('button[aria-label="Collapse list"]')) {
+              setListCollapsed(true);
+              return;
+            }
+            if (target?.closest('button[aria-label="Expand list"]')) {
+              setListCollapsed(false);
+            }
+          }}
           style={{
-            flex: "0 1 360px",
-            minWidth: 0,
-            maxWidth: "44%",
+            flex: "0 0 auto",
+            width: listCollapsed ? 72 : "clamp(280px, 30vw, 420px)",
+            minWidth: listCollapsed ? 72 : 280,
+            maxWidth: listCollapsed ? 72 : "44%",
             display: "flex",
             flexDirection: "column",
             minHeight: 0,
@@ -748,8 +761,8 @@ export function ProfilesWidgetCore({
                 }
                 void loadList({ append: true, cursor: nextCursor });
               }}
-              defaultWidthPercent={100}
-              minWidthPercent={100}
+              defaultWidthPercent={listCollapsed ? 100 : 96}
+              minWidthPercent={listCollapsed ? 100 : 90}
               maxWidthPercent={100}
               renderCard={(item) => {
                 const source = items.find((current) => current.entityId === item.id);
@@ -819,21 +832,24 @@ export function ProfilesWidgetCore({
                         onChange={onSelectVersion}
                         rightSection={versionsLoading ? <Loader size="xs" /> : undefined}
                       />
-                      {historicalView ? (
-                        <Button
-                          size="xs"
-                          leftSection={<IconRotateClockwise size={16} />}
+                    </Group>
+                  </Stack>
+                  <Group gap={4} justify="flex-end" wrap="wrap">
+                    {historicalView ? (
+                      <Tooltip label="Save snapshot as new version (+1)">
+                        <ActionIcon
+                          color="teal"
+                          variant="filled"
+                          aria-label="Save snapshot as new version (+1)"
                           onClick={() => {
                             void handleSaveHistoricalAsNew();
                           }}
                           loading={busyEntityId === selectedEntityId}
                         >
-                          Save snapshot as new version (+1)
-                        </Button>
-                      ) : null}
-                    </Group>
-                  </Stack>
-                  <Group gap={4} justify="flex-end" wrap="wrap">
+                          <IconSparkles size={18} />
+                        </ActionIcon>
+                      </Tooltip>
+                    ) : null}
                     {!historicalView && (
                       <>
                         {editMode ? (
@@ -921,7 +937,7 @@ export function ProfilesWidgetCore({
                       autosize={false}
                       styles={{
                         root: { flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
-                        input: { flex: 1, minHeight: 200, resize: "none" },
+                        input: { flex: 1, minHeight: 0, height: "100%", resize: "none" },
                       }}
                       value={editDocument}
                       onChange={(event) => setEditDocument(event.currentTarget.value)}
@@ -934,7 +950,7 @@ export function ProfilesWidgetCore({
                       autosize={false}
                       styles={{
                         root: { flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
-                        input: { flex: 1, minHeight: 200, resize: "none" },
+                        input: { flex: 1, minHeight: 0, height: "100%", resize: "none" },
                       }}
                     />
                   )}

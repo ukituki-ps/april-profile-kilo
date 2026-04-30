@@ -117,6 +117,18 @@ const buildProvider = (): ProfilesDataProvider => ({
 });
 
 describe("ProfilesWidgetCore", () => {
+  it("uses pageSize=20 by default for initial list request", async () => {
+    const provider = buildProvider();
+    render(
+      <MantineProvider>
+        <ProfilesWidgetCore hostContext={hostContext} provider={provider} />
+      </MantineProvider>,
+    );
+
+    await screen.findByLabelText(`Profile row ${e1}`);
+    expect(provider.list).toHaveBeenCalledWith(expect.objectContaining({ limit: 20 }), expect.anything());
+  });
+
   it("renders CardListColumn in fill height mode", async () => {
     const provider = buildProvider();
     render(
