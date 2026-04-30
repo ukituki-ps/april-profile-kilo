@@ -1,5 +1,5 @@
 import { ApiError } from "../generated";
-import type { ProfileListItem, ProfileListResponse, ProfileSnapshot } from "../generated";
+import type { EntityTypeListResponse, ProfileListItem, ProfileListResponse, ProfileSnapshot } from "../generated";
 import type { OpenAPIConfig } from "../generated/core/OpenAPI";
 import { request as openApiRequest } from "../generated/core/request";
 import type {
@@ -11,6 +11,7 @@ import type {
   ProfilesProviderError,
   ProfilesProviderErrorCode,
   ProviderContext,
+  EntityTypeOption,
   UpdateProfileInput,
 } from "./profilesDataProvider";
 
@@ -159,6 +160,45 @@ export const createOpenApiProfilesProvider = (config: OpenApiProviderConfig): Pr
           },
         });
         return toDetails(await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() })));
+      } catch (error) {
+        throw toProviderError(error);
+      }
+    },
+    async getByVersion(entityId: string, version: number, ctx: ProviderContext) {
+      try {
+        const openApiConfig = buildConfig(config, ctx);
+        const promise = openApiRequest<ProfileSnapshot>(openApiConfig, {
+          method: "GET",
+          url: "/v1/entities/{entityID}/versions/{version}",
+          path: { entityID: entityId, version },
+          errors: {
+            401: "Unauthorized",
+            403: "Forbidden",
+            404: "Not found",
+          },
+        });
+        return toDetails(await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() })));
+      } catch (error) {
+        throw toProviderError(error);
+      }
+    },
+    async listEntityTypes(ctx: ProviderContext) {
+      try {
+        const openApiConfig = buildConfig(config, ctx);
+        const promise = openApiRequest<EntityTypeListResponse>(openApiConfig, {
+          method: "GET",
+          url: "/v1/entity-types",
+          errors: {
+            401: "Unauthorized",
+            403: "Forbidden",
+          },
+        });
+        const response = await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() }));
+        const items: EntityTypeOption[] = response.items.map((row) => ({
+          id: row.id,
+          label: `${row.namespace}/${row.code}`,
+        }));
+        return items;
       } catch (error) {
         throw toProviderError(error);
       }

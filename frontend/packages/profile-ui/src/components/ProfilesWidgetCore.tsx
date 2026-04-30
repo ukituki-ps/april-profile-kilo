@@ -1,10 +1,41 @@
 import { CardListColumn } from "@april/ui";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Box, Button, Card, Loader, Modal, Stack, Text, TextInput, Textarea, Title } from "@mantine/core";
+import {
+  IconDeviceFloppy,
+  IconEdit,
+  IconRotateClockwise,
+  IconTrash,
+  IconX,
+} from "@tabler/icons-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActionIcon,
+  Alert,
+  Box,
+  Button,
+  Card,
+  Group,
+  Loader,
+  Modal,
+  Select,
+  Stack,
+  Text,
+  TextInput,
+  Textarea,
+  Title,
+  Tooltip,
+} from "@mantine/core";
 import { emitProfileWidgetTelemetry } from "../observability";
 import type { ProfileWidgetObservabilityHandler } from "../observability";
+import {
+  extractProfileNameFromDocument,
+  isDuplicateProfileName,
+  listPrimaryLabel,
+  listSecondaryLabel,
+  tryParsePreviewDocument,
+} from "../profileDisplay";
 import type { ProfileWidgetHostContext, ProfilesListAction, ProfilesListItem } from "../types";
 import type {
+  ProfileDetails,
   ProfilesDataProvider,
   ProfilesListSort,
   ProfilesProviderErrorCode,
@@ -16,6 +47,8 @@ export type ProfilesWidgetCoreProps = {
   hostContext: ProfileWidgetHostContext;
   provider: ProfilesDataProvider;
   providerContext?: Omit<ProviderContext, "signal">;
+  /** После загрузки каталога типов подставить это значение в модалку создания (удобно для тестов/host). */
+  initialCreateEntityTypeId?: string | null;
   pageSize?: number;
   initialSearch?: string;
   initialTypeId?: string;
@@ -67,6 +100,7 @@ export function ProfilesWidgetCore({
   hostContext,
   provider,
   providerContext,
+  initialCreateEntityTypeId = null,
   pageSize = DEFAULT_PAGE_SIZE,
   initialSearch = "",
   initialTypeId = "all",
@@ -81,22 +115,29 @@ export function ProfilesWidgetCore({
   const [listLoadingMore, setListLoadingMore] = useState(false);
   const [listErrorMessage, setListErrorMessage] = useState<string | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [versionsLoading, setVersionsLoading] = useState(false);
   const [detailsErrorMessage, setDetailsErrorMessage] = useState<string | null>(null);
   const [mutationErrorMessage, setMutationErrorMessage] = useState<string | null>(null);
   const [items, setItems] = useState<ProfilesListItem[]>([]);
+  const itemsRef = useRef<ProfilesListItem[]>([]);
+  itemsRef.current = items;
   const [query, setQuery] = useState(initialSearch);
   const [filterTypeId, setFilterTypeId] = useState(initialTypeId);
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<Record<string, unknown> | null>(null);
-  const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
+  const [headVersion, setHeadVersion] = useState<number | null>(null);
+  const [viewedVersion, setViewedVersion] = useState<number | null>(null);
+  const [versionDetailsByNum, setVersionDetailsByNum] = useState<Record<number, ProfileDetails>>({});
   const [editMode, setEditMode] = useState(false);
   const [editDocument, setEditDocument] = useState("{}");
-  const [createTypeId, setCreateTypeId] = useState("");
-  const [createDocument, setCreateDocument] = useState('{"name":"New profile"}');
+  const [createTypeId, setCreateTypeId] = useState<string | null>(null);
+  const [createProfileName, setCreateProfileName] = useState("New profile");
+  const [createDocument, setCreateDocument] = useState("{}");
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [busyEntityId, setBusyEntityId] = useState<string | null>(null);
+  const [entityTypeOptions, setEntityTypeOptions] = useState<{ value: string; label: string }[]>([]);
 
   const requestId = hostContext.telemetry?.requestId;
   const preferredSelectionRef = useRef<string | null>(null);
@@ -128,6 +169,8 @@ export function ProfilesWidgetCore({
 
   const selectedItem = selectedEntityId ? items.find((item) => item.entityId === selectedEntityId) ?? null : null;
 
+  const historicalView = viewedVersion !== null && headVersion !== null && viewedVersion < headVersion;
+
   const reportError = (error: unknown, setter: (message: string) => void) => {
     if (isProfilesProviderError(error)) {
       const message = mapSecureMessage(error.code);
@@ -149,9 +192,13 @@ export function ProfilesWidgetCore({
     if (append) {
       setListLoadingMore(true);
     } else {
-      setListLoading(true);
       setListErrorMessage(null);
       setMutationErrorMessage(null);
+      if (itemsRef.current.length === 0) {
+        setListLoading(true);
+      } else {
+        setListLoadingMore(true);
+      }
     }
     emitProfileWidgetTelemetry(onObservability, hostContext, {
       widget: "profiles_list",
@@ -248,18 +295,67 @@ export function ProfilesWidgetCore({
 
   useEffect(() => {
     void loadList({ append: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => {
       listAbortControllerRef.current?.abort();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider, hostContext, pageSize, query, filterTypeId, initialSort, autoSelectFirst, providerContextBase]);
+
+  const applyDetailsSnapshot = useCallback((details: ProfileDetails) => {
+    setSelectedDocument(details.document);
+    setHeadVersion(details.version);
+    setViewedVersion(details.version);
+    setEditDocument(JSON.stringify(details.document, null, 2));
+    setEditMode(false);
+  }, []);
+
+  const loadVersionMap = useCallback(
+    async (entityId: string, head: ProfileDetails, signal: AbortSignal, reqRef: number) => {
+      const map: Record<number, ProfileDetails> = { [head.version]: head };
+      if (!provider.getByVersion || head.version <= 1) {
+        if (detailsRequestIdRef.current === reqRef) {
+          setVersionDetailsByNum(map);
+        }
+        return;
+      }
+      setVersionsLoading(true);
+      try {
+        const olderVersions = Array.from({ length: head.version - 1 }, (_, index) => index + 1);
+        const snapshots = await Promise.all(
+          olderVersions.map((version) =>
+            provider.getByVersion!(entityId, version, { ...providerContextBase, signal }),
+          ),
+        );
+        if (detailsRequestIdRef.current !== reqRef || signal.aborted) {
+          return;
+        }
+        snapshots.forEach((snap) => {
+          map[snap.version] = snap;
+        });
+        setVersionDetailsByNum(map);
+      } catch (error) {
+        if (signal.aborted || detailsRequestIdRef.current !== reqRef) {
+          return;
+        }
+        reportError(error, (message) => setDetailsErrorMessage(message));
+      } finally {
+        if (detailsRequestIdRef.current === reqRef) {
+          setVersionsLoading(false);
+        }
+      }
+    },
+    [provider, providerContextBase],
+  );
 
   useEffect(() => {
     if (!selectedEntityId) {
       setSelectedDocument(null);
-      setSelectedVersion(null);
+      setHeadVersion(null);
+      setViewedVersion(null);
+      setVersionDetailsByNum({});
       setDetailsErrorMessage(null);
       setEditMode(false);
+      setVersionsLoading(false);
       return;
     }
     const requestIdRef = ++detailsRequestIdRef.current;
@@ -269,6 +365,7 @@ export function ProfilesWidgetCore({
     const startedAt = performance.now();
     setDetailsLoading(true);
     setDetailsErrorMessage(null);
+    setVersionDetailsByNum({});
     emitProfileWidgetTelemetry(onObservability, hostContext, {
       widget: "profiles_list",
       event: "details_requested",
@@ -278,15 +375,18 @@ export function ProfilesWidgetCore({
         entity_id: selectedEntityId,
       },
     });
+
     void provider
       .get(selectedEntityId, { ...providerContextBase, signal: abortController.signal })
-      .then((snapshot) => {
+      .then(async (snapshot) => {
         if (requestIdRef !== detailsRequestIdRef.current) {
           return;
         }
-        setSelectedDocument(snapshot.document);
-        setSelectedVersion(snapshot.version);
-        setEditDocument(JSON.stringify(snapshot.document, null, 2));
+        if (abortController.signal.aborted) {
+          return;
+        }
+        applyDetailsSnapshot(snapshot);
+        await loadVersionMap(selectedEntityId, snapshot, abortController.signal, requestIdRef);
       })
       .catch((error) => {
         if (requestIdRef !== detailsRequestIdRef.current) {
@@ -313,16 +413,56 @@ export function ProfilesWidgetCore({
           setDetailsLoading(false);
         }
       });
+
     return () => {
       abortController.abort();
     };
-  }, [hostContext, provider, requestId, selectedEntityId, onObservability, providerContextBase]);
+  }, [hostContext, provider, requestId, selectedEntityId, onObservability, providerContextBase, applyDetailsSnapshot, loadVersionMap]);
+
+  const handleOpenCreateModal = () => {
+    setMutationErrorMessage(null);
+    setCreateProfileName("New profile");
+    setCreateDocument("{}");
+    const loadTypes = async () => {
+      if (!provider.listEntityTypes) {
+        setCreateTypeId(null);
+        setCreateModalOpened(true);
+        return;
+      }
+      try {
+        const rows = await provider.listEntityTypes({ ...providerContextBase });
+        setEntityTypeOptions(rows.map((row) => ({ value: row.id, label: row.label })));
+        const preferred =
+          initialCreateEntityTypeId && rows.some((row) => row.id === initialCreateEntityTypeId)
+            ? initialCreateEntityTypeId
+            : rows[0]?.id ?? null;
+        setCreateTypeId(preferred);
+      } catch (error) {
+        reportError(error, (message) => setMutationErrorMessage(message));
+        setCreateTypeId(null);
+      }
+      setCreateModalOpened(true);
+    };
+    void loadTypes();
+  };
 
   const handleCreate = async () => {
     setMutationErrorMessage(null);
     const parsed = parseJsonObject(createDocument);
-    if (!createTypeId.trim() || !parsed) {
-      setMutationErrorMessage("Create form expects entity type ID and JSON object document.");
+    const trimmedName = createProfileName.trim();
+    if (!createTypeId || !parsed || !trimmedName) {
+      setMutationErrorMessage("Choose entity type, profile name, and valid JSON document.");
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profiles_list",
+        event: "save_failed",
+        meta: { operation: "create_entity_profile", phase: "validation" },
+      });
+      return;
+    }
+
+    const merged: Record<string, unknown> = { ...parsed, name: trimmedName };
+    if (isDuplicateProfileName(trimmedName, items, null)) {
+      setMutationErrorMessage("Profile name must be unique within the loaded list.");
       emitProfileWidgetTelemetry(onObservability, hostContext, {
         widget: "profiles_list",
         event: "save_failed",
@@ -339,10 +479,7 @@ export function ProfilesWidgetCore({
     });
 
     try {
-      const created = await provider.create(
-        { entityTypeId: createTypeId.trim(), document: parsed },
-        { ...providerContextBase },
-      );
+      const created = await provider.create({ entityTypeId: createTypeId, document: merged }, { ...providerContextBase });
       const createdItem: ProfilesListItem = {
         entityId: created.entityId,
         entityTypeId: created.entityTypeId,
@@ -372,7 +509,7 @@ export function ProfilesWidgetCore({
   };
 
   const handleUpdate = async () => {
-    if (!selectedEntityId) {
+    if (!selectedEntityId || historicalView) {
       return;
     }
     setMutationErrorMessage(null);
@@ -387,6 +524,12 @@ export function ProfilesWidgetCore({
       return;
     }
 
+    const nameFromDoc = extractProfileNameFromDocument(parsed);
+    if (nameFromDoc && isDuplicateProfileName(nameFromDoc, items, selectedEntityId)) {
+      setMutationErrorMessage("Profile name must be unique within the loaded list.");
+      return;
+    }
+
     setBusyEntityId(selectedEntityId);
     emitProfileWidgetTelemetry(onObservability, hostContext, {
       widget: "profiles_list",
@@ -397,7 +540,7 @@ export function ProfilesWidgetCore({
     try {
       const updated = await provider.update(
         selectedEntityId,
-        { document: parsed, expectedVersion: selectedVersion ?? undefined },
+        { document: parsed, expectedVersion: viewedVersion ?? undefined },
         { ...providerContextBase },
       );
       const updatedItem: ProfilesListItem = {
@@ -408,21 +551,67 @@ export function ProfilesWidgetCore({
         preview: JSON.stringify(updated.document),
       };
       setItems((prev) => prev.map((item) => (item.entityId === selectedEntityId ? updatedItem : item)));
-      setSelectedDocument(updated.document);
-      setSelectedVersion(updated.version);
-      setEditMode(false);
+      applyDetailsSnapshot(updated);
+      setVersionDetailsByNum({});
       onAction?.({ type: "updated", item: updatedItem });
       emitProfileWidgetTelemetry(onObservability, hostContext, {
         widget: "profiles_list",
         event: "save_succeeded",
         meta: { operation: "update_entity_profile", entity_id: updatedItem.entityId, version: updatedItem.version },
       });
+      await loadVersionMap(selectedEntityId, updated, new AbortController().signal, detailsRequestIdRef.current);
     } catch (error) {
       reportError(error, (message) => setMutationErrorMessage(message));
       emitProfileWidgetTelemetry(onObservability, hostContext, {
         widget: "profiles_list",
         event: "save_failed",
         meta: { operation: "update_entity_profile", phase: "api", entity_id: selectedEntityId },
+      });
+    } finally {
+      setBusyEntityId(null);
+    }
+  };
+
+  const handleSaveHistoricalAsNew = async () => {
+    if (!selectedEntityId || !historicalView || !selectedDocument) {
+      return;
+    }
+    setMutationErrorMessage(null);
+    setBusyEntityId(selectedEntityId);
+    emitProfileWidgetTelemetry(onObservability, hostContext, {
+      widget: "profiles_list",
+      event: "save_submitted",
+      meta: { operation: "update_entity_profile_from_history", entity_id: selectedEntityId, from_version: viewedVersion },
+    });
+    try {
+      const updated = await provider.update(selectedEntityId, { document: selectedDocument }, { ...providerContextBase });
+      const updatedItem: ProfilesListItem = {
+        entityId: updated.entityId,
+        entityTypeId: updated.entityTypeId,
+        version: updated.version,
+        updatedAt: updated.updatedAt,
+        preview: JSON.stringify(updated.document),
+      };
+      setItems((prev) => prev.map((item) => (item.entityId === selectedEntityId ? updatedItem : item)));
+      applyDetailsSnapshot(updated);
+      setVersionDetailsByNum({});
+      onAction?.({ type: "updated", item: updatedItem });
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profiles_list",
+        event: "save_succeeded",
+        meta: {
+          operation: "update_entity_profile_from_history",
+          entity_id: updated.entityId,
+          version: updated.version,
+        },
+      });
+      await loadVersionMap(selectedEntityId, updated, new AbortController().signal, detailsRequestIdRef.current);
+    } catch (error) {
+      reportError(error, (message) => setMutationErrorMessage(message));
+      emitProfileWidgetTelemetry(onObservability, hostContext, {
+        widget: "profiles_list",
+        event: "save_failed",
+        meta: { operation: "update_entity_profile_from_history", phase: "api", entity_id: selectedEntityId },
       });
     } finally {
       setBusyEntityId(null);
@@ -460,11 +649,43 @@ export function ProfilesWidgetCore({
     }
   };
 
+  const onSelectVersion = (value: string | null) => {
+    if (!value) {
+      return;
+    }
+    const version = Number(value);
+    if (Number.isNaN(version)) {
+      return;
+    }
+    setViewedVersion(version);
+    const detail = versionDetailsByNum[version];
+    if (detail) {
+      setSelectedDocument(detail.document);
+      setEditDocument(JSON.stringify(detail.document, null, 2));
+      setEditMode(false);
+    }
+  };
+
+  const versionSelectData = useMemo(() => {
+    const nums = Object.keys(versionDetailsByNum)
+      .map(Number)
+      .sort((a, b) => b - a);
+    return nums.map((v) => ({
+      value: String(v),
+      label: v === headVersion ? `v${v} (current)` : `v${v}`,
+    }));
+  }, [versionDetailsByNum, headVersion]);
+
+  const displayNameForCard =
+    selectedItem === null
+      ? ""
+      : extractProfileNameFromDocument(selectedDocument ?? undefined) ?? listPrimaryLabel(selectedItem);
+
   const listItems = items.map((item) => ({
     id: item.entityId,
-    title: item.entityId,
-    description: `${item.entityTypeId} · v${item.version}`,
-    searchText: `${item.entityId} ${item.preview} ${item.entityTypeId}`,
+    title: listPrimaryLabel(item),
+    description: listSecondaryLabel(item),
+    searchText: `${item.entityId} ${item.preview} ${item.entityTypeId} ${listPrimaryLabel(item)}`,
   }));
 
   if (listLoading) {
@@ -477,73 +698,91 @@ export function ProfilesWidgetCore({
   }
 
   return (
-    <Stack gap="md">
-      <Title order={4}>Profiles list widget</Title>
-      <Text size="sm" c="dimmed">
-        Tenant: {hostContext.tenant.id}
-      </Text>
+    <Stack gap="md" style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
       {listErrorMessage ? <Alert color="red">{listErrorMessage}</Alert> : null}
       {mutationErrorMessage ? <Alert color="red">{mutationErrorMessage}</Alert> : null}
 
-      <Box style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
-        <Stack gap="xs" style={{ width: "25%", minWidth: 280 }}>
-          <CardListColumn
-            title="Profiles"
-            items={listItems}
-            mode="inline"
-            withSort={false}
-            withFilter
-            withAdd
-            searchValue={query}
-            onSearchChange={setQuery}
-            filterValue={{ type: filterTypeId === "all" ? undefined : filterTypeId }}
-            filterField="type"
-            filterLabel="Type"
-            filterOptions={[{ value: "all", label: "All types" }, ...typeOptions.filter((option) => option.value !== "all")]}
-            onFilterChange={(value) => setFilterTypeId(value.type ?? "all")}
-            onAddItem={() => setCreateModalOpened(true)}
-            totalItems={totalCount}
-            loadedItemsCount={items.length}
-            onReachListEnd={() => {
-              if (!nextCursor || listLoadingMore) {
-                return;
-              }
-              void loadList({ append: true, cursor: nextCursor });
-            }}
-            defaultWidthPercent={100}
-            minWidthPercent={100}
-            maxWidthPercent={100}
-            renderCard={(item) => {
-              const source = items.find((current) => current.entityId === item.id);
-              const selected = selectedEntityId === item.id;
-              return (
-                <Card
-                  withBorder
-                  shadow={selected ? "sm" : undefined}
-                  radius="md"
-                  p="sm"
-                  style={{ borderColor: selected ? "var(--mantine-color-blue-6)" : undefined, cursor: "pointer" }}
-                  onClick={() => {
-                    setSelectedEntityId(item.id);
-                    setEditMode(false);
-                    onOpenEntity?.(item.id);
-                  }}
-                >
-                  <Text fw={600} lineClamp={1}>
-                    {item.title}
-                  </Text>
-                  <Text size="xs" c="dimmed" lineClamp={1}>
-                    {item.description}
-                  </Text>
-                  {source ? (
-                    <Text size="xs" mt="xs" lineClamp={2}>
-                      {source.preview}
+      <Box
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "stretch",
+          gap: "1rem",
+        }}
+      >
+        <Stack
+          gap="xs"
+          style={{
+            flex: "0 1 360px",
+            minWidth: 0,
+            maxWidth: "44%",
+            display: "flex",
+            flexDirection: "column",
+            minHeight: 0,
+          }}
+        >
+          <Box style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <CardListColumn
+              title="Profiles"
+              items={listItems}
+              mode="inline"
+              withSort={false}
+              withFilter
+              withAdd
+              searchValue={query}
+              onSearchChange={setQuery}
+              filterValue={{ type: filterTypeId === "all" ? undefined : filterTypeId }}
+              filterField="type"
+              filterLabel="Type"
+              filterOptions={[{ value: "all", label: "All types" }, ...typeOptions.filter((option) => option.value !== "all")]}
+              onFilterChange={(value) => setFilterTypeId(value.type ?? "all")}
+              onAddItem={handleOpenCreateModal}
+              totalItems={totalCount}
+              loadedItemsCount={items.length}
+              onReachListEnd={() => {
+                if (!nextCursor || listLoadingMore) {
+                  return;
+                }
+                void loadList({ append: true, cursor: nextCursor });
+              }}
+              defaultWidthPercent={100}
+              minWidthPercent={100}
+              maxWidthPercent={100}
+              renderCard={(item) => {
+                const source = items.find((current) => current.entityId === item.id);
+                const selected = selectedEntityId === item.id;
+                return (
+                  <Card
+                    withBorder
+                    shadow={selected ? "sm" : undefined}
+                    radius="md"
+                    p="sm"
+                    aria-label={`Profile row ${source?.entityId ?? item.id}`}
+                    style={{ borderColor: selected ? "var(--mantine-color-blue-6)" : undefined, cursor: "pointer" }}
+                    onClick={() => {
+                      setSelectedEntityId(item.id);
+                      setEditMode(false);
+                      onOpenEntity?.(item.id);
+                    }}
+                  >
+                    <Text fw={600} lineClamp={1}>
+                      {item.title}
                     </Text>
-                  ) : null}
-                </Card>
-              );
-            }}
-          />
+                    <Text size="xs" c="dimmed" lineClamp={1}>
+                      {item.description}
+                    </Text>
+                    {source ? (
+                      <Text size="xs" mt="xs" lineClamp={1} c="dimmed" title={source.entityId}>
+                        {source.entityId}
+                      </Text>
+                    ) : null}
+                  </Card>
+                );
+              }}
+            />
+          </Box>
           {listLoadingMore ? (
             <Box style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <Loader size="xs" />
@@ -554,78 +793,151 @@ export function ProfilesWidgetCore({
           ) : null}
         </Stack>
 
-        <Stack gap="sm" style={{ width: "75%" }}>
+        <Stack gap="sm" style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>
           {items.length === 0 ? <Alert color="gray">No profiles found for current query.</Alert> : null}
           {selectedItem ? (
             <>
-              <Box style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem" }}>
-                <Stack gap={2}>
-                  <Title order={5}>Profile card</Title>
-                  <Text size="sm" c="dimmed">
-                    {selectedItem.entityId} · {selectedItem.entityTypeId} · v{selectedVersion ?? selectedItem.version}
-                  </Text>
-                </Stack>
-                <Box style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                  {editMode ? (
-                    <>
-                      <Button onClick={handleUpdate} loading={busyEntityId === selectedEntityId}>
-                        Save changes
-                      </Button>
-                      <Button
-                        variant="default"
+              <Box style={{ flexShrink: 0 }}>
+                <Group justify="space-between" align="flex-start" wrap="wrap" gap="sm">
+                  <Stack gap={4} style={{ flex: "1 1 200px", minWidth: 0 }}>
+                    <Title order={5}>Profile</Title>
+                    <Text size="sm" fw={600} lineClamp={1}>
+                      {displayNameForCard}
+                    </Text>
+                    <Text size="xs" c="dimmed" lineClamp={2}>
+                      {selectedItem.entityTypeId} · id {selectedItem.entityId}
+                    </Text>
+                    <Group gap="xs" wrap="wrap" align="center">
+                      <Select
+                        label="Version"
+                        size="xs"
+                        w={200}
+                        disabled={detailsLoading || Object.keys(versionDetailsByNum).length === 0}
+                        data={versionSelectData}
+                        value={viewedVersion !== null ? String(viewedVersion) : null}
+                        onChange={onSelectVersion}
+                        rightSection={versionsLoading ? <Loader size="xs" /> : undefined}
+                      />
+                      {historicalView ? (
+                        <Button
+                          size="xs"
+                          leftSection={<IconRotateClockwise size={16} />}
+                          onClick={() => {
+                            void handleSaveHistoricalAsNew();
+                          }}
+                          loading={busyEntityId === selectedEntityId}
+                        >
+                          Save snapshot as new version (+1)
+                        </Button>
+                      ) : null}
+                    </Group>
+                  </Stack>
+                  <Group gap={4} justify="flex-end" wrap="wrap">
+                    {!historicalView && (
+                      <>
+                        {editMode ? (
+                          <>
+                            <Tooltip label="Save changes">
+                              <ActionIcon
+                                variant="filled"
+                                aria-label="Save changes"
+                                onClick={() => {
+                                  void handleUpdate();
+                                }}
+                                loading={busyEntityId === selectedEntityId}
+                              >
+                                <IconDeviceFloppy size={18} />
+                              </ActionIcon>
+                            </Tooltip>
+                            <Tooltip label="Cancel editing">
+                              <ActionIcon
+                                variant="default"
+                                aria-label="Cancel editing"
+                                onClick={() => {
+                                  setEditMode(false);
+                                  if (selectedDocument) {
+                                    setEditDocument(JSON.stringify(selectedDocument, null, 2));
+                                  }
+                                }}
+                              >
+                                <IconX size={18} />
+                              </ActionIcon>
+                            </Tooltip>
+                          </>
+                        ) : (
+                          <Tooltip label="Edit profile">
+                            <ActionIcon
+                              variant="light"
+                              aria-label="Edit profile"
+                              onClick={() => {
+                                setEditMode(true);
+                                if (selectedDocument) {
+                                  setEditDocument(JSON.stringify(selectedDocument, null, 2));
+                                }
+                              }}
+                            >
+                              <IconEdit size={18} />
+                            </ActionIcon>
+                          </Tooltip>
+                        )}
+                      </>
+                    )}
+                    <Tooltip label="Delete profile">
+                      <ActionIcon
+                        color="red"
+                        variant="light"
+                        aria-label="Delete profile"
+                        loading={busyEntityId === selectedEntityId}
                         onClick={() => {
-                          setEditMode(false);
-                          if (selectedDocument) {
-                            setEditDocument(JSON.stringify(selectedDocument, null, 2));
+                          if (selectedEntityId) {
+                            void handleDelete(selectedEntityId);
                           }
                         }}
                       >
-                        Cancel
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      variant="light"
-                      onClick={() => {
-                        setEditMode(true);
-                        if (selectedDocument) {
-                          setEditDocument(JSON.stringify(selectedDocument, null, 2));
-                        }
-                      }}
-                    >
-                      Edit profile
-                    </Button>
-                  )}
-                  <Button
-                    color="red"
-                    variant="light"
-                    loading={busyEntityId === selectedEntityId}
-                    onClick={() => {
-                      if (selectedEntityId) {
-                        void handleDelete(selectedEntityId);
-                      }
-                    }}
-                  >
-                    Delete profile
-                  </Button>
-                </Box>
+                        <IconTrash size={18} />
+                      </ActionIcon>
+                    </Tooltip>
+                  </Group>
+                </Group>
               </Box>
+              {historicalView ? (
+                <Alert color="gray" title="Historical version">
+                  You are viewing an older version (read-only JSON). Use “Save snapshot as new version (+1)” to append a new
+                  head from this document.
+                </Alert>
+              ) : null}
               {detailsErrorMessage ? <Alert color="red">{detailsErrorMessage}</Alert> : null}
               {detailsLoading ? (
                 <Box style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <Loader size="sm" />
                   <Text size="sm">Loading selected profile...</Text>
                 </Box>
-              ) : editMode ? (
-                <Textarea
-                  label="Updated document (JSON object)"
-                  autosize
-                  minRows={10}
-                  value={editDocument}
-                  onChange={(event) => setEditDocument(event.currentTarget.value)}
-                />
               ) : (
-                <Textarea label="Profile document" value={JSON.stringify(selectedDocument ?? {}, null, 2)} minRows={10} readOnly />
+                <Box style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+                  {editMode && !historicalView ? (
+                    <Textarea
+                      label="Updated document (JSON object)"
+                      autosize={false}
+                      styles={{
+                        root: { flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
+                        input: { flex: 1, minHeight: 200, resize: "none" },
+                      }}
+                      value={editDocument}
+                      onChange={(event) => setEditDocument(event.currentTarget.value)}
+                    />
+                  ) : (
+                    <Textarea
+                      label="Profile document"
+                      value={JSON.stringify(selectedDocument ?? {}, null, 2)}
+                      readOnly
+                      autosize={false}
+                      styles={{
+                        root: { flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
+                        input: { flex: 1, minHeight: 200, resize: "none" },
+                      }}
+                    />
+                  )}
+                </Box>
               )}
             </>
           ) : (
@@ -635,12 +947,26 @@ export function ProfilesWidgetCore({
       </Box>
       <Modal opened={createModalOpened} onClose={() => setCreateModalOpened(false)} title="Create profile">
         <Stack gap="xs">
-          <TextInput
-            label="Entity type ID"
-            placeholder="entity_type_id"
-            value={createTypeId}
-            onChange={(event) => setCreateTypeId(event.currentTarget.value)}
-          />
+          {provider.listEntityTypes ? (
+            <Select
+              label="Entity type"
+              placeholder="Select type"
+              data={entityTypeOptions}
+              value={createTypeId}
+              onChange={setCreateTypeId}
+              searchable
+              nothingFoundMessage="No types"
+              comboboxProps={{ withinPortal: false }}
+            />
+          ) : (
+            <TextInput
+              label="Entity type ID"
+              placeholder="Published entity type UUID"
+              value={createTypeId ?? ""}
+              onChange={(e) => setCreateTypeId(e.currentTarget.value || null)}
+            />
+          )}
+          <TextInput label="Profile name" value={createProfileName} onChange={(e) => setCreateProfileName(e.currentTarget.value)} />
           <Textarea
             label="Document (JSON object)"
             autosize
@@ -648,7 +974,7 @@ export function ProfilesWidgetCore({
             value={createDocument}
             onChange={(event) => setCreateDocument(event.currentTarget.value)}
           />
-          <Button onClick={handleCreate} loading={busyEntityId === "create"}>
+          <Button onClick={() => void handleCreate()} loading={busyEntityId === "create"}>
             Create profile
           </Button>
         </Stack>

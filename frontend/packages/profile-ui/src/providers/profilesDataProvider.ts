@@ -34,6 +34,12 @@ export type UpdateProfileInput = {
   expectedVersion?: number;
 };
 
+/** Элемент каталога типов сущностей для Select в UI. */
+export type EntityTypeOption = {
+  id: string;
+  label: string;
+};
+
 export type ProfilesProviderErrorCode =
   | "unauthorized"
   | "forbidden"
@@ -69,9 +75,13 @@ export type ProviderContext = {
 export interface ProfilesDataProvider {
   list(query: ProfilesListQuery, ctx: ProviderContext): Promise<ProfilesListPage>;
   get(entityId: string, ctx: ProviderContext): Promise<ProfileDetails>;
+  /** Конкретная версия профиля (если не реализовано — виджет ограничится текущей версией). */
+  getByVersion?(entityId: string, version: number, ctx: ProviderContext): Promise<ProfileDetails>;
   create(input: CreateProfileInput, ctx: ProviderContext): Promise<ProfileDetails>;
   update(entityId: string, input: UpdateProfileInput, ctx: ProviderContext): Promise<ProfileDetails>;
   remove(entityId: string, ctx: ProviderContext): Promise<void>;
+  /** Каталог типов для модалки создания (если не реализовано — остаётся пустой Select). */
+  listEntityTypes?(ctx: ProviderContext): Promise<EntityTypeOption[]>;
 }
 
 export const isProfilesProviderError = (error: unknown): error is ProfilesProviderError => {

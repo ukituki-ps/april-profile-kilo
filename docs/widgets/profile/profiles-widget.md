@@ -13,7 +13,7 @@
 
 ## 2) Назначение
 
-Виджет `Profiles` предоставляет основной master-detail UX для управления профилями сущностей: слева список профилей с поиском/фильтрацией/дозагрузкой, справа карточка выбранного профиля с просмотром и редактированием, плюс создание нового профиля через модальное окно.
+Виджет `Profiles` предоставляет основной master-detail UX для управления профилями сущностей: слева список профилей с поиском/фильтрацией/дозагрузкой (отображаемое имя из `document.name` и версия), справа карточка выбранного профиля с выбором версии (исторические версии read-only + «Save snapshot as new version (+1)»), просмотром и редактированием JSON, действиями через иконки, плюс создание профиля через модалку (тип сущности из каталога `GET /v1/entity-types`, имя профиля и документ). Контейнер заполняет доступную высоту хоста (`flex`); повторная подгрузка списка без полноэкранного лоадера, если список уже отображался.
 
 ## 3) Контракт интеграции
 
@@ -23,10 +23,11 @@
 
 Ключевые контрактные элементы (Phase 6 baseline):
 
-- Вход: `hostContext`, `apiBaseUrl` (или API adapter), опционально `accessToken`, `pageSize`, `initialSearch`, `initialTypeId`, `initialSort`, `autoSelectFirst`.
+- Вход: `hostContext`, `apiBaseUrl` (или API adapter), опционально `accessToken`, `initialCreateEntityTypeId` (предвыбор типа в модалке создания), `pageSize`, `initialSearch`, `initialTypeId`, `initialSort`, `autoSelectFirst`.
 - Источник данных: server-side list/search/filter/pagination через provider/API, без входного `entityIds` как source of truth.
 - Выход: `onAction` (`created`/`updated`/`deleted`), `onError` с безопасным сообщением + `requestId` + `code`, `onOpenEntity` для host-навигации.
-- Поведение: DS-first layout 25/75 (`CardListColumn` + профильная карточка), с консистентным list/detail lifecycle.
+- Поведение: DS-first layout (`CardListColumn` + колонка карточки на `flex`, `minWidth: 0` для корректного схлопывания/расширения), провайдер может реализовать `getByVersion` и `listEntityTypes` (OpenAPI-провайдер реализует оба).
+- Уникальность `document.name` в UI: клиентская проверка по уже загруженной странице списка; серверный unique — при появлении контракта.
 
 ### Архитектурная схема ответственности (task 042)
 
@@ -57,7 +58,8 @@ flowchart LR
 
 - `@april/profile-ui` (workspace/npm пакет, semver).
 - `@april/ui` (`CardListColumn`) как основной DS-компонент списка.
-- OpenAPI методы list/get/create/update/delete профиля.
+- OpenAPI методы list/get/create/update/delete профиля; для версий — `GET /v1/entities/{id}/versions/{version}`; для типов — `GET /v1/entity-types`.
+- `@tabler/icons-react` для иконок действий в карточке (peer-подобное включение через зависимость пакета).
 
 ### Контракт list endpoint (task 043)
 
@@ -107,3 +109,4 @@ flowchart LR
 - Реализация Core/API refactor: [`../../../tasks/044-phase-6-profiles-widget-core-api-refactor/TASK.md`](../../../tasks/044-phase-6-profiles-widget-core-api-refactor/TASK.md), [`../../../tasks/044-phase-6-profiles-widget-core-api-refactor/PLAN.md`](../../../tasks/044-phase-6-profiles-widget-core-api-refactor/PLAN.md), [`../../../tasks/044-phase-6-profiles-widget-core-api-refactor/REPORT.md`](../../../tasks/044-phase-6-profiles-widget-core-api-refactor/REPORT.md).
 - Базовый CRUD-виджет (историческая база): [`../../../tasks/025-phase-4a-profile-profiles-list-crud-widget/TASK.md`](../../../tasks/025-phase-4a-profile-profiles-list-crud-widget/TASK.md).
 - UX-модернизация `widget-card`: [`../../../tasks/040-phase-5-widget-card-layout-modernization/TASK.md`](../../../tasks/040-phase-5-widget-card-layout-modernization/TASK.md).
+- Рефакторинг embed UI + версии + имя (task 051): [`../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/TASK.md`](../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/TASK.md), [`../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/PLAN.md`](../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/PLAN.md), [`../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/REPORT.md`](../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/REPORT.md).

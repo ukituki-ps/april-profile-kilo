@@ -83,6 +83,71 @@ describe("createOpenApiProfilesProvider", () => {
     });
   });
 
+  it("maps entity type list response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            items: [
+              {
+                id: "etype-1",
+                namespace: "ns",
+                code: "person",
+                status: "published",
+                draft_schema: {},
+                draft_schema_version: 1,
+                published_schema: {},
+                published_schema_version: 1,
+                published_at: "2026-01-01T00:00:00Z",
+                created_at: "2026-01-01T00:00:00Z",
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+    const provider = createOpenApiProfilesProvider({
+      apiBaseUrl: "http://localhost:8080/admin/profile/api",
+      accessToken: "config-token",
+    });
+
+    const rows = await provider.listEntityTypes!(baseCtx);
+    expect(rows).toEqual([{ id: "etype-1", label: "ns/person" }]);
+  });
+
+  it("maps profile snapshot by version", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            entity_id: "e1",
+            entity_type_id: "etype-1",
+            version: 3,
+            document: { name: "v3" },
+            created_at: "2026-04-29T10:00:00Z",
+            external_refs: [],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+    const provider = createOpenApiProfilesProvider({
+      apiBaseUrl: "http://localhost:8080/admin/profile/api",
+      accessToken: "config-token",
+    });
+
+    const details = await provider.getByVersion!("e1", 3, baseCtx);
+    expect(details).toMatchObject({
+      entityId: "e1",
+      entityTypeId: "etype-1",
+      version: 3,
+      document: { name: "v3" },
+    });
+  });
+
   it("propagates abort through context signal", async () => {
     const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
       return new Promise<Response>((_resolve, reject) => {
