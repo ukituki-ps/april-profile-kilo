@@ -39,7 +39,14 @@ export function ProfilesApiWidget({
         correlationId: hostContext.telemetry?.correlationId,
       },
     }),
-    [accessToken, hostContext],
+    [
+      accessToken,
+      hostContext.tenant.id,
+      hostContext.auth?.subject,
+      hostContext.auth?.roles,
+      hostContext.telemetry?.requestId,
+      hostContext.telemetry?.correlationId,
+    ],
   );
 
   return (

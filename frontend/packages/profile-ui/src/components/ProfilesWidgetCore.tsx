@@ -300,8 +300,9 @@ export function ProfilesWidgetCore({
     return () => {
       listAbortControllerRef.current?.abort();
     };
+    // Host embed objects may churn on shell route changes (`hostContext` new ref, same tenant) — anchor on tenant id only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provider, hostContext, pageSize, query, filterTypeId, initialSort, autoSelectFirst, providerContextBase]);
+  }, [provider, hostContext.tenant.id, pageSize, query, filterTypeId, initialSort, autoSelectFirst, providerContextBase]);
 
   const applyDetailsSnapshot = useCallback((details: ProfileDetails) => {
     setSelectedDocument(details.document);
@@ -419,7 +420,7 @@ export function ProfilesWidgetCore({
     return () => {
       abortController.abort();
     };
-  }, [hostContext, provider, requestId, selectedEntityId, onObservability, providerContextBase, applyDetailsSnapshot, loadVersionMap]);
+  }, [hostContext.tenant.id, provider, requestId, selectedEntityId, onObservability, providerContextBase, applyDetailsSnapshot, loadVersionMap]);
 
   const handleOpenCreateModal = () => {
     setMutationErrorMessage(null);
