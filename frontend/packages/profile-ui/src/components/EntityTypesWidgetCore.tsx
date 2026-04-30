@@ -737,6 +737,9 @@ export function EntityTypesWidgetCore({
             items={listItems}
             mode="inline"
             heightMode="fill"
+            defaultWidthPercent={96}
+            minWidthPercent={90}
+            maxWidthPercent={100}
             withSort={false}
             withFilter={false}
             withAdd
@@ -841,8 +844,8 @@ export function EntityTypesWidgetCore({
                       aria-label="Draft JSON schema"
                       value={draftText}
                       onChange={(e) => setDraftText(e.currentTarget.value)}
-                      styles={{ input: { ...monoTextareaSx, flex: 1, minHeight: 200 } }}
-                      style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+                      styles={{ input: { ...monoTextareaSx, width: "100%" } }}
+                      style={{ flex: 1, display: "flex", flexDirection: "column" }}
                       autosize
                       minRows={12}
                     />
