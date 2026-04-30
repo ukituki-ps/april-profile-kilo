@@ -150,8 +150,18 @@ export function EntityTypesWidgetCore({
           correlationId: hostContext.telemetry?.correlationId,
         },
       },
-    [hostContext, providerContext],
+    [
+      hostContext.tenant.id,
+      hostContext.auth?.subject,
+      hostContext.auth?.roles,
+      hostContext.telemetry?.requestId,
+      hostContext.telemetry?.correlationId,
+      providerContext,
+    ],
   );
+
+  const providerContextBaseRef = useRef(providerContextBase);
+  providerContextBaseRef.current = providerContextBase;
 
   const reportError = useCallback(
     (error: unknown, setter: (message: string) => void) => {
@@ -182,7 +192,7 @@ export function EntityTypesWidgetCore({
     });
     const started = performance.now();
     try {
-      const rows = await provider.listFamilies({ ...providerContextBase, signal: ac.signal });
+      const rows = await provider.listFamilies({ ...providerContextBaseRef.current, signal: ac.signal });
       if (reqId !== listRequestIdRef.current) {
         return;
       }
@@ -210,7 +220,7 @@ export function EntityTypesWidgetCore({
         setListLoading(false);
       }
     }
-  }, [hostContext.tenant.id, onObservability, provider, providerContextBase, reportError]);
+  }, [hostContext.tenant.id, onObservability, provider, reportError]);
 
   useEffect(() => {
     void loadFamilies();
@@ -243,8 +253,8 @@ export function EntityTypesWidgetCore({
       });
       try {
         const [detail, revs] = await Promise.all([
-          provider.getFamily(familyId, { ...providerContextBase, signal: ac.signal }),
-          provider.listRevisions(familyId, { ...providerContextBase, signal: ac.signal }),
+          provider.getFamily(familyId, { ...providerContextBaseRef.current, signal: ac.signal }),
+          provider.listRevisions(familyId, { ...providerContextBaseRef.current, signal: ac.signal }),
         ]);
         if (reqId !== detailRequestIdRef.current) {
           return;
@@ -275,7 +285,7 @@ export function EntityTypesWidgetCore({
         }
       }
     },
-    [applyFamilyDetail, hostContext.tenant.id, onObservability, provider, providerContextBase, reportError],
+    [applyFamilyDetail, hostContext.tenant.id, onObservability, provider, reportError],
   );
 
   useEffect(() => {
@@ -300,7 +310,7 @@ export function EntityTypesWidgetCore({
     }
     setRevisionsLoading(true);
     try {
-      const revs = await provider.listRevisions(selectedFamilyId, { ...providerContextBase });
+      const revs = await provider.listRevisions(selectedFamilyId, { ...providerContextBaseRef.current });
       const sorted = [...revs].sort((a, b) => a.revisionNo - b.revisionNo);
       setRevisions(sorted);
       const latest = sorted.length > 0 ? sorted[sorted.length - 1] : null;
@@ -315,7 +325,7 @@ export function EntityTypesWidgetCore({
     } finally {
       setRevisionsLoading(false);
     }
-  }, [provider, providerContextBase, reportError, selectedFamilyId]);
+  }, [provider, reportError, selectedFamilyId]);
 
   const loadUpgradePage = useCallback(
     async ({ append, cursor }: { append: boolean; cursor?: string }) => {
@@ -336,7 +346,7 @@ export function EntityTypesWidgetCore({
             cursor: append ? cursor : undefined,
             sort: "updated_desc",
           },
-          { ...providerContextBase },
+          { ...providerContextBaseRef.current },
         );
         setUpgradeEntities((prev) => (append ? [...prev, ...page.items] : page.items));
         setUpgradeNextCursor(page.nextCursor);
@@ -347,7 +357,7 @@ export function EntityTypesWidgetCore({
         setUpgradeLoadingMore(false);
       }
     },
-    [pageSize, provider, providerContextBase, reportError, selectedFamilyId],
+    [pageSize, provider, reportError, selectedFamilyId],
   );
 
   useEffect(() => {
@@ -389,7 +399,7 @@ export function EntityTypesWidgetCore({
       const updated = await provider.saveDraft(
         selectedFamilyId,
         { draftSchema: parsedDraftObject, ifDraftSchemaVersion: familyDetail.draftSchemaVersion },
-        { ...providerContextBase },
+        { ...providerContextBaseRef.current },
       );
       applyFamilyDetail(updated);
       void reloadRevisionsOnly();
@@ -429,7 +439,7 @@ export function EntityTypesWidgetCore({
       meta: { family_id: selectedFamilyId },
     });
     try {
-      const updated = await provider.publishDraft(selectedFamilyId, { ...providerContextBase });
+      const updated = await provider.publishDraft(selectedFamilyId, { ...providerContextBaseRef.current });
       applyFamilyDetail(updated);
       await reloadRevisionsOnly();
       onAction?.({ type: "revision_published", familyId: selectedFamilyId });
@@ -460,7 +470,7 @@ export function EntityTypesWidgetCore({
     }
     setBusy("reload");
     try {
-      const detail = await provider.getFamily(selectedFamilyId, { ...providerContextBase });
+      const detail = await provider.getFamily(selectedFamilyId, { ...providerContextBaseRef.current });
       applyFamilyDetail(detail);
       await reloadRevisionsOnly();
     } catch (error) {
@@ -487,7 +497,7 @@ export function EntityTypesWidgetCore({
     try {
       const created = await provider.createFamily(
         { namespace: createNamespace.trim(), code: createCode.trim(), draftSchema: draftObj },
-        { ...providerContextBase },
+        { ...providerContextBaseRef.current },
       );
       setCreateOpened(false);
       setCreateNamespace("");
@@ -517,7 +527,7 @@ export function EntityTypesWidgetCore({
       await provider.patchFamily(
         selectedFamilyId,
         { namespace: patchNamespace.trim(), code: patchCode.trim() },
-        { ...providerContextBase },
+        { ...providerContextBaseRef.current },
       );
       setPatchOpened(false);
       await loadFamilies();
@@ -537,7 +547,7 @@ export function EntityTypesWidgetCore({
     setBusy("delete");
     try {
       const deletedId = selectedFamilyId;
-      await provider.deleteFamily(deletedId, { ...providerContextBase });
+      await provider.deleteFamily(deletedId, { ...providerContextBaseRef.current });
       setDeleteOpened(false);
       setSelectedFamilyId(null);
       await loadFamilies();
@@ -580,7 +590,7 @@ export function EntityTypesWidgetCore({
         selectedTargetRevision === null
           ? undefined
           : { entityTypeRevisionId: selectedTargetRevision.id };
-      await provider.upgradeEntityProfileBinding(entityId, body, { ...providerContextBase });
+      await provider.upgradeEntityProfileBinding(entityId, body, { ...providerContextBaseRef.current });
       onAction?.({ type: "entity_upgrade_succeeded", entityId });
       emitProfileWidgetTelemetry(onObservability, hostContext, {
         widget: "entity_types",
@@ -619,7 +629,7 @@ export function EntityTypesWidgetCore({
           entityIds: [...selectedEntityIds],
           targetEntityTypeRevisionId: selectedTargetRevision?.id,
         },
-        { ...providerContextBase },
+        { ...providerContextBaseRef.current },
       );
       onAction?.({
         type: "batch_upgrade_completed",
@@ -660,7 +670,7 @@ export function EntityTypesWidgetCore({
           limit: 500,
           targetEntityTypeRevisionId: selectedTargetRevision?.id,
         },
-        { ...providerContextBase },
+        { ...providerContextBaseRef.current },
       );
       onAction?.({
         type: "batch_upgrade_completed",

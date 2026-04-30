@@ -161,8 +161,19 @@ export function ProfilesWidgetCore({
           correlationId: hostContext.telemetry?.correlationId,
         },
       },
-    [hostContext, providerContext],
+    [
+      hostContext.tenant.id,
+      hostContext.auth?.subject,
+      hostContext.auth?.roles,
+      hostContext.telemetry?.requestId,
+      hostContext.telemetry?.correlationId,
+      providerContext,
+    ],
   );
+
+  /** Latest auth token / tenant slice without retriggering list effects when only `accessToken` rotates. */
+  const providerContextBaseRef = useRef(providerContextBase);
+  providerContextBaseRef.current = providerContextBase;
 
   const typeOptions = useMemo(() => {
     const unique = [...new Set(items.map((item) => item.entityTypeId))];
@@ -220,7 +231,7 @@ export function ProfilesWidgetCore({
           cursor,
           sort: initialSort,
         },
-        { ...providerContextBase, signal: abortController.signal },
+        { ...providerContextBaseRef.current, signal: abortController.signal },
       );
       if (requestIdRef !== listRequestIdRef.current) {
         return;
@@ -300,9 +311,10 @@ export function ProfilesWidgetCore({
     return () => {
       listAbortControllerRef.current?.abort();
     };
-    // Host embed objects may churn on shell route changes (`hostContext` new ref, same tenant) — anchor on tenant id only.
+    // List reload: tenant + query deps only. `providerContextBase` (incl. accessToken) is read via ref so token rotation
+    // does not duplicate GETs; `loadList` is intentionally omitted from deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provider, hostContext.tenant.id, pageSize, query, filterTypeId, initialSort, autoSelectFirst, providerContextBase]);
+  }, [provider, hostContext.tenant.id, pageSize, query, filterTypeId, initialSort, autoSelectFirst]);
 
   const applyDetailsSnapshot = useCallback((details: ProfileDetails) => {
     setSelectedDocument(details.document);
@@ -326,7 +338,7 @@ export function ProfilesWidgetCore({
         const olderVersions = Array.from({ length: head.version - 1 }, (_, index) => index + 1);
         const snapshots = await Promise.all(
           olderVersions.map((version) =>
-            provider.getByVersion!(entityId, version, { ...providerContextBase, signal }),
+            provider.getByVersion!(entityId, version, { ...providerContextBaseRef.current, signal }),
           ),
         );
         if (detailsRequestIdRef.current !== reqRef || signal.aborted) {
@@ -347,7 +359,7 @@ export function ProfilesWidgetCore({
         }
       }
     },
-    [provider, providerContextBase],
+    [provider],
   );
 
   useEffect(() => {
@@ -380,7 +392,7 @@ export function ProfilesWidgetCore({
     });
 
     void provider
-      .get(selectedEntityId, { ...providerContextBase, signal: abortController.signal })
+      .get(selectedEntityId, { ...providerContextBaseRef.current, signal: abortController.signal })
       .then(async (snapshot) => {
         if (requestIdRef !== detailsRequestIdRef.current) {
           return;
@@ -420,7 +432,7 @@ export function ProfilesWidgetCore({
     return () => {
       abortController.abort();
     };
-  }, [hostContext.tenant.id, provider, requestId, selectedEntityId, onObservability, providerContextBase, applyDetailsSnapshot, loadVersionMap]);
+  }, [hostContext.tenant.id, provider, requestId, selectedEntityId, onObservability, applyDetailsSnapshot, loadVersionMap]);
 
   const handleOpenCreateModal = () => {
     setMutationErrorMessage(null);
@@ -433,7 +445,7 @@ export function ProfilesWidgetCore({
         return;
       }
       try {
-        const rows = await provider.listEntityTypes({ ...providerContextBase });
+        const rows = await provider.listEntityTypes({ ...providerContextBaseRef.current });
         setEntityTypeOptions(rows.map((row) => ({ value: row.id, label: row.label })));
         const preferred =
           initialCreateEntityTypeId && rows.some((row) => row.id === initialCreateEntityTypeId)
@@ -482,7 +494,7 @@ export function ProfilesWidgetCore({
     });
 
     try {
-      const created = await provider.create({ entityTypeId: createTypeId, document: merged }, { ...providerContextBase });
+      const created = await provider.create({ entityTypeId: createTypeId, document: merged }, { ...providerContextBaseRef.current });
       const createdItem: ProfilesListItem = {
         entityId: created.entityId,
         entityTypeId: created.entityTypeId,
@@ -544,7 +556,7 @@ export function ProfilesWidgetCore({
       const updated = await provider.update(
         selectedEntityId,
         { document: parsed, expectedVersion: viewedVersion ?? undefined },
-        { ...providerContextBase },
+        { ...providerContextBaseRef.current },
       );
       const updatedItem: ProfilesListItem = {
         entityId: updated.entityId,
@@ -587,7 +599,7 @@ export function ProfilesWidgetCore({
       meta: { operation: "update_entity_profile_from_history", entity_id: selectedEntityId, from_version: viewedVersion },
     });
     try {
-      const updated = await provider.update(selectedEntityId, { document: selectedDocument }, { ...providerContextBase });
+      const updated = await provider.update(selectedEntityId, { document: selectedDocument }, { ...providerContextBaseRef.current });
       const updatedItem: ProfilesListItem = {
         entityId: updated.entityId,
         entityTypeId: updated.entityTypeId,
@@ -631,7 +643,7 @@ export function ProfilesWidgetCore({
     });
 
     try {
-      await provider.remove(entityId, { ...providerContextBase });
+      await provider.remove(entityId, { ...providerContextBaseRef.current });
       onAction?.({ type: "deleted", entityId });
       emitProfileWidgetTelemetry(onObservability, hostContext, {
         widget: "profiles_list",
