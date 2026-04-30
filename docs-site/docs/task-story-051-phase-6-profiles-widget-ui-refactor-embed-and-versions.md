@@ -42,6 +42,6 @@ go test ./...
 
 ## Артефакты
 
-- [`tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/TASK.md`](../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/TASK.md)
-- [`tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/PLAN.md`](../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/PLAN.md)
-- [`tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/REPORT.md`](../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/REPORT.md)
+- [`tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/TASK.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/TASK.md)
+- [`tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/PLAN.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/PLAN.md)
+- [`tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/REPORT.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/REPORT.md)
