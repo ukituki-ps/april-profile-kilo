@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { ProfilesWidgetCore } from "./ProfilesWidgetCore";
 import type { ProfilesWidgetCoreProps } from "./ProfilesWidgetCore";
 import { createOpenApiProfilesProvider } from "../providers/openapiProfilesProvider";
@@ -26,11 +26,16 @@ export function ProfilesApiWidget({
 }: ProfilesApiWidgetProps) {
   // Stable provider: token comes from `providerContext` per request, not from provider instance identity.
   const provider = useMemo(() => createOpenApiProfilesProvider({ apiBaseUrl }), [apiBaseUrl]);
+  // Keycloak updates `accessToken` often; it must NOT recreate this object (WidgetCore effects + useMemo churn).
+  const accessTokenRef = useRef(accessToken);
+  accessTokenRef.current = accessToken;
   const providerContext = useMemo<Omit<ProviderContext, "signal">>(
     () => ({
       tenantId: hostContext.tenant.id,
       auth: {
-        accessToken,
+        get accessToken(): string | undefined {
+          return accessTokenRef.current;
+        },
         subject: hostContext.auth?.subject,
         roles: hostContext.auth?.roles,
       },
@@ -40,7 +45,6 @@ export function ProfilesApiWidget({
       },
     }),
     [
-      accessToken,
       hostContext.tenant.id,
       hostContext.auth?.subject,
       hostContext.auth?.roles,
