@@ -16,6 +16,7 @@ title: Architecture Decision Records
 | [0002](0002-april-profile-scope-and-multitenancy.md) | AprilProfile: назначение, границы, мультитенантность | принято |
 | [0003](0003-april-profile-data-model-policies.md) | AprilProfile: метамодель, версии, authority, события | принято |
 | [0004](0004-hybrid-ui-integration-model.md) | Гибридная интеграция UI: Host / Widget / API–BFF-first | принято |
+| [0005](0005-entity-type-revisions-and-entity-binding.md) | Ревизии типа сущности и привязка entity к опубликованной схеме | принято |
 
 ## Как добавить запись
 
