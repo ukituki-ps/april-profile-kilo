@@ -44,4 +44,5 @@
 
 ## См. также
 
+- Режим **incident triage / fix** (ошибки, корреляция Sentry → Loki → Prometheus) — [`AGENT_ERROR_TRIAGE_PROMPT.md`](./AGENT_ERROR_TRIAGE_PROMPT.md).
 - Декомпозиция **фазы** дорожной карты в отдельные папки `tasks/<NNN-slug>/` — [`AGENT_PHASE_TASKS_MASTER_PROMPT.md`](./AGENT_PHASE_TASKS_MASTER_PROMPT.md).
