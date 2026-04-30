@@ -1,19 +1,9 @@
-export { EntityProfileWidget } from "./components/EntityProfileWidget";
-export type { EntityProfileWidgetProps } from "./components/EntityProfileWidget";
 export { ProfilesWidget } from "./components/ProfilesWidget";
 export type { ProfilesWidgetProps } from "./components/ProfilesWidget";
 export { ProfilesApiWidget } from "./components/ProfilesApiWidget";
 export type { ProfilesApiWidgetProps } from "./components/ProfilesApiWidget";
 export { ProfilesWidgetCore } from "./components/ProfilesWidgetCore";
 export type { ProfilesWidgetCoreProps } from "./components/ProfilesWidgetCore";
-export { ProfilesListWidget } from "./components/ProfilesListWidget";
-export type { ProfilesListWidgetProps } from "./components/ProfilesListWidget";
-export { ProfileInstancesWidget } from "./components/ProfileInstancesWidget";
-export type { ProfileInstancesWidgetProps } from "./components/ProfileInstancesWidget";
-export { InstanceHistoryWidget } from "./components/InstanceHistoryWidget";
-export type { InstanceHistoryWidgetProps } from "./components/InstanceHistoryWidget";
-export { ConflictQueueWidget } from "./components/ConflictQueueWidget";
-export type { ConflictQueueWidgetProps } from "./components/ConflictQueueWidget";
 export { EntityTypesWidget } from "./components/EntityTypesWidget";
 export type { EntityTypesWidgetProps } from "./components/EntityTypesWidget";
 export { EntityTypesApiWidget } from "./components/EntityTypesApiWidget";
@@ -22,8 +12,6 @@ export { EntityTypesWidgetCore } from "./components/EntityTypesWidgetCore";
 export type { EntityTypesWidgetCoreProps } from "./components/EntityTypesWidgetCore";
 export type {
   EntityTypesWidgetAction,
-  ProfileInstanceListItem,
-  ProfileInstancesAction,
   ProfileWidgetHostContext,
   ProfilesListAction,
   ProfilesListItem,

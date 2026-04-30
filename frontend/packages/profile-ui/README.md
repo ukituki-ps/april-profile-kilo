@@ -1,217 +1,66 @@
 # `@april/profile-ui`
 
-Embeddable React widget package for AprilProfile scenarios in AprilHub/host apps.
+Embeddable React widgets for AprilProfile in AprilHub/host apps. Публичная поверхность пакета: **`ProfilesWidget`** (`profiles-widget`) и **`EntityTypesWidget`** (`entity-types-widget`), плюс провайдеры/OpenAPI-клиент для кастомного wiring.
 
-## Observability (фаза 4a)
+## Observability
 
-Все виджеты ниже принимают опциональный **`onObservability`**: колбэк с типом `ProfileWidgetTelemetryEvent` (`widget`, `event`, `request_id`, `correlation_id`, опционально `api_request_id`, `meta`). Базовые события: **`view_loaded`**, **`list_requested`**, **`list_succeeded`**, **`list_failed`**, **`details_requested`**, **`details_failed`**, **`save_submitted`**, **`save_succeeded`**, **`save_failed`**. Для **`entity_types`** дополнительно: **`draft_save_*`**, **`publish_*`**, **`upgrade_*`**, **`batch_upgrade_*`** (см. `ProfileWidgetTelemetryEventName` в `src/observability.ts`). Идентификаторы берутся из `hostContext.telemetry.requestId` и опционально `correlationId` (см. `docs/WIDGET_OBSERVABILITY_GUIDE.md` §3.1). Типы и `emitProfileWidgetTelemetry` экспортируются из пакета.
+Виджеты принимают опциональный **`onObservability`**: колбэк с типом `ProfileWidgetTelemetryEvent` (`widget`, `event`, `request_id`, `correlation_id`, опционально `api_request_id`, `meta`). Базовые события: **`view_loaded`**, **`list_requested`**, **`list_succeeded`**, **`list_failed`**, **`details_requested`**, **`details_failed`**, **`save_submitted`**, **`save_succeeded`**, **`save_failed`**. Для **`entity_types`** дополнительно: **`draft_save_*`**, **`publish_*`**, **`upgrade_*`**, **`batch_upgrade_*`** (см. `ProfileWidgetTelemetryEventName` в `src/observability.ts`). Идентификаторы — из `hostContext.telemetry.requestId` и опционально `correlationId` (см. `docs/WIDGET_OBSERVABILITY_GUIDE.md` §3.1). Экспортируются `emitProfileWidgetTelemetry`, `buildTelemetryIds` и типы событий.
 
-## Public API
+Стабильные значения поля **`widget`**: `profiles_list`, `entity_types`.
 
-### `EntityProfileWidget`
+## `ProfilesWidget`
 
-Props:
+Фасад над **`ProfilesApiWidget`** → **`ProfilesWidgetCore`** + `createOpenApiProfilesProvider`.
 
-- `hostContext` — host/widget v1 context (`tenant`, optional `auth`, optional telemetry fields).
-- `entityId` — target entity UUID.
-- `apiBaseUrl` — profile API base URL (for BFF flow usually `/admin/profile/api`).
-- `accessToken?` — Bearer token passed to generated OpenAPI client.
-- `onSaveSuccess?` — callback after successful `PUT /v1/entities/{entityID}`.
-- `onError?` — callback with a normalized error message.
-- `onObservability?` — единый контур событий (`view_loaded`, `save_*`), см. раздел «Observability».
+Props (см. также `ProfilesWidgetProps` в исходниках):
 
-### `ProfilesWidget`
+- `hostContext` — контекст host (`tenant`, опционально `auth`, telemetry).
+- `apiBaseUrl`, `accessToken?` — база API и Bearer для OpenAPI-клиента.
+- `pageSize?`, `initialSearch?`, `initialTypeId?`, `initialSort?`, `initialCreateEntityTypeId?`, `autoSelectFirst?`
+- `onAction?`, `onError?`, `onOpenEntity?`, `onObservability?`
 
-Props:
+Поведение: master-detail (список профилей + карточка), server-side list/search/filter, CRUD, версии через провайдер.
 
-- `hostContext` — host/widget v1 context (`tenant`, optional `auth`, optional telemetry fields).
-- `apiBaseUrl` — profile API base URL (for BFF flow usually `/admin/profile/api`).
-- `accessToken?` — Bearer token for OpenAPI client.
-- `pageSize?` — list page size (server-side pagination step, default: `5`).
-- `initialSearch?` — initial server-side search query.
-- `initialTypeId?` — initial server-side type filter.
-- `initialSort?` — initial server-side sort (`updated_desc` by default).
-- `initialCreateEntityTypeId?` — после загрузки каталога типов предвыбрать этот `entity_type_id` в модалке создания (host/tests).
-- `autoSelectFirst?` — auto-select first row after list load (default: `false`).
-- `onAction?` — typed callback for CRUD actions (`created`, `updated`, `deleted`).
-- `onError?` — callback with normalized error payload (`message`, optional `requestId`, optional `code`).
-- `onOpenEntity?` — callback fired when user opens a profile card.
-- `onObservability?` — события наблюдаемости, см. раздел «Observability».
+Экспорты для кастомного wiring: **`ProfilesWidgetCore`**, **`ProfilesApiWidget`**, **`ProfilesDataProvider`**, **`createOpenApiProfilesProvider`**.
 
-Provider contract highlights (variant C hardening):
+## `EntityTypesWidget`
 
-- `ProfilesDataProvider` methods receive `ProviderContext` with `tenantId`, optional auth metadata, optional telemetry IDs and optional `AbortSignal`.
-- `ProfilesApiWidget` builds this context from `hostContext` + `accessToken`.
-- `ProfilesWidgetCore` drives request cancellation for list/details via `AbortController`.
+Фасад каталога семейств типов (`widgetId`: `entity-types-widget`): **`EntityTypesWidgetCore`** + **`EntityTypesApiWidget`** + **`createOpenApiEntityTypesProvider`**.
 
-Architecture baseline (task 042):
+Props: как у профилей по `hostContext` / `apiBaseUrl` / `accessToken`, плюс `pageSize?`, `providerContext?`, `onAction?`, `onError?`, `onObservability?`, `onOpenEntity?`.
 
-- `ProfilesWidget` is a public facade.
-- `ProfilesApiWidget` is an API adapter/wiring layer.
-- `ProfilesWidgetCore` owns UI/state machine and works via provider contract.
-- Source of truth for list is server-side list/search/filter/pagination API (no `entityIds` input contract).
+Экспорты: **`EntityTypesWidgetCore`**, **`EntityTypesApiWidget`**, **`EntityTypesDataProvider`**, **`createOpenApiEntityTypesProvider`**.
 
-Backward compatibility and migration note:
+## Generated OpenAPI client
 
-- Legacy import `ProfilesListWidget` is kept as a compatibility alias to `ProfilesWidget`.
-- `entityIds` is removed from public props contract and must not be used in new integrations.
-
-Behavior:
-
-- Uses DS-first master-detail layout: left `CardListColumn` (search + current selection), right profile card; root fills host height (`flex`), columns use `minWidth: 0` so the detail pane expands when the list narrows.
-- Left side includes filter modal (type filter) + incremental loading via `CardListColumn` (`onReachListEnd`).
-- List rows show profile display name (`document.name` when preview JSON contains it) and version; entity id is secondary.
-- "Plus" opens create modal: entity type from `GET /v1/entity-types` when `listEntityTypes` is implemented, profile name + JSON document.
-- Right card: version `Select` (loads historical versions via provider `getByVersion`), actions as icon buttons (`@tabler/icons-react`), historical snapshot can be saved as a new head version (+1).
-
-### `EntityTypesWidget` (фаза 7)
-
-Публичный фасад каталога семейств типов с ревизиями и апгрейдом привязки сущностей (`widgetId`: `entity-types-widget`). Архитектура: **`EntityTypesWidgetCore` + `EntityTypesApiWidget` + `createOpenApiEntityTypesProvider`**.
-
-Props (`EntityTypesWidgetProps` = `EntityTypesApiWidgetProps`):
-
-- `hostContext`, `apiBaseUrl`, `accessToken?` — как у `ProfilesWidget`.
-- `pageSize?` — размер страницы списка сущностей на вкладке **Upgrade** (по умолчанию `20`).
-- `providerContext?` — переопределение контекста провайдера без `signal` (редко; иначе собирается из `hostContext` + `accessToken`).
-- `onAction?` — доменные события (`EntityTypesWidgetAction` в `src/types.ts`).
-- `onError?`, `onObservability?`, `onOpenEntity?` — как у профилей; `onOpenEntity` вызывается при клике по `entity_id` в таблице апгрейда.
-
-Экспорты для кастомного wiring: `EntityTypesWidgetCore`, `EntityTypesApiWidget`, `EntityTypesDataProvider`, `createOpenApiEntityTypesProvider`.
-
-Поведение:
-
-- Master–detail: слева `CardListColumn` (семейства), справа вкладки **Draft** / **Revisions** / **Upgrade**; корень заполняет высоту embed (`flex`, `minHeight: 0`).
-- Черновик: JSON в моноширинном `Textarea`, сохранение с `if_draft_schema_version`, конфликт **409** — баннер и кнопка «Reload draft».
-- Публикация, PATCH/DELETE семейства, single/batch upgrade через OpenAPI задачи 053.
-
-### `ProfileInstancesWidget`
-
-Props:
-
-- `hostContext` — host/widget v1 context (`tenant`, optional `auth`, optional telemetry fields).
-- `profileId` — selected profile/type ID, all operations are scoped to this context.
-- `instanceIds` — instance IDs to load (`GET /v1/entities/{entityID}` for each ID), hidden/unavailable rows are skipped.
-- `apiBaseUrl` — profile API base URL (for BFF flow usually `/admin/profile/api`).
-- `accessToken?` — Bearer token for OpenAPI client.
-- `pageSize?` — client-side pagination size (default: `5`).
-- `onAction?` — typed callback for CRUD actions (`created`, `updated`, `deleted`).
-- `onOpenInstance?` — navigation callback for opening instance card.
-- `onError?` — callback with normalized error payload.
-- `onObservability?` — события наблюдаемости, см. раздел «Observability».
-
-### `InstanceHistoryWidget`
-
-Props:
-
-- `hostContext` — host/widget v1 context (`tenant`, optional `auth`, optional telemetry fields).
-- `entityId` — target instance ID for append-only history.
-- `apiBaseUrl` — profile API base URL (for BFF flow usually `/admin/profile/api`).
-- `accessToken?` — Bearer token for OpenAPI client.
-- `onError?` — callback with normalized error payload.
-- `onObservability?` — для истории эмитится только `view_loaded` (нет мутаций в текущем API).
-
-Notes:
-
-- Versions are loaded from `GET /v1/entities/{entityID}` + `GET /v1/entities/{entityID}/versions/{version}`.
-- Diff supports comparison against current or previous version.
-- Current API contract has no restore endpoint, so widget is intentionally read-only.
-
-### `ConflictQueueWidget`
-
-Props:
-
-- `hostContext` — host/widget v1 context (`tenant`, optional `auth`, optional telemetry fields).
-- `apiBaseUrl` — profile API base URL (for BFF flow usually `/admin/profile/api`).
-- `accessToken?` — Bearer token for OpenAPI client (admin realm role required on API).
-- `onError?` — callback with normalized error payload (`401/403/404/409` mapped to operator-safe copy).
-- `onObservability?` — `view_loaded` после списка; `save_*` для resolve и merge.
-
-Notes:
-
-- Uses admin OpenAPI operations: list conflicts, resolve conflict, merge duplicate entities.
-- After success, shows a short audit-oriented summary (entity/version from API responses).
-
-### Generated OpenAPI API client
-
-Package exports generated modules from `src/generated`:
-
-- `OpenAPI` — runtime config (`BASE`, `TOKEN`, etc.).
-- `ProfilesService` — public profile API methods generated from `openapi/openapi.yaml`.
-- Admin routes (`AdminService` in `src/generated`) are used internally by `ConflictQueueWidget`; regenerate via `npm run generate:api` in this package when OpenAPI changes.
+- `OpenAPI` — runtime config (`BASE`, `TOKEN`, …).
+- `ProfilesService` — публичные методы профилей из `openapi/openapi.yaml`.
+- Регенерация: `npm run generate:api` в этом пакете при изменении OpenAPI.
 
 ## Usage example
 
 ```tsx
-import {
-  ConflictQueueWidget,
-  EntityProfileWidget,
-  InstanceHistoryWidget,
-  ProfileInstancesWidget,
-  ProfilesWidget,
-} from "@april/profile-ui";
+import { EntityTypesWidget, ProfilesWidget } from "@april/profile-ui";
 
-<EntityProfileWidget
+<ProfilesWidget
   hostContext={{ tenant: { id: "tenant-a" }, telemetry: { requestId: "req-1" } }}
-  entityId="c7c5e6ea-8787-4ca0-a691-9f4fdc9830ff"
   apiBaseUrl="/admin/profile/api"
   accessToken={accessToken}
-  onSaveSuccess={({ entityId, version }) => {
-    console.log("saved", entityId, version);
+  onAction={(action) => {
+    console.log("profiles action", action.type);
   }}
 />;
 
-<ProfilesWidget
+<EntityTypesWidget
   hostContext={{ tenant: { id: "tenant-a" }, telemetry: { requestId: "req-2" } }}
   apiBaseUrl="/admin/profile/api"
   accessToken={accessToken}
-  pageSize={10}
-  initialSearch="Jane"
-  initialTypeId="89ac9958-fec8-43d7-8908-f0438e8e0e39"
-  onAction={(action) => {
-    console.log("profiles list action", action.type);
-  }}
-/>;
-
-<ProfileInstancesWidget
-  hostContext={{ tenant: { id: "tenant-a" }, telemetry: { requestId: "req-3" } }}
-  profileId="89ac9958-fec8-43d7-8908-f0438e8e0e39"
-  instanceIds={[
-    "c7c5e6ea-8787-4ca0-a691-9f4fdc9830ff",
-    "4f18363d-70e8-4814-9d12-5236b18877d0",
-  ]}
-  apiBaseUrl="/admin/profile/api"
-  accessToken={accessToken}
-  onAction={(action) => {
-    console.log("instances action", action.type);
-  }}
-  onOpenInstance={(entityId) => {
-    console.log("open instance", entityId);
-  }}
-/>;
-
-<InstanceHistoryWidget
-  hostContext={{ tenant: { id: "tenant-a" }, telemetry: { requestId: "req-4" } }}
-  entityId="c7c5e6ea-8787-4ca0-a691-9f4fdc9830ff"
-  apiBaseUrl="/admin/profile/api"
-  accessToken={accessToken}
-  onError={(payload) => {
-    console.log("history error", payload.message);
-  }}
-/>;
-
-<ConflictQueueWidget
-  hostContext={{ tenant: { id: "tenant-a" }, telemetry: { requestId: "req-5" } }}
-  apiBaseUrl="/admin/profile/api"
-  accessToken={accessToken}
-  onError={(payload) => {
-    console.log("conflicts error", payload.message);
-  }}
 />;
 ```
 
 ## Local commands
 
-From `frontend/` root:
+Из корня `frontend/`:
 
 ```bash
 npm run lint -w @april/profile-ui
@@ -219,4 +68,4 @@ npm run test -w @april/profile-ui
 npm run build -w @april/profile-ui
 ```
 
-`build` runs OpenAPI regeneration before TypeScript compile.
+`build` перед компиляцией запускает регенерацию OpenAPI.

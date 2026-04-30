@@ -54,7 +54,7 @@ sidebar_position: 11
 | `save_succeeded` | Успешный ответ API. |
 | `save_failed` | Валидация до API или ошибка API. |
 
-Стабильные `widget`: `entity_profile`, `profiles_list`, `profile_instances`, `instance_history`, `conflict_queue`. Подробности — канонический файл в корне репозитория `docs/WIDGET_OBSERVABILITY_GUIDE.md` §3.1.
+Стабильные `widget`: `profiles_list`, `entity_types`. Подробности — канонический файл в корне репозитория `docs/WIDGET_OBSERVABILITY_GUIDE.md` §3.1.
 
 ---
 
