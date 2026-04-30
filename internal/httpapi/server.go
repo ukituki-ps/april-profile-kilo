@@ -312,9 +312,6 @@ func handlePublishEntityType(catalog EntityTypeCatalog) http.HandlerFunc {
 			case errors.Is(err, entitytypes.ErrNotFound):
 				status = http.StatusNotFound
 				code = "entity_type_not_found"
-			case errors.Is(err, entitytypes.ErrAlreadyPublished):
-				status = http.StatusConflict
-				code = "already_published"
 			case errors.Is(err, entitytypes.ErrInvalidSchema):
 				status = http.StatusUnprocessableEntity
 				code = "invalid_schema"

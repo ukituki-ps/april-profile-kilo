@@ -46,7 +46,7 @@ export class EntityTypesService {
         });
     }
     /**
-     * Опубликовать черновик типа сущности
+     * Опубликовать черновик типа сущности (создаёт новую immutable-ревизию схемы; повторные вызовы допускаются)
      * @param entityTypeId
      * @returns EntityType Тип успешно опубликован
      * @throws ApiError
@@ -64,7 +64,6 @@ export class EntityTypesService {
                 401: `Нет или невалидный Bearer`,
                 403: `В токене нет claim с tenant_id`,
                 404: `Тип не найден в текущем tenant`,
-                409: `Повторная публикация`,
                 422: `Черновик не проходит структурную валидацию/invariants`,
             },
         });

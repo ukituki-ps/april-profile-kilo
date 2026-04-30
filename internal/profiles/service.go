@@ -120,10 +120,17 @@ func (s *Service) Create(ctx context.Context, tenantID string, params CreatePara
 
 	var entityID string
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO entities (tenant_id, entity_type_id)
-		VALUES ($1, $2)
+		INSERT INTO entities (tenant_id, entity_type_id, bound_entity_type_revision_id)
+		SELECT $1, $2, r.id
+		FROM entity_type_revisions r
+		WHERE r.tenant_id = $1 AND r.family_id = $2::uuid
+		ORDER BY r.revision_no DESC
+		LIMIT 1
 		RETURNING entity_id
 	`, tenantID, entityTypeID).Scan(&entityID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Snapshot{}, ErrEntityTypeNotPublished
+		}
 		return Snapshot{}, fmt.Errorf("create entity: %w", err)
 	}
 
@@ -517,18 +524,29 @@ func ensureTenant(ctx context.Context, tx pgx.Tx, tenantID string) error {
 }
 
 func ensureEntityTypePublished(ctx context.Context, tx pgx.Tx, tenantID, entityTypeID string) error {
-	var status string
+	var hasRev bool
 	if err := tx.QueryRow(ctx, `
-		SELECT status
-		FROM entity_types
-		WHERE tenant_id = $1 AND id = $2
-	`, tenantID, entityTypeID).Scan(&status); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		SELECT EXISTS (
+			SELECT 1
+			FROM entity_type_revisions r
+			WHERE r.tenant_id = $1 AND r.family_id = $2::uuid
+		)
+	`, tenantID, entityTypeID).Scan(&hasRev); err != nil {
+		return fmt.Errorf("check entity type revisions: %w", err)
+	}
+	if !hasRev {
+		var famExists bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM entity_type_families f
+				WHERE f.tenant_id = $1 AND f.id = $2::uuid
+			)
+		`, tenantID, entityTypeID).Scan(&famExists); err != nil {
+			return fmt.Errorf("check entity type family: %w", err)
+		}
+		if !famExists {
 			return ErrEntityTypeNotFound
 		}
-		return fmt.Errorf("load entity type: %w", err)
-	}
-	if status != "published" {
 		return ErrEntityTypeNotPublished
 	}
 	return nil

@@ -96,20 +96,7 @@ func TestAsynq_outboxBatch_marksPublished(t *testing.T) {
 	if _, err := pool.Exec(ctx, `INSERT INTO tenants (id) VALUES ($1)`, tenantID); err != nil {
 		t.Fatalf("insert tenant: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `
-		INSERT INTO entity_types (
-			id, tenant_id, namespace, code, schema_json, schema_version, status,
-			published_schema_json, published_schema_version, published_at
-		) VALUES (
-			$1, $2, 'hr', 'employee',
-			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
-			1, 'published',
-			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
-			1, now()
-		)
-	`, entityTypeID, tenantID); err != nil {
-		t.Fatalf("insert entity type: %v", err)
-	}
+	integrationInsertPublishedEntityFamily(t, ctx, pool, tenantID, entityTypeID, "hr", "employee")
 
 	service := profiles.NewService(pool)
 	created, err := service.Create(ctx, tenantID, profiles.CreateParams{
@@ -217,20 +204,7 @@ func TestAsynq_outboxBatch_publishRetriesThenPublished(t *testing.T) {
 	if _, err := pool.Exec(ctx, `INSERT INTO tenants (id) VALUES ($1)`, tenantID); err != nil {
 		t.Fatalf("insert tenant: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `
-		INSERT INTO entity_types (
-			id, tenant_id, namespace, code, schema_json, schema_version, status,
-			published_schema_json, published_schema_version, published_at
-		) VALUES (
-			$1, $2, 'hr', 'employee',
-			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
-			1, 'published',
-			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
-			1, now()
-		)
-	`, entityTypeID, tenantID); err != nil {
-		t.Fatalf("insert entity type: %v", err)
-	}
+	integrationInsertPublishedEntityFamily(t, ctx, pool, tenantID, entityTypeID, "hr", "employee")
 
 	service := profiles.NewService(pool)
 	created, err := service.Create(ctx, tenantID, profiles.CreateParams{
@@ -320,20 +294,7 @@ func TestAsynq_outboxBatch_publishExhaustedToFailed(t *testing.T) {
 	if _, err := pool.Exec(ctx, `INSERT INTO tenants (id) VALUES ($1)`, tenantID); err != nil {
 		t.Fatalf("insert tenant: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `
-		INSERT INTO entity_types (
-			id, tenant_id, namespace, code, schema_json, schema_version, status,
-			published_schema_json, published_schema_version, published_at
-		) VALUES (
-			$1, $2, 'hr', 'employee',
-			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
-			1, 'published',
-			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
-			1, now()
-		)
-	`, entityTypeID, tenantID); err != nil {
-		t.Fatalf("insert entity type: %v", err)
-	}
+	integrationInsertPublishedEntityFamily(t, ctx, pool, tenantID, entityTypeID, "hr", "employee")
 
 	service := profiles.NewService(pool)
 	created, err := service.Create(ctx, tenantID, profiles.CreateParams{

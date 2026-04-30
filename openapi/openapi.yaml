@@ -134,7 +134,7 @@ paths:
                 $ref: '#/components/schemas/Error'
   /v1/entity-types/{entityTypeID}/publish:
     post:
-      summary: Опубликовать черновик типа сущности
+      summary: Опубликовать черновик типа сущности (создаёт новую immutable-ревизию схемы; повторные вызовы допускаются)
       operationId: publishEntityTypeDraft
       tags: [EntityTypes]
       security:
@@ -155,12 +155,6 @@ paths:
                 $ref: '#/components/schemas/EntityType'
         '404':
           description: Тип не найден в текущем tenant
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: Повторная публикация
           content:
             application/json:
               schema:

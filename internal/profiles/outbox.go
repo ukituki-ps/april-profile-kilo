@@ -56,10 +56,10 @@ func insertProfileOutboxRow(ctx context.Context, tx pgx.Tx, tenantID, entityID s
 func loadEntityTypeKey(ctx context.Context, tx pgx.Tx, tenantID, entityID string) (string, error) {
 	var ns, code string
 	err := tx.QueryRow(ctx, `
-		SELECT et.namespace, et.code
+		SELECT f.namespace, f.code
 		FROM entities e
-		JOIN entity_types et
-			ON et.tenant_id = e.tenant_id AND et.id = e.entity_type_id
+		JOIN entity_type_families f
+			ON f.tenant_id = e.tenant_id AND f.id = e.entity_type_id
 		WHERE e.tenant_id = $1 AND e.entity_id = $2
 	`, tenantID, entityID).Scan(&ns, &code)
 	if err != nil {

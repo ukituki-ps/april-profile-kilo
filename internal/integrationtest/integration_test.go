@@ -37,6 +37,31 @@ import (
 
 const atlasImage = "arigaio/atlas:0.32.0"
 
+// integrationEntitySchemaMinimal — минимальная корректная схема для ValidateSchemaForPublication в интеграционных тестах.
+const integrationEntitySchemaMinimal = `{"type":"object","properties":{"name":{"type":"string"}}}`
+
+func integrationInsertPublishedEntityFamily(t *testing.T, ctx context.Context, pool *pgxpool.Pool, tenantID, familyID, namespace, code string) {
+	t.Helper()
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO entity_type_families (id, tenant_id, namespace, code)
+		VALUES ($1, $2, $3, $4)
+	`, familyID, tenantID, namespace, code); err != nil {
+		t.Fatalf("insert entity_type_families: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO entity_type_drafts (tenant_id, family_id, draft_schema_json, draft_schema_version)
+		VALUES ($1, $2, $3::jsonb, 1)
+	`, tenantID, familyID, integrationEntitySchemaMinimal); err != nil {
+		t.Fatalf("insert entity_type_drafts: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO entity_type_revisions (tenant_id, family_id, revision_no, schema_json, published_at)
+		VALUES ($1, $2, 1, $3::jsonb, now())
+	`, tenantID, familyID, integrationEntitySchemaMinimal); err != nil {
+		t.Fatalf("insert entity_type_revisions: %v", err)
+	}
+}
+
 func TestAtlasMigrationsAppliedOnPostgresContainer(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
@@ -50,7 +75,7 @@ func TestAtlasMigrationsAppliedOnPostgresContainer(t *testing.T) {
 	}
 	defer pool.Close()
 
-	for _, table := range []string{"tenants", "entity_types", "entities", "profile_outbox", "profile_field_conflicts", "admin_audit_log"} {
+	for _, table := range []string{"tenants", "entity_type_families", "entity_type_drafts", "entity_type_revisions", "entities", "profile_outbox", "profile_field_conflicts", "admin_audit_log"} {
 		table := table
 		t.Run(table, func(t *testing.T) {
 			var exists bool
@@ -153,30 +178,7 @@ func TestProfilesService_AppendOnlyVersioningAndExternalMappings(t *testing.T) {
 	`, tenantID); err != nil {
 		t.Fatalf("insert tenant: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `
-		INSERT INTO entity_types (
-			id,
-			tenant_id,
-			namespace,
-			code,
-			schema_json,
-			schema_version,
-			status,
-			published_schema_json,
-			published_schema_version,
-			published_at
-		) VALUES (
-			$1, $2, 'hr', 'employee',
-			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
-			1,
-			'published',
-			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
-			1,
-			now()
-		)
-	`, entityTypeID, tenantID); err != nil {
-		t.Fatalf("insert entity type: %v", err)
-	}
+	integrationInsertPublishedEntityFamily(t, ctx, pool, tenantID, entityTypeID, "hr", "employee")
 
 	service := profiles.NewService(pool)
 	created, err := service.Create(ctx, tenantID, profiles.CreateParams{
@@ -254,20 +256,7 @@ func TestProfilesService_ListSupportsSearchFilterAndCursor(t *testing.T) {
 		t.Fatalf("insert tenant: %v", err)
 	}
 	for idx, typeID := range []string{typeA, typeB} {
-		if _, err := pool.Exec(ctx, `
-			INSERT INTO entity_types (
-				id, tenant_id, namespace, code, schema_json, schema_version, status,
-				published_schema_json, published_schema_version, published_at
-			) VALUES (
-				$1, $2, 'hr', $3,
-				'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
-				1, 'published',
-				'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
-				1, now()
-			)
-		`, typeID, tenantID, fmt.Sprintf("employee_%d", idx)); err != nil {
-			t.Fatalf("insert entity type: %v", err)
-		}
+		integrationInsertPublishedEntityFamily(t, ctx, pool, tenantID, typeID, "hr", fmt.Sprintf("employee_%d", idx))
 	}
 
 	service := profiles.NewService(pool)
@@ -361,20 +350,7 @@ func TestProfileOutbox_eventContractAndIdempotency(t *testing.T) {
 	if _, err := pool.Exec(ctx, `INSERT INTO tenants (id) VALUES ($1)`, tenantID); err != nil {
 		t.Fatalf("insert tenant: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `
-		INSERT INTO entity_types (
-			id, tenant_id, namespace, code, schema_json, schema_version, status,
-			published_schema_json, published_schema_version, published_at
-		) VALUES (
-			$1, $2, 'hr', 'employee',
-			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
-			1, 'published',
-			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
-			1, now()
-		)
-	`, entityTypeID, tenantID); err != nil {
-		t.Fatalf("insert entity type: %v", err)
-	}
+	integrationInsertPublishedEntityFamily(t, ctx, pool, tenantID, entityTypeID, "hr", "employee")
 
 	service := profiles.NewService(pool)
 	created, err := service.Create(ctx, tenantID, profiles.CreateParams{
@@ -476,20 +452,7 @@ func TestABAC_GetCurrent_filtersNamespacesByJWTRealmRoles(t *testing.T) {
 	if _, err := pool.Exec(ctx, `INSERT INTO tenants (id) VALUES ($1)`, tenantID); err != nil {
 		t.Fatalf("insert tenant: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `
-		INSERT INTO entity_types (
-			id, tenant_id, namespace, code, schema_json, schema_version, status,
-			published_schema_json, published_schema_version, published_at
-		) VALUES (
-			$1, $2, 'hr', 'employee',
-			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
-			1, 'published',
-			'{"type":"object","properties":{"name":{"type":"string"}}}'::jsonb,
-			1, now()
-		)
-	`, entityTypeID, tenantID); err != nil {
-		t.Fatalf("insert entity type: %v", err)
-	}
+	integrationInsertPublishedEntityFamily(t, ctx, pool, tenantID, entityTypeID, "hr", "employee")
 
 	svc := profiles.NewService(pool)
 	created, err := svc.Create(ctx, tenantID, profiles.CreateParams{
