@@ -13,6 +13,7 @@ export function ProfilesApiWidget({
   apiBaseUrl,
   accessToken,
   hostContext,
+  initialCreateEntityTypeId,
   pageSize,
   initialSearch,
   initialTypeId,
@@ -48,6 +49,7 @@ export function ProfilesApiWidget({
       hostContext={hostContext}
       provider={provider}
       providerContext={providerContext}
+      initialCreateEntityTypeId={initialCreateEntityTypeId}
       pageSize={pageSize}
       initialSearch={initialSearch}
       initialTypeId={initialTypeId}

@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MantineProvider } from "@mantine/core";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -12,7 +13,12 @@ vi.mock("@mantine/core", async () => {
   const actual = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
   return {
     ...actual,
-    Modal: ({ opened, children }: { opened: boolean; children: ReactNode }) => (opened ? <div>{children}</div> : null),
+    Modal: ({ opened, children }: { opened: boolean; children: ReactNode }) =>
+      opened ? (
+        <div role="dialog" aria-modal="true">
+          {children}
+        </div>
+      ) : null,
   };
 });
 
@@ -61,6 +67,8 @@ const e1 = "c7c5e6ea-8787-4ca0-a691-9f4fdc9830ff";
 const e2 = "4f18363d-70e8-4814-9d12-5236b18877d0";
 const e3 = "d6f55c6c-6ea8-4ad2-b42b-7e7eefaf55a3";
 
+const jp = (name: string) => JSON.stringify({ name });
+
 const buildSnapshot = (entityId: string, version = 1, name = "Jane", typeId = entityTypeId) => ({
   entity_id: entityId,
   entity_type_id: typeId,
@@ -70,13 +78,31 @@ const buildSnapshot = (entityId: string, version = 1, name = "Jane", typeId = en
   external_refs: [],
 });
 
+const entityTypeRow = (id: string, code: string) => ({
+  id,
+  namespace: "ns",
+  code,
+  status: "published" as const,
+  draft_schema: {},
+  draft_schema_version: 1,
+  published_schema: {},
+  published_schema_version: 1,
+  published_at: "2026-01-01T00:00:00Z",
+  created_at: "2026-01-01T00:00:00Z",
+});
+
 let listItems = [
-  { entity_id: e1, entity_type_id: entityTypeId, version: 1, created_at: "2026-04-24T10:00:00Z", preview: "Jane A" },
-  { entity_id: e2, entity_type_id: entityTypeId, version: 1, created_at: "2026-04-24T10:01:00Z", preview: "Jane B" },
-  { entity_id: e3, entity_type_id: entityTypeIdB, version: 1, created_at: "2026-04-24T10:02:00Z", preview: "Jane C" },
+  { entity_id: e1, entity_type_id: entityTypeId, version: 1, created_at: "2026-04-24T10:00:00Z", preview: jp("Jane A") },
+  { entity_id: e2, entity_type_id: entityTypeId, version: 1, created_at: "2026-04-24T10:01:00Z", preview: jp("Jane B") },
+  { entity_id: e3, entity_type_id: entityTypeIdB, version: 1, created_at: "2026-04-24T10:02:00Z", preview: jp("Jane C") },
 ];
 
 const server = setupServer(
+  http.get(`${apiBaseUrl}/v1/entity-types`, () =>
+    HttpResponse.json({
+      items: [entityTypeRow(entityTypeId, "code-a"), entityTypeRow(entityTypeIdB, "code-b")],
+    }),
+  ),
   http.get(`${apiBaseUrl}/v1/entities`, ({ request }) => {
     const url = new URL(request.url);
     const search = (url.searchParams.get("search") ?? "").toLowerCase();
@@ -102,34 +128,44 @@ const server = setupServer(
   http.get(`${apiBaseUrl}/v1/entities/${e1}`, () => HttpResponse.json(buildSnapshot(e1, 1, "Jane A"))),
   http.get(`${apiBaseUrl}/v1/entities/${e2}`, () => HttpResponse.json(buildSnapshot(e2, 1, "Jane B"))),
   http.get(`${apiBaseUrl}/v1/entities/${e3}`, () => HttpResponse.json(buildSnapshot(e3, 1, "Jane C", entityTypeIdB))),
-  http.get(`${apiBaseUrl}/v1/entities/new-entity`, () => HttpResponse.json(buildSnapshot("new-entity", 1, "Created"))),
+  http.get(`${apiBaseUrl}/v1/entities/new-entity`, () => HttpResponse.json(buildSnapshot("new-entity", 1, "Created via test"))),
+  http.get(`${apiBaseUrl}/v1/entities/${e1}/versions/1`, () => HttpResponse.json(buildSnapshot(e1, 1, "Jane A"))),
+  http.get(`${apiBaseUrl}/v1/entities/${e2}/versions/1`, () => HttpResponse.json(buildSnapshot(e2, 1, "Jane B"))),
+  http.get(`${apiBaseUrl}/v1/entities/${e3}/versions/1`, () => HttpResponse.json(buildSnapshot(e3, 1, "Jane C", entityTypeIdB))),
+  http.get(`${apiBaseUrl}/v1/entities/new-entity/versions/1`, () =>
+    HttpResponse.json(buildSnapshot("new-entity", 1, "Created via test")),
+  ),
   http.post(`${apiBaseUrl}/v1/entities`, async ({ request }) => {
     const body = (await request.json()) as { entity_type_id: string; document: { name?: string } };
+    const preview = JSON.stringify({ name: body.document.name ?? "Created" });
     listItems = [
       {
         entity_id: "new-entity",
         entity_type_id: body.entity_type_id,
         version: 1,
         created_at: "2026-04-24T10:03:00Z",
-        preview: body.document.name ?? "Created",
+        preview,
       },
       ...listItems,
     ];
-    return HttpResponse.json(buildSnapshot("new-entity", 1, body.document.name ?? "Created"), { status: 201 });
+    return HttpResponse.json(buildSnapshot("new-entity", 1, body.document.name ?? "Created via test"), { status: 201 });
   }),
   http.put(`${apiBaseUrl}/v1/entities/${e1}`, async ({ request }) => {
     const body = (await request.json()) as { document: { name?: string } };
     return HttpResponse.json(buildSnapshot(e1, 2, body.document.name ?? "Updated"));
   }),
-  http.delete(`${apiBaseUrl}/v1/entities/${e2}`, () => new HttpResponse(null, { status: 204 })),
+  http.delete(`${apiBaseUrl}/v1/entities/${e2}`, () => {
+    listItems = listItems.filter((item) => item.entity_id !== e2);
+    return new HttpResponse(null, { status: 204 });
+  }),
 );
 
 beforeAll(() => server.listen());
 afterEach(() => {
   listItems = [
-    { entity_id: e1, entity_type_id: entityTypeId, version: 1, created_at: "2026-04-24T10:00:00Z", preview: "Jane A" },
-    { entity_id: e2, entity_type_id: entityTypeId, version: 1, created_at: "2026-04-24T10:01:00Z", preview: "Jane B" },
-    { entity_id: e3, entity_type_id: entityTypeIdB, version: 1, created_at: "2026-04-24T10:02:00Z", preview: "Jane C" },
+    { entity_id: e1, entity_type_id: entityTypeId, version: 1, created_at: "2026-04-24T10:00:00Z", preview: jp("Jane A") },
+    { entity_id: e2, entity_type_id: entityTypeId, version: 1, created_at: "2026-04-24T10:01:00Z", preview: jp("Jane B") },
+    { entity_id: e3, entity_type_id: entityTypeIdB, version: 1, created_at: "2026-04-24T10:02:00Z", preview: jp("Jane C") },
   ];
   server.resetHandlers();
 });
@@ -142,46 +178,43 @@ const renderWidget = (props?: Partial<ProfilesWidgetProps>) =>
         hostContext={{ tenant: { id: "tenant-a" }, telemetry: { requestId: "req-1" } }}
         apiBaseUrl={apiBaseUrl}
         autoSelectFirst
+        initialCreateEntityTypeId={entityTypeId}
         {...props}
       />
     </MantineProvider>,
   );
 
 const selectCard = (entityId: string) => {
-  fireEvent.click(screen.getAllByText(entityId)[0]);
+  fireEvent.click(screen.getByLabelText(`Profile row ${entityId}`));
 };
 
-const fillCreateModal = (typeId: string, documentJson: string) => {
-  const textboxes = screen.getAllByRole("textbox");
-  const createTypeInput = textboxes.find((input) => input.getAttribute("placeholder") === "entity_type_id");
-  const createDocumentInput = textboxes.find((input) => (input as HTMLInputElement).value.includes("New profile"));
-  if (!createTypeInput || !createDocumentInput) {
-    throw new Error("Create modal inputs not found");
-  }
-  fireEvent.change(createTypeInput, { target: { value: typeId } });
-  fireEvent.change(createDocumentInput, { target: { value: documentJson } });
+const fillCreateModal = async (profileName: string, documentJson: string) => {
+  expect(await screen.findByLabelText("Profile name")).toBeInTheDocument();
+  await userEvent.clear(screen.getByLabelText("Profile name"));
+  await userEvent.type(screen.getByLabelText("Profile name"), profileName);
+  fireEvent.change(screen.getByLabelText("Document (JSON object)"), { target: { value: documentJson } });
 };
 
 describe("ProfilesWidget", () => {
   it("renders list with incremental loading and search", async () => {
     renderWidget({ pageSize: 2 });
 
-    expect(await screen.findByText(e1)).toBeInTheDocument();
-    expect(screen.getByText(e2)).toBeInTheDocument();
-    expect(screen.queryByText(e3)).not.toBeInTheDocument();
-    expect(screen.getByText(/Profile card/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText(`Profile row ${e1}`)).toBeInTheDocument();
+    expect(screen.getByLabelText(`Profile row ${e2}`)).toBeInTheDocument();
+    expect(screen.queryByLabelText(`Profile row ${e3}`)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Profile" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Load more cards/i }));
-    expect(await screen.findByText(e3)).toBeInTheDocument();
+    expect(await screen.findByLabelText(`Profile row ${e3}`)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Search cards"), { target: { value: "Jane C" } });
-    expect(await screen.findByText(e3)).toBeInTheDocument();
-    expect(screen.queryByText(e1)).not.toBeInTheDocument();
+    expect(await screen.findByLabelText(`Profile row ${e3}`)).toBeInTheDocument();
+    expect(screen.queryByLabelText(`Profile row ${e1}`)).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Search cards"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: /Open filter options/i }));
-    expect(await screen.findByText(e3)).toBeInTheDocument();
-    expect(screen.queryByText(e1)).not.toBeInTheDocument();
+    expect(await screen.findByLabelText(`Profile row ${e3}`)).toBeInTheDocument();
+    expect(screen.queryByLabelText(`Profile row ${e1}`)).not.toBeInTheDocument();
   });
 
   it(
@@ -190,13 +223,13 @@ describe("ProfilesWidget", () => {
       const onAction = vi.fn();
       renderWidget({ onAction });
 
-      expect(await screen.findByText(e1)).toBeInTheDocument();
+      expect(await screen.findByLabelText(`Profile row ${e1}`)).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole("button", { name: /Add new item/i }));
-      fillCreateModal(entityTypeId, '{"name":"Created via test"}');
+      await fillCreateModal("Created via test", "{}");
       fireEvent.click(screen.getByRole("button", { name: /Create profile/i }));
 
-      expect(await screen.findByText("new-entity")).toBeInTheDocument();
+      expect(await screen.findByTitle("new-entity")).toBeInTheDocument();
 
       selectCard(e1);
       fireEvent.click(await screen.findByRole("button", { name: /Edit profile/i }));
@@ -210,7 +243,7 @@ describe("ProfilesWidget", () => {
       fireEvent.click(screen.getByRole("button", { name: /Delete profile/i }));
       await waitFor(
         () => {
-          expect(screen.queryByText(e2)).not.toBeInTheDocument();
+          expect(screen.queryByLabelText(`Profile row ${e2}`)).not.toBeInTheDocument();
         },
         { timeout: 10_000 },
       );
@@ -223,6 +256,7 @@ describe("ProfilesWidget", () => {
   );
 
   it("maps 401/403/409 to secure messages", async () => {
+    const onError = vi.fn();
     server.use(
       http.post(`${apiBaseUrl}/v1/entities`, () =>
         HttpResponse.json({ code: "unauthorized", message: "raw backend message" }, { status: 401 }),
@@ -235,20 +269,23 @@ describe("ProfilesWidget", () => {
       ),
     );
 
-    renderWidget();
-    expect(await screen.findByText(e1)).toBeInTheDocument();
+    renderWidget({ onError });
+    expect(await screen.findByLabelText(`Profile row ${e1}`)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Add new item/i }));
-    fillCreateModal(entityTypeId, '{"name":"New profile"}');
+    await fillCreateModal("Err case unique 401", "{}");
     fireEvent.click(screen.getByRole("button", { name: /Create profile/i }));
-    expect(await screen.findByText(/Authentication required/i)).toBeInTheDocument();
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: "unauthorized" })));
+    expect(screen.getByText(/Authentication required/i)).toBeInTheDocument();
 
     selectCard(e1);
     fireEvent.click(screen.getByRole("button", { name: /Edit profile/i }));
     fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
-    expect(await screen.findByText(/Access denied/i)).toBeInTheDocument();
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: "forbidden" })));
+    expect(screen.getByText(/Access denied/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Delete profile/i }));
-    expect(await screen.findByText(/conflicts with current profile state/i)).toBeInTheDocument();
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: "conflict" })));
+    expect(screen.getByText(/conflicts with current profile state/i)).toBeInTheDocument();
   });
 });

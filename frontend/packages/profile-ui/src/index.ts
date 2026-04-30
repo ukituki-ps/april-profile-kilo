@@ -42,4 +42,5 @@ export type {
   ProfilesProviderError,
   ProfilesProviderErrorCode,
   UpdateProfileInput,
+  EntityTypeOption,
 } from "./providers/profilesDataProvider";

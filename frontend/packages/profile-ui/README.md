@@ -31,6 +31,7 @@ Props:
 - `initialSearch?` — initial server-side search query.
 - `initialTypeId?` — initial server-side type filter.
 - `initialSort?` — initial server-side sort (`updated_desc` by default).
+- `initialCreateEntityTypeId?` — после загрузки каталога типов предвыбрать этот `entity_type_id` в модалке создания (host/tests).
 - `autoSelectFirst?` — auto-select first row after list load (default: `false`).
 - `onAction?` — typed callback for CRUD actions (`created`, `updated`, `deleted`).
 - `onError?` — callback with normalized error payload (`message`, optional `requestId`, optional `code`).
@@ -57,10 +58,11 @@ Backward compatibility and migration note:
 
 Behavior:
 
-- Uses DS-first master-detail layout: left `CardListColumn` (search + current selection), right profile card.
+- Uses DS-first master-detail layout: left `CardListColumn` (search + current selection), right profile card; root fills host height (`flex`), columns use `minWidth: 0` so the detail pane expands when the list narrows.
 - Left side includes filter modal (type filter) + incremental loading via `CardListColumn` (`onReachListEnd`).
-- "Plus" action opens a modal create form; after successful create the new profile is selected on the right.
-- Right card supports view mode and edit mode with save through the existing profile API.
+- List rows show profile display name (`document.name` when preview JSON contains it) and version; entity id is secondary.
+- "Plus" opens create modal: entity type from `GET /v1/entity-types` when `listEntityTypes` is implemented, profile name + JSON document.
+- Right card: version `Select` (loads historical versions via provider `getByVersion`), actions as icon buttons (`@tabler/icons-react`), historical snapshot can be saved as a new head version (+1).
 
 ### `ProfileInstancesWidget`
 

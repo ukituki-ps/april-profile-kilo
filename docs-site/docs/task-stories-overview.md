@@ -53,6 +53,7 @@ sidebar_position: 20
 - [045 — Hardening контракта и Core для `ProfilesWidget` (вариант C)](./task-story-045-phase-6-profiles-widget-contract-and-core-hardening)
 - [046 — Provider context, abort и observability hardening для `ProfilesWidget`](./task-story-046-phase-6-profiles-widget-provider-context-abort-observability-hardening)
 - [047 — Тестовая матрица и release-gate для `ProfilesWidget` варианта C](./task-story-047-phase-6-profiles-widget-test-matrix-and-release-gate)
+- [051 — Рефакторинг UI `ProfilesWidget`: embed, версии, имя](./task-story-051-phase-6-profiles-widget-ui-refactor-embed-and-versions)
 - [048–050 — Дизайн-система: vendored tarball’ы, CI под GitHub Packages, документация (эпик Hub 049)](./task-story-048-phase-7-ds-npm-registry-consumption)
 
 ## Быстрый статус
@@ -99,3 +100,4 @@ sidebar_position: 20
 | 046 Profiles widget provider/abort/observability hardening | ✅ | [046](./task-story-046-phase-6-profiles-widget-provider-context-abort-observability-hardening) | `ProviderContext` стандартизирован, list/details запросы реально отменяются, убрана глобальная мутация OpenAPI runtime, добавлены transport telemetry события |
 | 047 Profiles widget test matrix + release gate | ✅ | [047](./task-story-047-phase-6-profiles-widget-test-matrix-and-release-gate) | Зафиксирован обязательный release-gate variant C, добавлены provider integration tests и блокирующие критерии релиза в testing/release docs |
 | 048–050 DS npm registry (Hub epic 049) | ✅ | [048–050](./task-story-048-phase-7-ds-npm-registry-consumption) | Vendored `@april/*` 0.1.0, CI `NODE_AUTH_TOKEN`, обновлены DESIGN_SYSTEM / DEPLOYMENT / TESTING и человекопонятная история |
+| 051 Profiles widget embed UI + versions | ✅ | [051](./task-story-051-phase-6-profiles-widget-ui-refactor-embed-and-versions) | Flex-layout для хоста, версии и имя в UI, Select типов, иконки действий, расширение `ProfilesDataProvider` |

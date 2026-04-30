@@ -23,12 +23,12 @@ vi.mock("@april/ui", () => ({
     onFilterChange,
     renderCard,
   }: {
-    items: Array<{ id: string }>;
+    items: Array<{ id: string; title: string }>;
     onSearchChange?: (value: string) => void;
     onReachListEnd?: () => void;
     onAddItem?: () => void;
     onFilterChange?: (value: Record<string, string | undefined>) => void;
-    renderCard?: (item: { id: string }) => ReactNode;
+    renderCard?: (item: { id: string; title: string }) => ReactNode;
   }) => (
     <div>
       <input aria-label="Search cards" onChange={(event) => onSearchChange?.(event.currentTarget.value)} />
@@ -48,17 +48,23 @@ vi.mock("@april/ui", () => ({
   ),
 }));
 
+const p1 = "Alpha profile";
+const p2 = "Beta profile";
+const p3 = "Gamma profile";
+
 const e1 = "c7c5e6ea-8787-4ca0-a691-9f4fdc9830ff";
 const e2 = "4f18363d-70e8-4814-9d12-5236b18877d0";
 const e3 = "d6f55c6c-6ea8-4ad2-b42b-7e7eefaf55a3";
 const hostContext = { tenant: { id: "tenant-a" }, telemetry: { requestId: "req-1", correlationId: "corr-1" } } as const;
 
+const docPreview = (name: string) => JSON.stringify({ name });
+
 const buildProvider = (): ProfilesDataProvider => ({
   list: vi.fn(async ({ search, entityTypeId, limit, cursor }) => {
     const source = [
-      { entityId: e1, entityTypeId: "type-a", version: 1, updatedAt: "2026-04-24T10:00:00Z", preview: "Jane A" },
-      { entityId: e2, entityTypeId: "type-a", version: 1, updatedAt: "2026-04-24T10:01:00Z", preview: "Jane B" },
-      { entityId: e3, entityTypeId: "type-b", version: 1, updatedAt: "2026-04-24T10:02:00Z", preview: "Jane C" },
+      { entityId: e1, entityTypeId: "type-a", version: 1, updatedAt: "2026-04-24T10:00:00Z", preview: docPreview(p1) },
+      { entityId: e2, entityTypeId: "type-a", version: 1, updatedAt: "2026-04-24T10:01:00Z", preview: docPreview(p2) },
+      { entityId: e3, entityTypeId: "type-b", version: 1, updatedAt: "2026-04-24T10:02:00Z", preview: docPreview(p3) },
     ];
     const filtered = source.filter((item) => {
       const searchHit = !search || `${item.entityId} ${item.preview}`.toLowerCase().includes(search.toLowerCase());
@@ -76,10 +82,21 @@ const buildProvider = (): ProfilesDataProvider => ({
   get: vi.fn(async (entityId) => ({
     entityId,
     entityTypeId: entityId === e3 ? "type-b" : "type-a",
-    version: 1,
+    version: 2,
     updatedAt: "2026-04-24T10:00:00Z",
-    document: { name: `Doc ${entityId}` },
+    document: { name: p1, slot: "current" },
   })),
+  getByVersion: vi.fn(async (entityId, version) => ({
+    entityId,
+    entityTypeId: entityId === e3 ? "type-b" : "type-a",
+    version,
+    updatedAt: "2026-04-24T10:00:00Z",
+    document: { name: p1, slot: `v${version}` },
+  })),
+  listEntityTypes: vi.fn(async () => [
+    { id: "type-uuid-a", label: "ns/code-a" },
+    { id: "type-uuid-b", label: "ns/code-b" },
+  ]),
   create: vi.fn(async () => ({
     entityId: "new-entity",
     entityTypeId: "type-a",
@@ -90,7 +107,7 @@ const buildProvider = (): ProfilesDataProvider => ({
   update: vi.fn(async (entityId) => ({
     entityId,
     entityTypeId: "type-a",
-    version: 2,
+    version: 3,
     updatedAt: "2026-04-24T11:00:00Z",
     document: { name: "Updated" },
   })),
@@ -112,21 +129,21 @@ describe("ProfilesWidgetCore", () => {
       </MantineProvider>,
     );
 
-    expect(await screen.findByText(e1)).toBeInTheDocument();
-    expect(screen.getByText(e2)).toBeInTheDocument();
-    expect(screen.queryByText(e3)).not.toBeInTheDocument();
+    expect(await screen.findByLabelText(`Profile row ${e1}`)).toBeInTheDocument();
+    expect(screen.getByLabelText(`Profile row ${e2}`)).toBeInTheDocument();
+    expect(screen.queryByLabelText(`Profile row ${e3}`)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Load more cards/i }));
-    expect(await screen.findByText(e3)).toBeInTheDocument();
+    expect(await screen.findByLabelText(`Profile row ${e3}`)).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Search cards"), { target: { value: "Jane C" } });
-    expect(await screen.findByText(e3)).toBeInTheDocument();
-    expect(screen.queryByText(e1)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Search cards"), { target: { value: "Gamma" } });
+    expect(await screen.findByLabelText(`Profile row ${e3}`)).toBeInTheDocument();
+    expect(screen.queryByLabelText(`Profile row ${e1}`)).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Search cards"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: /Open filter options/i }));
-    expect(await screen.findByText(e3)).toBeInTheDocument();
-    expect(screen.queryByText(e1)).not.toBeInTheDocument();
+    expect(await screen.findByLabelText(`Profile row ${e3}`)).toBeInTheDocument();
+    expect(screen.queryByLabelText(`Profile row ${e1}`)).not.toBeInTheDocument();
     expect(provider.list).toHaveBeenCalledWith(expect.objectContaining({ sort: "updated_asc" }), expect.anything());
   });
 
@@ -146,24 +163,19 @@ describe("ProfilesWidgetCore", () => {
       </MantineProvider>,
     );
 
-    expect(await screen.findByText(e1)).toBeInTheDocument();
+    expect(await screen.findByLabelText(`Profile row ${e1}`)).toBeInTheDocument();
     expect(screen.getByText(/Select a profile from the left column/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Add new item/i }));
-    const textboxes = screen.getAllByRole("textbox");
-    const createTypeInput = textboxes.find((input) => input.getAttribute("placeholder") === "entity_type_id");
-    const createDocumentInput = textboxes.find((input) => (input as HTMLInputElement).value.includes("New profile"));
-    if (!createTypeInput || !createDocumentInput) {
-      throw new Error("Create modal inputs not found");
-    }
-    fireEvent.change(createTypeInput, { target: { value: "type-a" } });
-    fireEvent.change(createDocumentInput, { target: { value: '{"name":"Created via test"}' } });
+    expect(await screen.findByLabelText("Profile name")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Profile name"), { target: { value: "Unique created" } });
+    fireEvent.change(screen.getByLabelText("Document (JSON object)"), { target: { value: "{}" } });
     fireEvent.click(screen.getByRole("button", { name: /Create profile/i }));
 
     await waitFor(() => {
       expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ type: "created" }));
     });
 
-    fireEvent.click(screen.getAllByText(e1)[0]);
+    fireEvent.click(screen.getByLabelText(`Profile row ${e1}`));
     expect(onOpenEntity).toHaveBeenCalledWith(e1);
     fireEvent.click(await screen.findByRole("button", { name: /Edit profile/i }));
     fireEvent.change(screen.getByLabelText("Updated document (JSON object)"), { target: { value: '{"name":"Updated via test"}' } });
@@ -173,11 +185,11 @@ describe("ProfilesWidgetCore", () => {
     });
     expect(provider.update).toHaveBeenCalledWith(
       e1,
-      expect.objectContaining({ expectedVersion: 1 }),
+      expect.objectContaining({ expectedVersion: 2 }),
       expect.anything(),
     );
 
-    fireEvent.click(screen.getAllByText(e1)[0]);
+    fireEvent.click(screen.getByLabelText(`Profile row ${e1}`));
     fireEvent.click(screen.getByRole("button", { name: /Delete profile/i }));
     await waitFor(() => {
       expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ type: "deleted", entityId: e1 }));
@@ -221,7 +233,15 @@ describe("ProfilesWidgetCore", () => {
           return new Promise(() => undefined);
         }
         return Promise.resolve({
-          items: [{ entityId: e3, entityTypeId: "type-b", version: 1, updatedAt: "2026-04-24T10:02:00Z", preview: "Jane C" }],
+          items: [
+            {
+              entityId: e3,
+              entityTypeId: "type-b",
+              version: 1,
+              updatedAt: "2026-04-24T10:02:00Z",
+              preview: docPreview(p3),
+            },
+          ],
           totalCount: 1,
         });
       }) as ProfilesDataProvider["list"],
@@ -233,7 +253,7 @@ describe("ProfilesWidgetCore", () => {
       </MantineProvider>,
     );
 
-    expect(await screen.findByText(e3)).toBeInTheDocument();
+    expect(await screen.findByLabelText(`Profile row ${e3}`)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Search cards"), { target: { value: "a" } });
     unmount();
 
