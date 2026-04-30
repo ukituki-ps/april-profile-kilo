@@ -3,7 +3,7 @@
 - Статус: ✅ выполнено
 - Задача: 054 — `@april/profile-ui`: production-first виджет `entity-types-widget` (Core + ApiWidget + Provider + фасад)
 - Ветка: `feature/task-054-phase-7-entity-types-widget-production-ui` (рекомендуется для PR)
-- Коммиты: `265bd34` (реализация), `2918aee` (REPORT)
+- Коммиты: `265bd34` (основной объём); актуальная цепочка — `git log` ветки `feature/task-054-phase-7-entity-types-widget-production-ui`
 - PR: не создавался из среды агента
 
 ## 2) Что сделано
