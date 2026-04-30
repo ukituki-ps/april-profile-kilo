@@ -3,7 +3,7 @@
 - Статус: ✅ выполнено
 - Задача: Рефакторинг UI `ProfilesWidget` — встраивание, версии, имя профиля
 - Ветка: `feature/task-051-phase-6-profiles-widget-ui-refactor-embed-and-versions`
-- Коммиты: `c799b6d`
+- Коммиты: `59606c4`
 - PR: не создавался (merge через PR по политике репозитория)
 
 ## 2) Что сделано
