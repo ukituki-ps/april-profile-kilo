@@ -20,7 +20,9 @@ export function EntityTypesApiWidget({
   onObservability,
   onOpenEntity,
 }: EntityTypesApiWidgetProps) {
-  const provider = useMemo(() => createOpenApiEntityTypesProvider({ apiBaseUrl, accessToken }), [accessToken, apiBaseUrl]);
+  // Token must not affect provider identity — recreating the provider retriggers WidgetCore effects (duplicate GETs).
+  // Bearer token is read per request from ProviderContext (`mergedProviderContext.auth.accessToken`).
+  const provider = useMemo(() => createOpenApiEntityTypesProvider({ apiBaseUrl }), [apiBaseUrl]);
   const mergedProviderContext = useMemo<Omit<ProviderContext, "signal">>(
     () =>
       providerContext ?? {

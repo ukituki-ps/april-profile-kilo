@@ -24,10 +24,8 @@ export function ProfilesApiWidget({
   onObservability,
   onOpenEntity,
 }: ProfilesApiWidgetProps) {
-  const provider = useMemo(
-    () => createOpenApiProfilesProvider({ apiBaseUrl, accessToken }),
-    [accessToken, apiBaseUrl],
-  );
+  // Stable provider: token comes from `providerContext` per request, not from provider instance identity.
+  const provider = useMemo(() => createOpenApiProfilesProvider({ apiBaseUrl }), [apiBaseUrl]);
   const providerContext = useMemo<Omit<ProviderContext, "signal">>(
     () => ({
       tenantId: hostContext.tenant.id,
