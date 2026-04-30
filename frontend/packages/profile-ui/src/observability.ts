@@ -1,13 +1,7 @@
 import type { ProfileWidgetHostContext } from "./types";
 
 /** Стабильные идентификаторы виджетов для логов/аналитики (snake_case). */
-export type ProfileWidgetTelemetryKind =
-  | "entity_profile"
-  | "profiles_list"
-  | "entity_types"
-  | "profile_instances"
-  | "instance_history"
-  | "conflict_queue";
+export type ProfileWidgetTelemetryKind = "profiles_list" | "entity_types";
 
 /** Единый минимум событий фазы 4a для `@april/profile-ui`. */
 export type ProfileWidgetTelemetryEventName =

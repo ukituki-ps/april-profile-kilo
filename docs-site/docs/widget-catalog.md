@@ -16,11 +16,19 @@ sidebar_position: 8
 
 ### `entity-profile`
 
-- `entity-profile-editor`
+- `profiles-widget`
   - package: `@april/profile-ui`
   - contract: `v1`
   - status: `beta`
-  - где смотреть детали: `docs/widgets/profile/entity-profile-editor.md`
+  - где смотреть детали: `docs/widgets/profile/profiles-widget.md`
+
+### `entity-types-admin`
+
+- `entity-types-widget`
+  - package: `@april/profile-ui`
+  - contract: `v1`
+  - status: `beta`
+  - где смотреть детали: `docs/widgets/profile/entity-types-widget.md`
 
 ## Быстрый смысл статусов
 

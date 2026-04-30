@@ -49,7 +49,7 @@
 | `save_succeeded` | Успешный ответ API для этой мутации. |
 | `save_failed` | Ошибка валидации до API или ошибка/отказ API для мутации. |
 
-Стабильные значения `widget` в payload: `entity_profile`, `profiles_list`, `profile_instances`, `instance_history`, `conflict_queue`. Дополнительный контекст без PII — в `meta` (например `operation`, `phase`).
+Стабильные значения `widget` в payload: `profiles_list`, `entity_types`. Дополнительный контекст без PII — в `meta` (например `operation`, `phase`).
 
 Типы и хелперы экспортируются из `@april/profile-ui` (`ProfileWidgetTelemetryEvent`, `emitProfileWidgetTelemetry`, …).
 
