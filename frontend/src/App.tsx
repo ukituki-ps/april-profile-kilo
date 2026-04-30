@@ -118,8 +118,16 @@ function ProfilesWidgetDemoPage() {
   const accessToken = import.meta.env.VITE_PROFILE_ACCESS_TOKEN;
 
   return (
-    <Container py="xl" size="lg">
-      <Stack gap="md">
+    <Container
+      py="md"
+      size="lg"
+      style={{
+        height: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <Stack gap="md" style={{ flex: 1, minHeight: 0 }}>
         <Box style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <Anchor component={Link} to="/">
             April Profile
@@ -131,18 +139,20 @@ function ProfilesWidgetDemoPage() {
           Embedded demo for list/search/filter/pagination with CRUD actions.
         </Text>
         {actionMessage ? <Alert color="green">{actionMessage}</Alert> : null}
-        <ProfilesWidget
-          hostContext={{ tenant: { id: "demo-tenant" }, telemetry: { requestId: "local-demo-req-list" } }}
-          apiBaseUrl={apiBaseUrl}
-          accessToken={accessToken}
-          onAction={(action) => {
-            if (action.type === "deleted") {
-              setActionMessage(`Deleted entity ${action.entityId}`);
-              return;
-            }
-            setActionMessage(`${action.type} entity ${action.item.entityId}, version ${action.item.version}`);
-          }}
-        />
+        <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+          <ProfilesWidget
+            hostContext={{ tenant: { id: "demo-tenant" }, telemetry: { requestId: "local-demo-req-list" } }}
+            apiBaseUrl={apiBaseUrl}
+            accessToken={accessToken}
+            onAction={(action) => {
+              if (action.type === "deleted") {
+                setActionMessage(`Deleted entity ${action.entityId}`);
+                return;
+              }
+              setActionMessage(`${action.type} entity ${action.item.entityId}, version ${action.item.version}`);
+            }}
+          />
+        </Box>
       </Stack>
     </Container>
   );
