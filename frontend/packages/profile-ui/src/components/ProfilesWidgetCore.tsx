@@ -728,6 +728,7 @@ export function ProfilesWidgetCore({
               title="Profiles"
               items={listItems}
               mode="inline"
+              heightMode="fill"
               withSort={false}
               withFilter
               withAdd
