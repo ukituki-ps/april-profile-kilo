@@ -97,15 +97,19 @@ const withSignal = async <T>(
   ctx: ProviderContext,
   requestFactory: () => { promise: Promise<T>; cancel?: () => void },
 ): Promise<T> => {
-  const request = requestFactory();
   const signal = ctx.signal;
   if (!signal) {
-    return request.promise;
+    return requestFactory().promise;
   }
   if (signal.aborted) {
-    request.cancel?.();
     throw new DOMException("The operation was aborted.", "AbortError");
   }
+  // Give StrictMode cleanup a chance to abort before starting network I/O.
+  await Promise.resolve();
+  if (signal.aborted) {
+    throw new DOMException("The operation was aborted.", "AbortError");
+  }
+  const request = requestFactory();
   const abortHandler = () => {
     request.cancel?.();
   };
