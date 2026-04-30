@@ -698,7 +698,7 @@ export function ProfilesWidgetCore({
   }
 
   return (
-    <Stack gap="md" style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
+    <Stack gap="md" style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {listErrorMessage ? <Alert color="red">{listErrorMessage}</Alert> : null}
       {mutationErrorMessage ? <Alert color="red">{mutationErrorMessage}</Alert> : null}
 

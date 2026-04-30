@@ -17,6 +17,7 @@ vi.mock("@mantine/core", async () => {
 vi.mock("@april/ui", () => ({
   CardListColumn: ({
     items,
+    heightMode,
     onSearchChange,
     onReachListEnd,
     onAddItem,
@@ -24,13 +25,14 @@ vi.mock("@april/ui", () => ({
     renderCard,
   }: {
     items: Array<{ id: string; title: string }>;
+    heightMode?: string;
     onSearchChange?: (value: string) => void;
     onReachListEnd?: () => void;
     onAddItem?: () => void;
     onFilterChange?: (value: Record<string, string | undefined>) => void;
     renderCard?: (item: { id: string; title: string }) => ReactNode;
   }) => (
-    <div>
+    <div aria-label="CardListColumn mock" data-height-mode={heightMode}>
       <input aria-label="Search cards" onChange={(event) => onSearchChange?.(event.currentTarget.value)} />
       <button type="button" aria-label="Open filter options" onClick={() => onFilterChange?.({ type: "type-b" })}>
         Filter type-b
@@ -115,6 +117,18 @@ const buildProvider = (): ProfilesDataProvider => ({
 });
 
 describe("ProfilesWidgetCore", () => {
+  it("renders CardListColumn in fill height mode", async () => {
+    const provider = buildProvider();
+    render(
+      <MantineProvider>
+        <ProfilesWidgetCore hostContext={hostContext} provider={provider} />
+      </MantineProvider>,
+    );
+
+    await screen.findByLabelText(`Profile row ${e1}`);
+    expect(screen.getByLabelText("CardListColumn mock")).toHaveAttribute("data-height-mode", "fill");
+  });
+
   it("loads list through provider and supports search/filter/pagination", async () => {
     const provider = buildProvider();
     render(
