@@ -4,7 +4,11 @@ import { MantineProvider } from "@mantine/core";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { EntityTypesWidgetCore } from "./EntityTypesWidgetCore";
-import type { EntityTypesDataProvider } from "../providers/entityTypesDataProvider";
+import type {
+  EntityTypeFamilySummary,
+  EntityTypesDataProvider,
+} from "../providers/entityTypesDataProvider";
+import type { ProviderContext } from "../providers/profilesDataProvider";
 import type { ProfileDetails } from "../providers/profilesDataProvider";
 
 vi.mock("@mantine/core", async () => {
@@ -55,12 +59,12 @@ const detail = {
 };
 
 const buildProvider = (): EntityTypesDataProvider => ({
-  listFamilies: vi.fn(async () => [
+  listFamilies: vi.fn(async (): Promise<EntityTypeFamilySummary[]> => [
     {
       id: famId,
       namespace: "ns",
       code: "person",
-      status: "published",
+      status: "published" as const,
       draftSchemaVersion: 1,
       publishedSchemaVersion: 1,
     },
@@ -149,7 +153,7 @@ describe("EntityTypesWidgetCore", () => {
     const staleSignals: AbortSignal[] = [];
     const provider: EntityTypesDataProvider = {
       ...buildProvider(),
-      listFamilies: vi.fn((_ctx) => {
+      listFamilies: vi.fn((_ctx: ProviderContext): Promise<EntityTypeFamilySummary[]> => {
         staleSignals.push(_ctx.signal as AbortSignal);
         return new Promise(() => undefined);
       }),
