@@ -56,7 +56,7 @@ func (c *Catalog) CreateDraft(ctx context.Context, tenantID string, params Creat
 	namespace := strings.TrimSpace(params.Namespace)
 	code := strings.TrimSpace(params.Code)
 	if namespace == "" || code == "" {
-		return Record{}, fmt.Errorf("namespace and code are required")
+		return Record{}, fmt.Errorf("%w: namespace and code are required", ErrInvalidArgument)
 	}
 	draftSchema := params.DraftSchema
 	if draftSchema == nil {
@@ -147,7 +147,7 @@ func (c *Catalog) List(ctx context.Context, tenantID string) ([]Record, error) {
 func (c *Catalog) Publish(ctx context.Context, tenantID, entityTypeFamilyID string) (Record, error) {
 	_, err := uuid.Parse(entityTypeFamilyID)
 	if err != nil {
-		return Record{}, fmt.Errorf("invalid entity type id: %w", err)
+		return Record{}, fmt.Errorf("%w: invalid entity type id: %v", ErrInvalidArgument, err)
 	}
 
 	tx, err := c.pool.BeginTx(ctx, pgx.TxOptions{})

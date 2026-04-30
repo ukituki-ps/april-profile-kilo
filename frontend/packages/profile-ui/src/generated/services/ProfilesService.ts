@@ -2,14 +2,38 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { BatchUpgradeEntityTypeRevisionRequest } from '../models/BatchUpgradeEntityTypeRevisionRequest';
+import type { BatchUpgradeEntityTypeRevisionResponse } from '../models/BatchUpgradeEntityTypeRevisionResponse';
 import type { CreateEntityRequest } from '../models/CreateEntityRequest';
 import type { ProfileListResponse } from '../models/ProfileListResponse';
 import type { ProfileSnapshot } from '../models/ProfileSnapshot';
 import type { UpdateEntityRequest } from '../models/UpdateEntityRequest';
+import type { UpgradeEntityTypeRevisionRequest } from '../models/UpgradeEntityTypeRevisionRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class ProfilesService {
+    /**
+     * Пакетный апгрейд привязки к одной целевой ревизии
+     * @param requestBody
+     * @returns BatchUpgradeEntityTypeRevisionResponse Сводка по сущностям
+     * @throws ApiError
+     */
+    public static batchUpgradeEntityTypeRevision(
+        requestBody: BatchUpgradeEntityTypeRevisionRequest,
+    ): CancelablePromise<BatchUpgradeEntityTypeRevisionResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/v1/entities/batch-upgrade-entity-type-revision',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Невалидный запрос или целевая ревизия`,
+                401: `Нет или невалидный Bearer`,
+                403: `В токене нет claim с tenant_id`,
+            },
+        });
+    }
     /**
      * Список текущих профилей (server-side search/filter/pagination)
      * @param search Поиск по `entity_id` и текстовым фрагментам текущего `document`.
@@ -66,6 +90,7 @@ export class ProfilesService {
                 403: `В токене нет claim с tenant_id`,
                 404: `Тип сущности не найден`,
                 409: `Тип не опубликован, конфликт external mapping или все поля заблокированы authority`,
+                422: `Документ не соответствует JSON Schema последней опубликованной ревизии типа`,
             },
         });
     }
@@ -141,6 +166,37 @@ export class ProfilesService {
                 401: `Нет или невалидный Bearer`,
                 403: `В токене нет claim с tenant_id`,
                 404: `Сущность не найдена`,
+            },
+        });
+    }
+    /**
+     * Апгрейд привязки сущности к опубликованной ревизии схемы типа
+     * Валидирует текущий документ профиля по целевой JSON Schema ревизии; при успехе обновляет `bound_entity_type_revision_id`
+     * и при смене ревизии добавляет новую строку `profile_versions` (append-only) и событие outbox.
+     *
+     * @param entityId
+     * @param requestBody
+     * @returns ProfileSnapshot Текущий снимок профиля после операции
+     * @throws ApiError
+     */
+    public static upgradeEntityTypeRevision(
+        entityId: string,
+        requestBody?: UpgradeEntityTypeRevisionRequest,
+    ): CancelablePromise<ProfileSnapshot> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/v1/entities/{entityID}/upgrade-entity-type-revision',
+            path: {
+                'entityID': entityId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Невалидный JSON или целевая ревизия`,
+                401: `Нет или невалидный Bearer`,
+                403: `В токене нет claim с tenant_id`,
+                404: `Сущность не найдена`,
+                422: `Документ не проходит валидацию по схеме целевой ревизии`,
             },
         });
     }

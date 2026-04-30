@@ -14,18 +14,20 @@ import (
 // логической версии не создаёт вторую строку. Статус pending: фоновый воркер Asynq вызывает Publisher
 // и переводит строку в published/failed (см. internal/asyncjobs).
 func insertProfileOutboxRow(ctx context.Context, tx pgx.Tx, tenantID, entityID string, profileVersion int64, occurredAt time.Time) error {
-	entityType, err := loadEntityTypeKey(ctx, tx, tenantID, entityID)
+	info, err := loadEntityBindingForEvent(ctx, tx, tenantID, entityID)
 	if err != nil {
 		return err
 	}
 	eventID := ProfileChangeEventID(tenantID, entityID, profileVersion)
 	ev := ProfileChangeEventV1{
-		TenantID:       tenantID,
-		EntityID:       entityID,
-		EntityType:     entityType,
-		ProfileVersion: profileVersion,
-		OccurredAt:     occurredAt.UTC(),
-		EventID:        eventID.String(),
+		TenantID:             tenantID,
+		EntityID:             entityID,
+		EntityType:           info.TypeKey,
+		EntityTypeRevisionID: info.RevisionID,
+		EntityTypeRevisionNo: info.RevisionNo,
+		ProfileVersion:       profileVersion,
+		OccurredAt:           occurredAt.UTC(),
+		EventID:              eventID.String(),
 	}
 	payload, err := MarshalProfileChangeEvent(ev)
 	if err != nil {
@@ -46,27 +48,40 @@ func insertProfileOutboxRow(ctx context.Context, tx pgx.Tx, tenantID, entityID s
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'pending', NULL)
 		ON CONFLICT (tenant_id, entity_id, profile_version) DO NOTHING
-	`, eventID, tenantID, entityID, entityType, profileVersion, occurredAt.UTC(), payload)
+	`, eventID, tenantID, entityID, info.TypeKey, profileVersion, occurredAt.UTC(), payload)
 	if err != nil {
 		return fmt.Errorf("insert profile outbox: %w", err)
 	}
 	return nil
 }
 
-func loadEntityTypeKey(ctx context.Context, tx pgx.Tx, tenantID, entityID string) (string, error) {
-	var ns, code string
+type entityBindingEventInfo struct {
+	TypeKey    string
+	RevisionID string
+	RevisionNo int
+}
+
+func loadEntityBindingForEvent(ctx context.Context, tx pgx.Tx, tenantID, entityID string) (entityBindingEventInfo, error) {
+	var ns, code, revID string
+	var revNo int
 	err := tx.QueryRow(ctx, `
-		SELECT f.namespace, f.code
+		SELECT f.namespace, f.code, r.id::text, r.revision_no
 		FROM entities e
 		JOIN entity_type_families f
 			ON f.tenant_id = e.tenant_id AND f.id = e.entity_type_id
+		JOIN entity_type_revisions r
+			ON r.tenant_id = e.tenant_id AND r.id = e.bound_entity_type_revision_id
 		WHERE e.tenant_id = $1 AND e.entity_id = $2
-	`, tenantID, entityID).Scan(&ns, &code)
+	`, tenantID, entityID).Scan(&ns, &code, &revID, &revNo)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return "", ErrNotFound
+			return entityBindingEventInfo{}, ErrNotFound
 		}
-		return "", fmt.Errorf("load entity type: %w", err)
+		return entityBindingEventInfo{}, fmt.Errorf("load entity binding: %w", err)
 	}
-	return ns + "/" + code, nil
+	return entityBindingEventInfo{
+		TypeKey:    ns + "/" + code,
+		RevisionID: revID,
+		RevisionNo: revNo,
+	}, nil
 }

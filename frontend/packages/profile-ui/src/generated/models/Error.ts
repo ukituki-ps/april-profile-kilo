@@ -15,5 +15,12 @@ export type Error = {
      * Идентификатор запроса для корреляции в логах и трассировке.
      */
     request_id?: string | null;
+    /**
+     * Детали при `code=schema_validation_failed` (несоответствие документа JSON Schema ревизии).
+     */
+    issues?: Array<{
+        path: string;
+        message: string;
+    }>;
 };
 

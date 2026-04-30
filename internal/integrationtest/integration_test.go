@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -395,6 +396,9 @@ func TestProfileOutbox_eventContractAndIdempotency(t *testing.T) {
 	if doc["event_id"] != eventID || doc["entity_type"] != "hr/employee" {
 		t.Fatalf("payload mismatch: %v", doc)
 	}
+	if doc["entity_type_revision_id"] == nil || doc["entity_type_revision_no"] == nil {
+		t.Fatalf("expected revision fields in outbox payload, got %v", doc)
+	}
 
 	updated, err := service.Update(ctx, tenantID, created.EntityID, profiles.UpdateParams{
 		Document: map[string]any{"name": "Bob"},
@@ -685,6 +689,160 @@ func applyAtlasMigrations(t *testing.T, ctx context.Context, databaseURL string)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("atlas migrate apply failed: %v\n%s", err, string(output))
+	}
+}
+
+func TestEntityType_secondPublishedRevision_andProfileUpgrade(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	pgURL, cleanup := startPostgresWithAtlasMigrations(t, ctx)
+	defer cleanup()
+
+	pool, err := pgxpool.New(ctx, pgURL)
+	if err != nil {
+		t.Fatalf("pgxpool new: %v", err)
+	}
+	defer pool.Close()
+
+	tenantID := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	familyID := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	if _, err := pool.Exec(ctx, `INSERT INTO tenants (id) VALUES ($1)`, tenantID); err != nil {
+		t.Fatalf("insert tenant: %v", err)
+	}
+	integrationInsertPublishedEntityFamily(t, ctx, pool, tenantID, familyID, "hr", "employee")
+
+	var rev1ID string
+	if err := pool.QueryRow(ctx, `
+		SELECT id::text FROM entity_type_revisions
+		WHERE tenant_id = $1 AND family_id = $2::uuid AND revision_no = 1
+	`, tenantID, familyID).Scan(&rev1ID); err != nil {
+		t.Fatalf("rev1 id: %v", err)
+	}
+
+	svc := profiles.NewService(pool)
+	created, err := svc.Create(ctx, tenantID, profiles.CreateParams{
+		EntityTypeID: familyID,
+		Document:     map[string]any{"name": "Alice"},
+	})
+	if err != nil {
+		t.Fatalf("create profile: %v", err)
+	}
+	var bound string
+	if err := pool.QueryRow(ctx, `
+		SELECT bound_entity_type_revision_id::text FROM entities
+		WHERE tenant_id = $1 AND entity_id = $2::uuid
+	`, tenantID, created.EntityID).Scan(&bound); err != nil {
+		t.Fatalf("bound: %v", err)
+	}
+	if bound != rev1ID {
+		t.Fatalf("expected bind to rev1 %s, got %s", rev1ID, bound)
+	}
+
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO entity_type_revisions (tenant_id, family_id, revision_no, schema_json, published_at)
+		VALUES ($1, $2::uuid, 2, $3::jsonb, now())
+	`, tenantID, familyID, integrationEntitySchemaMinimal); err != nil {
+		t.Fatalf("insert rev2: %v", err)
+	}
+
+	upgraded, err := svc.UpgradeEntityBinding(ctx, tenantID, created.EntityID, profiles.UpgradeBindingParams{})
+	if err != nil {
+		t.Fatalf("upgrade: %v", err)
+	}
+	if upgraded.Version != 2 {
+		t.Fatalf("want profile version 2, got %d", upgraded.Version)
+	}
+	if err := pool.QueryRow(ctx, `
+		SELECT bound_entity_type_revision_id::text FROM entities
+		WHERE tenant_id = $1 AND entity_id = $2::uuid
+	`, tenantID, created.EntityID).Scan(&bound); err != nil {
+		t.Fatalf("bound after: %v", err)
+	}
+	if bound == rev1ID {
+		t.Fatal("expected bound revision to change after upgrade")
+	}
+}
+
+func TestEntityType_draftSave_conflictReturns409(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	pgURL, cleanup := startPostgresWithAtlasMigrations(t, ctx)
+	defer cleanup()
+
+	pool, err := pgxpool.New(ctx, pgURL)
+	if err != nil {
+		t.Fatalf("pgxpool new: %v", err)
+	}
+	defer pool.Close()
+
+	tenantID := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	if _, err := pool.Exec(ctx, `INSERT INTO tenants (id) VALUES ($1)`, tenantID); err != nil {
+		t.Fatalf("insert tenant: %v", err)
+	}
+
+	cat := entitytypes.NewCatalog(pool)
+	rec, err := cat.CreateDraft(ctx, tenantID, entitytypes.CreateDraftParams{
+		Namespace:   "hr",
+		Code:        "contractor",
+		DraftSchema: map[string]any{"type": "object", "properties": map[string]any{"name": map[string]any{"type": "string"}}},
+	})
+	if err != nil {
+		t.Fatalf("create draft: %v", err)
+	}
+	wrong := 999
+	_, err = cat.SaveDraft(ctx, tenantID, rec.ID, entitytypes.SaveDraftParams{
+		DraftSchema:          map[string]any{"type": "object", "properties": map[string]any{"name": map[string]any{"type": "string"}}},
+		IfDraftSchemaVersion: &wrong,
+	})
+	if err == nil {
+		t.Fatal("expected draft version conflict")
+	}
+	if !errors.Is(err, entitytypes.ErrDraftVersionConflict) {
+		t.Fatalf("want ErrDraftVersionConflict, got %v", err)
+	}
+}
+
+func TestCatalog_publishTwice_incrementsRevisionNo(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	pgURL, cleanup := startPostgresWithAtlasMigrations(t, ctx)
+	defer cleanup()
+
+	pool, err := pgxpool.New(ctx, pgURL)
+	if err != nil {
+		t.Fatalf("pgxpool new: %v", err)
+	}
+	defer pool.Close()
+
+	tenantID := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	if _, err := pool.Exec(ctx, `INSERT INTO tenants (id) VALUES ($1)`, tenantID); err != nil {
+		t.Fatalf("insert tenant: %v", err)
+	}
+
+	cat := entitytypes.NewCatalog(pool)
+	rec, err := cat.CreateDraft(ctx, tenantID, entitytypes.CreateDraftParams{
+		Namespace: "x",
+		Code:        "y",
+		DraftSchema: map[string]any{"type": "object", "properties": map[string]any{"a": map[string]any{"type": "string"}}},
+	})
+	if err != nil {
+		t.Fatalf("draft: %v", err)
+	}
+	if _, err := cat.Publish(ctx, tenantID, rec.ID); err != nil {
+		t.Fatalf("publish1: %v", err)
+	}
+	if _, err := cat.Publish(ctx, tenantID, rec.ID); err != nil {
+		t.Fatalf("publish2: %v", err)
+	}
+	revs, err := cat.ListRevisions(ctx, tenantID, rec.ID)
+	if err != nil {
+		t.Fatalf("list rev: %v", err)
+	}
+	if len(revs) != 2 || revs[0].RevisionNo != 1 || revs[1].RevisionNo != 2 {
+		t.Fatalf("revisions: %+v", revs)
 	}
 }
 

@@ -118,6 +118,24 @@ func (s *Service) Create(ctx context.Context, tenantID string, params CreatePara
 		return Snapshot{}, err
 	}
 
+	var latestSchemaRaw []byte
+	if err := tx.QueryRow(ctx, `
+		SELECT r.schema_json
+		FROM entity_type_revisions r
+		WHERE r.tenant_id = $1 AND r.family_id = $2::uuid
+		ORDER BY r.revision_no DESC, r.published_at DESC
+		LIMIT 1
+	`, tenantID, entityTypeID).Scan(&latestSchemaRaw); err != nil {
+		return Snapshot{}, fmt.Errorf("load latest published schema: %w", err)
+	}
+	var latestSchema map[string]any
+	if err := json.Unmarshal(latestSchemaRaw, &latestSchema); err != nil {
+		return Snapshot{}, fmt.Errorf("decode latest schema: %w", err)
+	}
+	if err := ValidateDocumentAgainstSchema(latestSchema, document); err != nil {
+		return Snapshot{}, err
+	}
+
 	var entityID string
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO entities (tenant_id, entity_type_id, bound_entity_type_revision_id)
