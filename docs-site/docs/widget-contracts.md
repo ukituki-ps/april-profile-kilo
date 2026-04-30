@@ -145,3 +145,50 @@ sidebar_position: 6
 
 - **Task 043** стартует только после фиксации list/search/filter/pagination API контракта и error envelope (`code`, `message`, `request_id`).
 - **Task 044** стартует только после готовности generated SDK с list endpoint и подтверждённого baseline из этого раздела.
+
+---
+
+## 9. EntityTypesWidget production-first baseline (Phase 7 / tasks 052–054)
+
+Дополнение к **контракту v1** (обратно совместимо: новые виды событий telemetry — **minor** для `@april/profile-ui`, см. [версионирование](/docs/versioning-and-compatibility)). Идентификаторы embed: **`profileId` = `entity-types-admin`**, **`widgetId` = `entity-types-widget`** (каталог виджетов в репозитории: `docs/widgets/README.md`).
+
+### 9.1 Целевое разбиение ответственности
+
+| Слой | Обязанности | Явно запрещено |
+|------|-------------|----------------|
+| `EntityTypesWidgetCore` | UI + state machine (список семейств, вкладки Draft / Revisions / Upgrade), DS-first рендер, `onAction` / `onError` / `onObservability`, отмена in-flight через `AbortSignal` в `ProviderContext` | Прямые вызовы OpenAPI, `apiBaseUrl`/`accessToken` внутри Core, `VITE_*` как источник данных |
+| `EntityTypesApiWidget` | Создание `createOpenApiEntityTypesProvider`, сборка `ProviderContext` из `hostContext` + `accessToken`, маппинг transport → нормализованные ошибки | Дублирование UI-логики Core |
+| `EntityTypesWidget` (фасад) | Стабильная точка встраивания для host | Отдельная бизнес-логика поверх `EntityTypesApiWidget` |
+
+### 9.2 Контракт данных (логическое имя: `EntityTypesDataProvider`)
+
+Минимальный набор операций (детали типов — экспорт пакета `@april/profile-ui`):
+
+- `listFamilies(ctx)` — каталог семейств типов;
+- `getFamily`, `createFamily`, `patchFamily`, `deleteFamily`;
+- `saveDraft` (optimistic concurrency: `if_draft_schema_version`), `publishDraft`;
+- `listRevisions`;
+- `listProfilesForType` — для вкладки Upgrade (`GET /v1/entities` с `entity_type_id`);
+- `upgradeEntityProfileBinding`, `batchUpgradeEntityBindings`.
+
+`ctx` включает `tenantId`, auth (в т.ч. `accessToken`), telemetry ids и **`AbortSignal`** на read-путях, которые Core отменяет при смене выбора / размонтировании.
+
+### 9.3 Публичные props (фасад `EntityTypesWidget` / `EntityTypesApiWidget`)
+
+Обязательные: `hostContext`, `apiBaseUrl`. Рекомендуемые: `accessToken`, `onError`, `onObservability`. Опционально: `pageSize` (список сущностей на Upgrade), `providerContext` (переопределение без `signal`), `onAction` (`EntityTypesWidgetAction`), `onOpenEntity` (клик по `entity_id` в таблице апгрейда — навигация к `profiles-widget`).
+
+Семантика **`HostContext` v1** (§2) не меняется: `tenant` и telemetry только из доверенного OIDC/BFF.
+
+### 9.4 Telemetry (расширение union событий)
+
+Для `ProfileWidgetTelemetryEvent` допускается `widget: "entity_types"` и события (наряду с базовыми из §3 / Profiles):
+
+- стадии каталога: `list_requested` / `list_succeeded` / `list_failed` (список семейств), `details_requested` / `details_failed` (деталь семейства + ревизии);
+- черновик / публикация: `draft_save_submitted` | `draft_save_succeeded` | `draft_save_failed`, `publish_submitted` | `publish_succeeded` | `publish_failed`;
+- апгрейд: `upgrade_submitted` | `upgrade_succeeded` | `upgrade_failed`, `batch_upgrade_submitted`, `batch_upgrade_completed`.
+
+Корреляция: `request_id` из `hostContext.telemetry`, при наличии — `request_id` из JSON envelope ошибки API в поле `api_request_id` / `requestId` в `onError` (как у профильных виджетов).
+
+### 9.5 Handoff Hub/BFF
+
+Исполняемый чеклист маршрутов, таймаутов и примера `hostContext`: в репозитории `docs/integration/entity-types-widget-hub-handoff.md`.

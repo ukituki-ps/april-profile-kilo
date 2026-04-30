@@ -87,7 +87,7 @@
 
 `onError`: нормализованный `{ code?, message, requestId? }`; при наличии `request_id` в теле ошибки API его имеет смысл прокинуть в `requestId` для корреляции с логами бэкенда.
 
-Telemetry: тот же дух, что у `profiles-widget` (корреляция `request_id`, ключи вида `widget = entity_types` + стадии list/detail/save/publish/upgrade). Детальный список событий фиксируется в PLAN задачи на UI.
+Telemetry: см. [`WIDGET_CONTRACTS.md`](../../WIDGET_CONTRACTS.md) §9 (`widget: "entity_types"`, события `list_*`, `details_*`, `draft_save_*`, `publish_*`, `upgrade_*`, `batch_upgrade_*`) и типы в пакете `src/observability.ts`.
 
 ---
 

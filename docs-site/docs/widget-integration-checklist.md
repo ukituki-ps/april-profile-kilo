@@ -33,3 +33,11 @@ sidebar_position: 10
 - [ ] Ручной smoke: сохранение, ошибка API, сценарий «следующий» (если применимо).
 - [ ] Lockfile обновлён; CI зелёный.
 - [ ] Синхронизация документации выполнена: `docs/widgets/...` (канон) и страницы каталога/модели в docs-site.
+
+## Каталог типов (`profileId`: `entity-types-admin`, `widgetId`: `entity-types-widget`)
+
+- [ ] В конфигурации host зафиксированы **`entity-types-admin`** / **`entity-types-widget`** (см. каталог в репозитории `docs/widgets/README.md`); нет подмены другими идентификаторами.
+- [ ] BFF проксирует **полный** набор путей API для виджета по тому же каноническому префиксу, что и для профильных виджетов (обычно `/admin/profile/api` → сервисный `/api`), без «произвольного внешнего URL» без OIDC — см. handoff в репозитории `docs/integration/entity-types-widget-hub-handoff.md`.
+- [ ] `EntityTypesWidget` получает тот же паттерн **`hostContext` + `apiBaseUrl` + `accessToken`**, что и `ProfilesWidget`; `tenant` не вводится из полей формы виджета.
+- [ ] Host реализует `onAction` / `onOpenEntity` (например переход к `profiles-widget` по `entity_id`) и не полагается на внутренний роутинг виджета.
+- [ ] Для операций **publish** и **batch upgrade** согласованы таймауты reverse-proxy/BFF и ожидания UX (виджет блокирует повтор до завершения in-flight запроса).
