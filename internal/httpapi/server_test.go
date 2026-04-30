@@ -787,6 +787,14 @@ func (s *stubProfileService) Delete(ctx context.Context, tenantID, entityID stri
 	return s.deleteFn(ctx, tenantID, entityID)
 }
 
+func (s *stubProfileService) UpgradeEntityBinding(ctx context.Context, tenantID, entityID string, params profiles.UpgradeBindingParams) (profiles.Snapshot, error) {
+	return profiles.Snapshot{}, profiles.ErrNotFound
+}
+
+func (s *stubProfileService) BatchUpgradeEntityBinding(ctx context.Context, tenantID string, params profiles.BatchUpgradeBindingParams) (profiles.BatchUpgradeBindingResult, error) {
+	return profiles.BatchUpgradeBindingResult{}, profiles.ErrInvalidBindingUpgrade
+}
+
 func (s *stubCatalog) CreateDraft(ctx context.Context, tenantID string, params entitytypes.CreateDraftParams) (entitytypes.Record, error) {
 	if s.createDraftFn == nil {
 		return entitytypes.Record{}, nil
@@ -806,4 +814,32 @@ func (s *stubCatalog) Publish(ctx context.Context, tenantID, entityTypeID string
 		return entitytypes.Record{}, nil
 	}
 	return s.publishFn(ctx, tenantID, entityTypeID)
+}
+
+func (s *stubCatalog) Get(ctx context.Context, tenantID, entityTypeID string) (entitytypes.Record, error) {
+	return entitytypes.Record{}, entitytypes.ErrNotFound
+}
+
+func (s *stubCatalog) UpdateFamilyMeta(ctx context.Context, tenantID, entityTypeID string, params entitytypes.UpdateFamilyParams) (entitytypes.Record, error) {
+	return entitytypes.Record{}, entitytypes.ErrNotFound
+}
+
+func (s *stubCatalog) DeleteFamily(ctx context.Context, tenantID, entityTypeID string) error {
+	return entitytypes.ErrNotFound
+}
+
+func (s *stubCatalog) SaveDraft(ctx context.Context, tenantID, entityTypeID string, params entitytypes.SaveDraftParams) (entitytypes.Record, error) {
+	return entitytypes.Record{}, entitytypes.ErrNotFound
+}
+
+func (s *stubCatalog) ListRevisions(ctx context.Context, tenantID, entityTypeID string) ([]entitytypes.Revision, error) {
+	return []entitytypes.Revision{}, nil
+}
+
+func (s *stubCatalog) GetRevision(ctx context.Context, tenantID, entityTypeID, revisionID string) (entitytypes.Revision, error) {
+	return entitytypes.Revision{}, entitytypes.ErrRevisionNotFound
+}
+
+func (s *stubCatalog) GetRevisionByNo(ctx context.Context, tenantID, entityTypeID string, revisionNo int) (entitytypes.Revision, error) {
+	return entitytypes.Revision{}, entitytypes.ErrRevisionNotFound
 }

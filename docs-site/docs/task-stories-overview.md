@@ -55,6 +55,9 @@ sidebar_position: 20
 - [047 — Тестовая матрица и release-gate для `ProfilesWidget` варианта C](./task-story-047-phase-6-profiles-widget-test-matrix-and-release-gate)
 - [051 — Рефакторинг UI `ProfilesWidget`: embed, версии, имя](./task-story-051-phase-6-profiles-widget-ui-refactor-embed-and-versions)
 - [048–050 — Дизайн-система: vendored tarball’ы, CI под GitHub Packages, документация (эпик Hub 049)](./task-story-048-phase-7-ds-npm-registry-consumption)
+- [052 — Ревизии типов: модель БД и миграции](./task-story-052-phase-7-entity-type-revisions-data-model)
+- [053 — Ревизии типов: API и OpenAPI](./task-story-053-phase-7-entity-type-revisions-api)
+- [054 — Виджет `entity-types-widget` в `@april/profile-ui`](./task-story-054-phase-7-entity-types-widget)
 
 ## Быстрый статус
 
@@ -101,3 +104,7 @@ sidebar_position: 20
 | 047 Profiles widget test matrix + release gate | ✅ | [047](./task-story-047-phase-6-profiles-widget-test-matrix-and-release-gate) | Зафиксирован обязательный release-gate variant C, добавлены provider integration tests и блокирующие критерии релиза в testing/release docs |
 | 048–050 DS npm registry (Hub epic 049) | ✅ | [048–050](./task-story-048-phase-7-ds-npm-registry-consumption) | Vendored `@april/*` 0.1.0, CI `NODE_AUTH_TOKEN`, обновлены DESIGN_SYSTEM / DEPLOYMENT / TESTING и человекопонятная история |
 | 051 Profiles widget embed UI + versions | ✅ | [051](./task-story-051-phase-6-profiles-widget-ui-refactor-embed-and-versions) | Flex-layout для хоста, версии и имя в UI, Select типов, иконки действий, расширение `ProfilesDataProvider` |
+| 052 Entity type revisions (data model) | ✅ | [052](./task-story-052-phase-7-entity-type-revisions-data-model) | Семейства типов, immutable ревизии схемы, привязка `entities` к ревизии; миграции Atlas и ADR-0005 |
+| 053 Entity type revisions (API) | ✅ | [053](./task-story-053-phase-7-entity-type-revisions-api) | OpenAPI + Go: каталог, draft/publish, ревизии, single/batch upgrade профилей; SDK |
+| 054 `entity-types-widget` UI | ✅ | [054](./task-story-054-phase-7-entity-types-widget) | Production-first виджет Core+Api+facade, DS, telemetry, handoff подготовлен в репозитории |
+| 055 Contracts + docs-site + Hub handoff docs | ✅ | [контракты](/docs/widget-contracts) §9, [handoff](https://github.com/ukituki-ps/april-profile/blob/develop/docs/integration/entity-types-widget-hub-handoff.md), отчёт `tasks/055-phase-7-entity-types-contract-docs-hub-handoff/REPORT.md` | Синхронизация `WIDGET_CONTRACTS` / чеклистов / каталога; три story-страницы 052–054; финальный handoff Hub/BFF |

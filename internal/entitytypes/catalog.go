@@ -14,9 +14,8 @@ import (
 )
 
 var (
-	ErrNotFound         = errors.New("entity type not found")
-	ErrAlreadyPublished = errors.New("entity type already published")
-	ErrInvalidSchema    = errors.New("invalid draft schema")
+	ErrNotFound      = errors.New("entity type not found")
+	ErrInvalidSchema = errors.New("invalid draft schema")
 )
 
 type Status string
@@ -57,7 +56,7 @@ func (c *Catalog) CreateDraft(ctx context.Context, tenantID string, params Creat
 	namespace := strings.TrimSpace(params.Namespace)
 	code := strings.TrimSpace(params.Code)
 	if namespace == "" || code == "" {
-		return Record{}, fmt.Errorf("namespace and code are required")
+		return Record{}, fmt.Errorf("%w: namespace and code are required", ErrInvalidArgument)
 	}
 	draftSchema := params.DraftSchema
 	if draftSchema == nil {
@@ -69,55 +68,62 @@ func (c *Catalog) CreateDraft(ctx context.Context, tenantID string, params Creat
 		return Record{}, fmt.Errorf("marshal draft schema: %w", err)
 	}
 
-	row := c.pool.QueryRow(ctx, `
-		INSERT INTO entity_types (
-			tenant_id,
-			namespace,
-			code,
-			schema_json,
-			schema_version,
-			status
-		) VALUES ($1, $2, $3, $4, 1, 'draft')
-		RETURNING id, namespace, code, schema_json, schema_version, status, created_at
-	`, tenantID, namespace, code, schemaJSON)
+	tx, err := c.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return Record{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
 
-	var rec Record
-	var rawSchema []byte
-	var status string
-	if err := row.Scan(
-		&rec.ID,
-		&rec.Namespace,
-		&rec.Code,
-		&rawSchema,
-		&rec.DraftSchemaVersion,
-		&status,
-		&rec.CreatedAt,
-	); err != nil {
+	var familyID string
+	var createdAt time.Time
+	err = tx.QueryRow(ctx, `
+		INSERT INTO entity_type_families (id, tenant_id, namespace, code)
+		VALUES (gen_random_uuid(), $1, $2, $3)
+		RETURNING id, created_at
+	`, tenantID, namespace, code).Scan(&familyID, &createdAt)
+	if err != nil {
+		return Record{}, fmt.Errorf("insert entity type family: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO entity_type_drafts (tenant_id, family_id, draft_schema_json, draft_schema_version, updated_at)
+		VALUES ($1, $2, $3::jsonb, 1, now())
+	`, tenantID, familyID, schemaJSON)
+	if err != nil {
 		return Record{}, fmt.Errorf("insert entity type draft: %w", err)
 	}
-	rec.Status = Status(status)
-	if err := json.Unmarshal(rawSchema, &rec.DraftSchema); err != nil {
-		return Record{}, fmt.Errorf("decode stored draft schema: %w", err)
+
+	if err := tx.Commit(ctx); err != nil {
+		return Record{}, fmt.Errorf("commit create draft: %w", err)
 	}
-	return rec, nil
+
+	return c.getRecord(ctx, tenantID, familyID)
 }
 
 func (c *Catalog) List(ctx context.Context, tenantID string) ([]Record, error) {
 	rows, err := c.pool.Query(ctx, `
 		SELECT
-			id,
-			namespace,
-			code,
-			schema_json,
-			schema_version,
-			status,
-			published_schema_json,
-			published_schema_version,
-			published_at,
-			created_at
-		FROM entity_types
-		WHERE tenant_id = $1
-		ORDER BY created_at DESC
+			f.id,
+			f.namespace,
+			f.code,
+			d.draft_schema_json,
+			d.draft_schema_version,
+			lr.revision_no,
+			lr.schema_json,
+			lr.published_at,
+			f.created_at
+		FROM entity_type_families f
+		JOIN entity_type_drafts d
+			ON d.tenant_id = f.tenant_id AND d.family_id = f.id
+		LEFT JOIN LATERAL (
+			SELECT r.revision_no, r.schema_json, r.published_at
+			FROM entity_type_revisions r
+			WHERE r.tenant_id = f.tenant_id AND r.family_id = f.id
+			ORDER BY r.revision_no DESC
+			LIMIT 1
+		) lr ON TRUE
+		WHERE f.tenant_id = $1
+		ORDER BY f.created_at DESC
 	`, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("list entity types: %w", err)
@@ -126,7 +132,7 @@ func (c *Catalog) List(ctx context.Context, tenantID string) ([]Record, error) {
 
 	out := make([]Record, 0)
 	for rows.Next() {
-		rec, err := scanRecord(rows)
+		rec, err := scanRecordFromListRow(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -138,112 +144,138 @@ func (c *Catalog) List(ctx context.Context, tenantID string) ([]Record, error) {
 	return out, nil
 }
 
-func (c *Catalog) Publish(ctx context.Context, tenantID, entityTypeID string) (Record, error) {
-	_, err := uuid.Parse(entityTypeID)
+func (c *Catalog) Publish(ctx context.Context, tenantID, entityTypeFamilyID string) (Record, error) {
+	_, err := uuid.Parse(entityTypeFamilyID)
 	if err != nil {
-		return Record{}, fmt.Errorf("invalid entity type id: %w", err)
+		return Record{}, fmt.Errorf("%w: invalid entity type id: %v", ErrInvalidArgument, err)
 	}
 
 	tx, err := c.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return Record{}, fmt.Errorf("begin tx: %w", err)
 	}
-	defer func() {
-		_ = tx.Rollback(ctx)
-	}()
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	row := tx.QueryRow(ctx, `
-		SELECT
-			id,
-			namespace,
-			code,
-			schema_json,
-			schema_version,
-			status,
-			published_schema_json,
-			published_schema_version,
-			published_at,
-			created_at
-		FROM entity_types
-		WHERE tenant_id = $1 AND id = $2
-		FOR UPDATE
-	`, tenantID, entityTypeID)
+		SELECT d.draft_schema_json
+		FROM entity_type_drafts d
+		JOIN entity_type_families f ON f.id = d.family_id AND f.tenant_id = d.tenant_id
+		WHERE d.tenant_id = $1 AND d.family_id = $2
+		FOR UPDATE OF d
+	`, tenantID, entityTypeFamilyID)
 
-	rec, err := scanRecord(row)
-	if err != nil {
+	var draftRaw []byte
+	if err := row.Scan(&draftRaw); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Record{}, ErrNotFound
 		}
 		return Record{}, fmt.Errorf("load draft for publish: %w", err)
 	}
-	if rec.Status == StatusPublished {
-		return Record{}, ErrAlreadyPublished
-	}
 
-	if err := ValidateSchemaForPublication(rec.DraftSchema); err != nil {
+	var draftMap map[string]any
+	if err := json.Unmarshal(draftRaw, &draftMap); err != nil {
+		return Record{}, fmt.Errorf("decode draft schema: %w", err)
+	}
+	if err := ValidateSchemaForPublication(draftMap); err != nil {
 		return Record{}, fmt.Errorf("%w: %v", ErrInvalidSchema, err)
 	}
 
-	row = tx.QueryRow(ctx, `
-		UPDATE entity_types
-		SET
-			status = 'published',
-			published_schema_json = schema_json,
-			published_schema_version = schema_version,
-			published_at = now()
-		WHERE tenant_id = $1 AND id = $2
-		RETURNING
-			id,
-			namespace,
-			code,
-			schema_json,
-			schema_version,
-			status,
-			published_schema_json,
-			published_schema_version,
-			published_at,
-			created_at
-	`, tenantID, entityTypeID)
-
-	published, err := scanRecord(row)
-	if err != nil {
-		return Record{}, fmt.Errorf("persist published entity type: %w", err)
+	var nextNo int
+	if err := tx.QueryRow(ctx, `
+		SELECT COALESCE(MAX(revision_no), 0) + 1
+		FROM entity_type_revisions
+		WHERE tenant_id = $1 AND family_id = $2
+	`, tenantID, entityTypeFamilyID).Scan(&nextNo); err != nil {
+		return Record{}, fmt.Errorf("next revision_no: %w", err)
 	}
+
+	payload, err := json.Marshal(draftMap)
+	if err != nil {
+		return Record{}, fmt.Errorf("marshal revision schema: %w", err)
+	}
+
+	pubAt := time.Now().UTC()
+	_, err = tx.Exec(ctx, `
+		INSERT INTO entity_type_revisions (tenant_id, family_id, revision_no, schema_json, published_at)
+		VALUES ($1, $2, $3, $4::jsonb, $5)
+	`, tenantID, entityTypeFamilyID, nextNo, payload, pubAt)
+	if err != nil {
+		return Record{}, fmt.Errorf("insert published revision: %w", err)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return Record{}, fmt.Errorf("commit publish: %w", err)
 	}
-	return published, nil
+
+	return c.getRecord(ctx, tenantID, entityTypeFamilyID)
 }
 
-func scanRecord(row pgx.Row) (Record, error) {
+func (c *Catalog) getRecord(ctx context.Context, tenantID, familyID string) (Record, error) {
+	row := c.pool.QueryRow(ctx, `
+		SELECT
+			f.id,
+			f.namespace,
+			f.code,
+			d.draft_schema_json,
+			d.draft_schema_version,
+			lr.revision_no,
+			lr.schema_json,
+			lr.published_at,
+			f.created_at
+		FROM entity_type_families f
+		JOIN entity_type_drafts d
+			ON d.tenant_id = f.tenant_id AND d.family_id = f.id
+		LEFT JOIN LATERAL (
+			SELECT r.revision_no, r.schema_json, r.published_at
+			FROM entity_type_revisions r
+			WHERE r.tenant_id = f.tenant_id AND r.family_id = f.id
+			ORDER BY r.revision_no DESC
+			LIMIT 1
+		) lr ON TRUE
+		WHERE f.tenant_id = $1 AND f.id = $2
+	`, tenantID, familyID)
+	rec, err := scanRecordFromListRow(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Record{}, ErrNotFound
+		}
+		return Record{}, err
+	}
+	return rec, nil
+}
+
+func scanRecordFromListRow(row pgx.Row) (Record, error) {
 	var rec Record
-	var rawDraft []byte
-	var rawPublished []byte
-	var status string
-	var publishedVersion *int
+	var draftRaw []byte
+	var lrRevNo *int
+	var lrRaw []byte
+	var lrPubAt *time.Time
 	if err := row.Scan(
 		&rec.ID,
 		&rec.Namespace,
 		&rec.Code,
-		&rawDraft,
+		&draftRaw,
 		&rec.DraftSchemaVersion,
-		&status,
-		&rawPublished,
-		&publishedVersion,
-		&rec.PublishedAt,
+		&lrRevNo,
+		&lrRaw,
+		&lrPubAt,
 		&rec.CreatedAt,
 	); err != nil {
 		return Record{}, err
 	}
-	rec.Status = Status(status)
-	if err := json.Unmarshal(rawDraft, &rec.DraftSchema); err != nil {
+	if err := json.Unmarshal(draftRaw, &rec.DraftSchema); err != nil {
 		return Record{}, fmt.Errorf("decode draft schema: %w", err)
 	}
-	if len(rawPublished) > 0 {
-		if err := json.Unmarshal(rawPublished, &rec.PublishedSchema); err != nil {
+	if lrRevNo != nil && len(lrRaw) > 0 {
+		rec.Status = StatusPublished
+		v := *lrRevNo
+		rec.PublishedSchemaVersion = &v
+		rec.PublishedAt = lrPubAt
+		if err := json.Unmarshal(lrRaw, &rec.PublishedSchema); err != nil {
 			return Record{}, fmt.Errorf("decode published schema: %w", err)
 		}
+	} else {
+		rec.Status = StatusDraft
 	}
-	rec.PublishedSchemaVersion = publishedVersion
 	return rec, nil
 }

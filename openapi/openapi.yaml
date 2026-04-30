@@ -6,7 +6,7 @@ info:
     Спецификация ведётся в репозитории (`openapi/openapi.yaml`); скорректируйте `servers` под свой gateway.
     Для AprilHub BFF (фаза 4.2) публичный путь согласован как `/admin/profile/api/v1/...`,
     при этом сервисный путь остаётся `/api/v1/...` и tenant берётся только из JWT claim.
-  version: 0.2.0
+  version: 0.3.0
   license:
     name: UNLICENSED
 servers:
@@ -134,7 +134,7 @@ paths:
                 $ref: '#/components/schemas/Error'
   /v1/entity-types/{entityTypeID}/publish:
     post:
-      summary: Опубликовать черновик типа сущности
+      summary: Опубликовать черновик типа сущности (создаёт новую immutable-ревизию схемы; повторные вызовы допускаются)
       operationId: publishEntityTypeDraft
       tags: [EntityTypes]
       security:
@@ -159,12 +159,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '409':
-          description: Повторная публикация
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '422':
           description: Черновик не проходит структурную валидацию/invariants
           content:
@@ -183,6 +177,254 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /v1/entity-types/{entityTypeID}:
+    get:
+      summary: Получить семейство типа с черновиком и последней ревизией
+      operationId: getEntityType
+      tags: [EntityTypes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EntityTypeIdPath'
+      responses:
+        '200':
+          description: Тип сущности
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityType'
+        '404':
+          description: Не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenTenant'
+    patch:
+      summary: Обновить namespace/code семейства типа
+      operationId: patchEntityTypeFamily
+      tags: [EntityTypes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EntityTypeIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchEntityTypeFamilyRequest'
+      responses:
+        '200':
+          description: Обновлённый тип
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityType'
+        '404':
+          description: Семейство типа не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Дубликат пары namespace/code в tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenTenant'
+    delete:
+      summary: Удалить семейство (только без ревизий и без сущностей)
+      operationId: deleteEntityTypeFamily
+      tags: [EntityTypes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EntityTypeIdPath'
+      responses:
+        '204':
+          description: Удалено
+        '404':
+          description: Семейство типа не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Есть опубликованные ревизии или сущности
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenTenant'
+  /v1/entity-types/{entityTypeID}/draft:
+    put:
+      summary: Сохранить черновик с optimistic concurrency
+      operationId: putEntityTypeDraft
+      tags: [EntityTypes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EntityTypeIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutEntityTypeDraftRequest'
+      responses:
+        '200':
+          description: Черновик сохранён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityType'
+        '404':
+          description: Семейство типа не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Конфликт if_draft_schema_version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Невалидный JSON или отсутствует if_draft_schema_version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenTenant'
+  /v1/entity-types/{entityTypeID}/revisions:
+    get:
+      summary: Список опубликованных ревизий семейства
+      operationId: listEntityTypeRevisions
+      tags: [EntityTypes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EntityTypeIdPath'
+      responses:
+        '200':
+          description: Ревизии по возрастанию revision_no
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityTypeRevisionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenTenant'
+  /v1/entity-types/{entityTypeID}/revisions/by-revision-no/{revisionNo}:
+    get:
+      summary: Получить ревизию по номеру
+      operationId: getEntityTypeRevisionByNo
+      tags: [EntityTypes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EntityTypeIdPath'
+        - in: path
+          name: revisionNo
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Ревизия схемы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityTypeRevision'
+        '404':
+          description: Ревизия или семейство не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenTenant'
+  /v1/entity-types/{entityTypeID}/revisions/{revisionID}:
+    get:
+      summary: Получить ревизию по UUID
+      operationId: getEntityTypeRevision
+      tags: [EntityTypes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EntityTypeIdPath'
+        - in: path
+          name: revisionID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Ревизия схемы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityTypeRevision'
+        '404':
+          description: Ревизия или семейство не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenTenant'
+  /v1/entities/batch-upgrade-entity-type-revision:
+    post:
+      summary: Пакетный апгрейд привязки к одной целевой ревизии
+      operationId: batchUpgradeEntityTypeRevision
+      tags: [Profiles]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchUpgradeEntityTypeRevisionRequest'
+      responses:
+        '200':
+          description: Сводка по сущностям
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchUpgradeEntityTypeRevisionResponse'
+        '400':
+          description: Невалидный запрос или целевая ревизия
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenTenant'
   /v1/entities:
     get:
       summary: Список текущих профилей (server-side search/filter/pagination)
@@ -297,6 +539,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         '409':
           description: Тип не опубликован, конфликт external mapping или все поля заблокированы authority
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Документ не соответствует JSON Schema последней опубликованной ревизии типа
           content:
             application/json:
               schema:
@@ -430,6 +678,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /v1/entities/{entityID}/upgrade-entity-type-revision:
+    post:
+      summary: Апгрейд привязки сущности к опубликованной ревизии схемы типа
+      description: |
+        Валидирует текущий документ профиля по целевой JSON Schema ревизии; при успехе обновляет `bound_entity_type_revision_id`
+        и при смене ревизии добавляет новую строку `profile_versions` (append-only) и событие outbox.
+      operationId: upgradeEntityTypeRevision
+      tags: [Profiles]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EntityID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpgradeEntityTypeRevisionRequest'
+      responses:
+        '200':
+          description: Текущий снимок профиля после операции
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileSnapshot'
+        '400':
+          description: Невалидный JSON или целевая ревизия
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Сущность не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Документ не проходит валидацию по схеме целевой ревизии
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenTenant'
   /v1/entities/{entityID}/versions/{version}:
     get:
       summary: Получить конкретную версию профиля
@@ -694,7 +989,27 @@ paths:
                 $ref: '#/components/schemas/ReadyzResponse'
 
 components:
+  responses:
+    Unauthorized:
+      description: Нет или невалидный Bearer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ForbiddenTenant:
+      description: В токене нет claim с tenant_id
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
   parameters:
+    EntityTypeIdPath:
+      in: path
+      name: entityTypeID
+      required: true
+      schema:
+        type: string
+        format: uuid
     EntityID:
       in: path
       name: entityID
@@ -734,6 +1049,17 @@ components:
         request_id:
           description: Идентификатор запроса для корреляции в логах и трассировке.
           type: [string, 'null']
+        issues:
+          description: Детали при `code=schema_validation_failed` (несоответствие документа JSON Schema ревизии).
+          type: array
+          items:
+            type: object
+            required: [path, message]
+            properties:
+              path:
+                type: string
+              message:
+                type: string
     ReadyzResponse:
       type: object
       required: [status, database, redis]
@@ -819,6 +1145,123 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EntityType'
+    PatchEntityTypeFamilyRequest:
+      type: object
+      required: [namespace, code]
+      properties:
+        namespace:
+          type: string
+        code:
+          type: string
+    PutEntityTypeDraftRequest:
+      type: object
+      required: [draft_schema, if_draft_schema_version]
+      properties:
+        draft_schema:
+          type: object
+          additionalProperties: true
+        if_draft_schema_version:
+          type: integer
+          description: Ожидаемая текущая версия черновика с GET типа; при рассогласовании — 409.
+    EntityTypeRevision:
+      type: object
+      required: [id, family_id, revision_no, schema, published_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        family_id:
+          type: string
+          format: uuid
+        revision_no:
+          type: integer
+          minimum: 1
+        schema:
+          type: object
+          additionalProperties: true
+        published_at:
+          type: string
+          format: date-time
+    EntityTypeRevisionListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityTypeRevision'
+    UpgradeEntityTypeRevisionRequest:
+      type: object
+      description: |
+        Пустое тело — апгрейд на последнюю опубликованную ревизию семейства сущности.
+        Иначе задайте ровно одно из полей.
+      properties:
+        entity_type_revision_id:
+          type: string
+          format: uuid
+        revision_no:
+          type: integer
+          minimum: 1
+    BatchUpgradeEntityTypeRevisionRequest:
+      type: object
+      required: [entity_type_id]
+      properties:
+        entity_type_id:
+          type: string
+          format: uuid
+          description: Семейство типа (`entity_type_families.id`).
+        target_entity_type_revision_id:
+          type: string
+          format: uuid
+        target_revision_no:
+          type: integer
+          minimum: 1
+        entity_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        only_behind_latest:
+          type: boolean
+          description: Если true и `entity_ids` пуст — выбрать сущности, у которых привязка старее целевой ревизии.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+        idempotency_key:
+          type: string
+          description: Опциональный ключ для корреляции на стороне клиента (сервер возвращает его в ответе).
+    BatchUpgradeEntityTypeRevisionResponse:
+      type: object
+      required: [processed, succeeded, failed, results]
+      properties:
+        processed:
+          type: integer
+        succeeded:
+          type: integer
+        failed:
+          type: integer
+        idempotency_key:
+          type: string
+        results:
+          type: array
+          items:
+            type: object
+            required: [entity_id, ok]
+            properties:
+              entity_id:
+                type: string
+                format: uuid
+              ok:
+                type: boolean
+              code:
+                type: string
+              message:
+                type: string
+              profile_version:
+                type: integer
+                format: int64
     ExternalRef:
       type: object
       required: [source_system, external_id]

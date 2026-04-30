@@ -14,7 +14,14 @@ export { InstanceHistoryWidget } from "./components/InstanceHistoryWidget";
 export type { InstanceHistoryWidgetProps } from "./components/InstanceHistoryWidget";
 export { ConflictQueueWidget } from "./components/ConflictQueueWidget";
 export type { ConflictQueueWidgetProps } from "./components/ConflictQueueWidget";
+export { EntityTypesWidget } from "./components/EntityTypesWidget";
+export type { EntityTypesWidgetProps } from "./components/EntityTypesWidget";
+export { EntityTypesApiWidget } from "./components/EntityTypesApiWidget";
+export type { EntityTypesApiWidgetProps } from "./components/EntityTypesApiWidget";
+export { EntityTypesWidgetCore } from "./components/EntityTypesWidgetCore";
+export type { EntityTypesWidgetCoreProps } from "./components/EntityTypesWidgetCore";
 export type {
+  EntityTypesWidgetAction,
   ProfileInstanceListItem,
   ProfileInstancesAction,
   ProfileWidgetHostContext,
@@ -31,6 +38,21 @@ export type {
 export { buildTelemetryIds, emitProfileWidgetTelemetry } from "./observability";
 export { ProfilesService, OpenAPI } from "./generated";
 export { createOpenApiProfilesProvider } from "./providers/openapiProfilesProvider";
+export { createOpenApiEntityTypesProvider } from "./providers/openapiEntityTypesProvider";
+export type {
+  BatchUpgradeInput,
+  BatchUpgradeResult,
+  BatchUpgradeResultRow,
+  CreateEntityTypeFamilyInput,
+  EntityTypeFamilyDetail,
+  EntityTypeFamilySummary,
+  EntityTypeRevisionRow,
+  EntityTypesDataProvider,
+  PatchEntityTypeFamilyInput,
+  SaveDraftInput,
+  UpgradeBindingInput,
+} from "./providers/entityTypesDataProvider";
+export { isEntityTypesProviderError } from "./providers/entityTypesDataProvider";
 export type {
   CreateProfileInput,
   ProfileDetails,

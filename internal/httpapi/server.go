@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -47,6 +48,13 @@ type EntityTypeCatalog interface {
 	CreateDraft(ctx context.Context, tenantID string, params entitytypes.CreateDraftParams) (entitytypes.Record, error)
 	List(ctx context.Context, tenantID string) ([]entitytypes.Record, error)
 	Publish(ctx context.Context, tenantID, entityTypeID string) (entitytypes.Record, error)
+	Get(ctx context.Context, tenantID, entityTypeID string) (entitytypes.Record, error)
+	UpdateFamilyMeta(ctx context.Context, tenantID, entityTypeID string, params entitytypes.UpdateFamilyParams) (entitytypes.Record, error)
+	DeleteFamily(ctx context.Context, tenantID, entityTypeID string) error
+	SaveDraft(ctx context.Context, tenantID, entityTypeID string, params entitytypes.SaveDraftParams) (entitytypes.Record, error)
+	ListRevisions(ctx context.Context, tenantID, entityTypeID string) ([]entitytypes.Revision, error)
+	GetRevision(ctx context.Context, tenantID, entityTypeID, revisionID string) (entitytypes.Revision, error)
+	GetRevisionByNo(ctx context.Context, tenantID, entityTypeID string, revisionNo int) (entitytypes.Revision, error)
 }
 
 // ProfileService описывает операции CRUD и версионирования профиля.
@@ -58,6 +66,8 @@ type ProfileService interface {
 	GetByVersion(ctx context.Context, tenantID, entityID string, version int64) (profiles.Snapshot, error)
 	GetCurrentByExternalRef(ctx context.Context, tenantID string, ref profiles.ExternalRef) (profiles.Snapshot, error)
 	Delete(ctx context.Context, tenantID, entityID string) error
+	UpgradeEntityBinding(ctx context.Context, tenantID, entityID string, params profiles.UpgradeBindingParams) (profiles.Snapshot, error)
+	BatchUpgradeEntityBinding(ctx context.Context, tenantID string, params profiles.BatchUpgradeBindingParams) (profiles.BatchUpgradeBindingResult, error)
 }
 
 // ProfileAdmin — админ-операции: конфликты authority и merge дубликатов (роль Keycloak см. RequireRealmRole).
@@ -81,10 +91,19 @@ func NewMux(v *auth.Validator, readiness ReadinessChecker, catalog EntityTypeCat
 	mux.Handle("GET /v1/auth/whoami", v.Middleware(http.HandlerFunc(handleWhoAmI)))
 	mux.Handle("POST /v1/entity-types", v.Middleware(http.HandlerFunc(handleCreateEntityTypeDraft(catalog))))
 	mux.Handle("GET /v1/entity-types", v.Middleware(http.HandlerFunc(handleListEntityTypes(catalog))))
+	mux.Handle("GET /v1/entity-types/{entityTypeID}", v.Middleware(http.HandlerFunc(handleGetEntityType(catalog))))
+	mux.Handle("PATCH /v1/entity-types/{entityTypeID}", v.Middleware(http.HandlerFunc(handlePatchEntityTypeFamily(catalog))))
+	mux.Handle("DELETE /v1/entity-types/{entityTypeID}", v.Middleware(http.HandlerFunc(handleDeleteEntityTypeFamily(catalog))))
+	mux.Handle("PUT /v1/entity-types/{entityTypeID}/draft", v.Middleware(http.HandlerFunc(handlePutEntityTypeDraft(catalog))))
+	mux.Handle("GET /v1/entity-types/{entityTypeID}/revisions", v.Middleware(http.HandlerFunc(handleListEntityTypeRevisions(catalog))))
+	mux.Handle("GET /v1/entity-types/{entityTypeID}/revisions/by-revision-no/{revisionNo}", v.Middleware(http.HandlerFunc(handleGetEntityTypeRevisionByNo(catalog))))
+	mux.Handle("GET /v1/entity-types/{entityTypeID}/revisions/{revisionID}", v.Middleware(http.HandlerFunc(handleGetEntityTypeRevision(catalog))))
 	mux.Handle("POST /v1/entity-types/{entityTypeID}/publish", v.Middleware(http.HandlerFunc(handlePublishEntityType(catalog))))
 	mux.Handle("POST /v1/entities", v.Middleware(http.HandlerFunc(handleCreateEntity(profileService))))
+	mux.Handle("POST /v1/entities/batch-upgrade-entity-type-revision", v.Middleware(http.HandlerFunc(handleBatchUpgradeEntityBinding(profileService))))
 	mux.Handle("GET /v1/entities", v.Middleware(http.HandlerFunc(handleListEntities(profileService))))
 	mux.Handle("GET /v1/entities/{entityID}", v.Middleware(http.HandlerFunc(handleGetEntityCurrent(profileService, abacPolicy))))
+	mux.Handle("POST /v1/entities/{entityID}/upgrade-entity-type-revision", v.Middleware(http.HandlerFunc(handleUpgradeEntityBinding(profileService))))
 	mux.Handle("PUT /v1/entities/{entityID}", v.Middleware(http.HandlerFunc(handleUpdateEntity(profileService))))
 	mux.Handle("DELETE /v1/entities/{entityID}", v.Middleware(http.HandlerFunc(handleDeleteEntity(profileService))))
 	mux.Handle("GET /v1/entities/{entityID}/versions/{version}", v.Middleware(http.HandlerFunc(handleGetEntityByVersion(profileService, abacPolicy))))
@@ -291,6 +310,276 @@ func handleListEntityTypes(catalog EntityTypeCatalog) http.HandlerFunc {
 	}
 }
 
+func handleGetEntityType(catalog EntityTypeCatalog) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if catalog == nil {
+			ErrorWithRequestID(w, http.StatusServiceUnavailable, map[string]any{
+				"code": "catalog_unavailable", "message": "entity type catalog unavailable",
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+		rec, err := catalog.Get(r.Context(), auth.TenantIDFromContext(r.Context()), r.PathValue("entityTypeID"))
+		if err != nil {
+			writeEntityTypeCatalogError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(rec)
+	}
+}
+
+func handlePatchEntityTypeFamily(catalog EntityTypeCatalog) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if catalog == nil {
+			ErrorWithRequestID(w, http.StatusServiceUnavailable, map[string]any{
+				"code": "catalog_unavailable", "message": "entity type catalog unavailable",
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+		var req struct {
+			Namespace string `json:"namespace"`
+			Code      string `json:"code"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeBadRequest(w, r, "invalid json body")
+			return
+		}
+		rec, err := catalog.UpdateFamilyMeta(r.Context(), auth.TenantIDFromContext(r.Context()), r.PathValue("entityTypeID"), entitytypes.UpdateFamilyParams{
+			Namespace: req.Namespace,
+			Code:      req.Code,
+		})
+		if err != nil {
+			writeEntityTypeCatalogError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(rec)
+	}
+}
+
+func handleDeleteEntityTypeFamily(catalog EntityTypeCatalog) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if catalog == nil {
+			ErrorWithRequestID(w, http.StatusServiceUnavailable, map[string]any{
+				"code": "catalog_unavailable", "message": "entity type catalog unavailable",
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+		if err := catalog.DeleteFamily(r.Context(), auth.TenantIDFromContext(r.Context()), r.PathValue("entityTypeID")); err != nil {
+			writeEntityTypeCatalogError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func handlePutEntityTypeDraft(catalog EntityTypeCatalog) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if catalog == nil {
+			ErrorWithRequestID(w, http.StatusServiceUnavailable, map[string]any{
+				"code": "catalog_unavailable", "message": "entity type catalog unavailable",
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+		var req struct {
+			DraftSchema            map[string]any `json:"draft_schema"`
+			IfDraftSchemaVersion   *int           `json:"if_draft_schema_version"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeBadRequest(w, r, "invalid json body")
+			return
+		}
+		if req.IfDraftSchemaVersion == nil {
+			writeBadRequest(w, r, "if_draft_schema_version is required for optimistic concurrency")
+			return
+		}
+		rec, err := catalog.SaveDraft(r.Context(), auth.TenantIDFromContext(r.Context()), r.PathValue("entityTypeID"), entitytypes.SaveDraftParams{
+			DraftSchema:          req.DraftSchema,
+			IfDraftSchemaVersion: req.IfDraftSchemaVersion,
+		})
+		if err != nil {
+			writeEntityTypeCatalogError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(rec)
+	}
+}
+
+func handleListEntityTypeRevisions(catalog EntityTypeCatalog) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if catalog == nil {
+			ErrorWithRequestID(w, http.StatusServiceUnavailable, map[string]any{
+				"code": "catalog_unavailable", "message": "entity type catalog unavailable",
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+		items, err := catalog.ListRevisions(r.Context(), auth.TenantIDFromContext(r.Context()), r.PathValue("entityTypeID"))
+		if err != nil {
+			writeEntityTypeCatalogError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(map[string]any{"items": items})
+	}
+}
+
+func handleGetEntityTypeRevision(catalog EntityTypeCatalog) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if catalog == nil {
+			ErrorWithRequestID(w, http.StatusServiceUnavailable, map[string]any{
+				"code": "catalog_unavailable", "message": "entity type catalog unavailable",
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+		rev, err := catalog.GetRevision(r.Context(), auth.TenantIDFromContext(r.Context()), r.PathValue("entityTypeID"), r.PathValue("revisionID"))
+		if err != nil {
+			writeEntityTypeCatalogError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(rev)
+	}
+}
+
+func handleGetEntityTypeRevisionByNo(catalog EntityTypeCatalog) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if catalog == nil {
+			ErrorWithRequestID(w, http.StatusServiceUnavailable, map[string]any{
+				"code": "catalog_unavailable", "message": "entity type catalog unavailable",
+			}, RequestIDFromContext(r.Context()))
+			return
+		}
+		n, err := strconv.Atoi(r.PathValue("revisionNo"))
+		if err != nil || n <= 0 {
+			writeBadRequest(w, r, "invalid revisionNo")
+			return
+		}
+		rev, err := catalog.GetRevisionByNo(r.Context(), auth.TenantIDFromContext(r.Context()), r.PathValue("entityTypeID"), n)
+		if err != nil {
+			writeEntityTypeCatalogError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(rev)
+	}
+}
+
+func handleUpgradeEntityBinding(service ProfileService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if service == nil {
+			writeServiceUnavailable(w, r)
+			return
+		}
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			writeBadRequest(w, r, "invalid body")
+			return
+		}
+		var req struct {
+			EntityTypeRevisionID *string `json:"entity_type_revision_id"`
+			RevisionNo           *int    `json:"revision_no"`
+		}
+		if len(strings.TrimSpace(string(body))) > 0 {
+			if err := json.Unmarshal(body, &req); err != nil {
+				writeBadRequest(w, r, "invalid json body")
+				return
+			}
+		}
+		snap, err := service.UpgradeEntityBinding(
+			r.Context(),
+			auth.TenantIDFromContext(r.Context()),
+			r.PathValue("entityID"),
+			profiles.UpgradeBindingParams{
+				RevisionID: req.EntityTypeRevisionID,
+				RevisionNo: req.RevisionNo,
+			},
+		)
+		if err != nil {
+			writeProfileError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(snap)
+	}
+}
+
+func handleBatchUpgradeEntityBinding(service ProfileService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if service == nil {
+			writeServiceUnavailable(w, r)
+			return
+		}
+		var req struct {
+			EntityTypeID           string   `json:"entity_type_id"`
+			TargetRevisionID       *string  `json:"target_entity_type_revision_id"`
+			TargetRevisionNo       *int     `json:"target_revision_no"`
+			EntityIDs              []string `json:"entity_ids"`
+			OnlyBehindLatest       bool     `json:"only_behind_latest"`
+			Limit                  int      `json:"limit"`
+			IdempotencyKey         string   `json:"idempotency_key"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeBadRequest(w, r, "invalid json body")
+			return
+		}
+		res, err := service.BatchUpgradeEntityBinding(r.Context(), auth.TenantIDFromContext(r.Context()), profiles.BatchUpgradeBindingParams{
+			EntityTypeFamilyID:     req.EntityTypeID,
+			TargetRevisionID:       req.TargetRevisionID,
+			TargetRevisionNo:       req.TargetRevisionNo,
+			EntityIDs:              req.EntityIDs,
+			OnlyBehindLatest:       req.OnlyBehindLatest,
+			Limit:                  req.Limit,
+			IdempotencyKey:         req.IdempotencyKey,
+		})
+		if err != nil {
+			writeProfileError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(res)
+	}
+}
+
+func writeEntityTypeCatalogError(w http.ResponseWriter, r *http.Request, err error) {
+	status := http.StatusInternalServerError
+	code := "internal_error"
+	payload := map[string]any{"code": code, "message": fmt.Sprintf("%v", err)}
+	switch {
+	case errors.Is(err, entitytypes.ErrInvalidArgument):
+		status = http.StatusBadRequest
+		code = "invalid_request"
+		payload["code"] = code
+	case errors.Is(err, entitytypes.ErrNotFound):
+		status = http.StatusNotFound
+		code = "entity_type_not_found"
+		payload["code"] = code
+	case errors.Is(err, entitytypes.ErrInvalidSchema):
+		status = http.StatusUnprocessableEntity
+		code = "invalid_schema"
+		payload["code"] = code
+	case errors.Is(err, entitytypes.ErrDraftVersionConflict):
+		status = http.StatusConflict
+		code = "draft_version_conflict"
+		payload["code"] = code
+	case errors.Is(err, entitytypes.ErrRevisionNotFound):
+		status = http.StatusNotFound
+		code = "entity_type_revision_not_found"
+		payload["code"] = code
+	case errors.Is(err, entitytypes.ErrFamilyNotDeletable):
+		status = http.StatusConflict
+		code = "entity_type_family_not_deletable"
+		payload["code"] = code
+	case errors.Is(err, entitytypes.ErrDuplicateFamilyKey):
+		status = http.StatusConflict
+		code = "entity_type_duplicate_key"
+		payload["code"] = code
+	default:
+		// неизвестные ошибки каталога — 500 (см. выше)
+	}
+	ErrorWithRequestID(w, status, payload, RequestIDFromContext(r.Context()))
+}
+
 func handlePublishEntityType(catalog EntityTypeCatalog) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if catalog == nil {
@@ -306,23 +595,7 @@ func handlePublishEntityType(catalog EntityTypeCatalog) http.HandlerFunc {
 			r.PathValue("entityTypeID"),
 		)
 		if err != nil {
-			status := http.StatusInternalServerError
-			code := "internal_error"
-			switch {
-			case errors.Is(err, entitytypes.ErrNotFound):
-				status = http.StatusNotFound
-				code = "entity_type_not_found"
-			case errors.Is(err, entitytypes.ErrAlreadyPublished):
-				status = http.StatusConflict
-				code = "already_published"
-			case errors.Is(err, entitytypes.ErrInvalidSchema):
-				status = http.StatusUnprocessableEntity
-				code = "invalid_schema"
-			}
-			ErrorWithRequestID(w, status, map[string]any{
-				"code":    code,
-				"message": err.Error(),
-			}, RequestIDFromContext(r.Context()))
+			writeEntityTypeCatalogError(w, r, err)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -564,30 +837,54 @@ func writeServiceUnavailable(w http.ResponseWriter, r *http.Request) {
 func writeProfileError(w http.ResponseWriter, r *http.Request, err error) {
 	status := http.StatusBadRequest
 	code := "invalid_request"
-	switch {
-	case errors.Is(err, profiles.ErrNotFound):
-		status = http.StatusNotFound
-		code = "entity_not_found"
-	case errors.Is(err, profiles.ErrVersionNotFound):
-		status = http.StatusNotFound
-		code = "version_not_found"
-	case errors.Is(err, profiles.ErrEntityTypeNotFound):
-		status = http.StatusNotFound
-		code = "entity_type_not_found"
-	case errors.Is(err, profiles.ErrEntityTypeNotPublished):
-		status = http.StatusConflict
-		code = "entity_type_not_published"
-	case errors.Is(err, profiles.ErrExternalMappingConflict):
-		status = http.StatusConflict
-		code = "external_mapping_conflict"
-	case errors.Is(err, profiles.ErrAuthorityAllBlocked):
-		status = http.StatusConflict
-		code = "authority_all_blocked"
-	}
-	ErrorWithRequestID(w, status, map[string]any{
+	payload := map[string]any{
 		"code":    code,
 		"message": fmt.Sprintf("%v", err),
-	}, RequestIDFromContext(r.Context()))
+	}
+	var sve *profiles.SchemaValidationError
+	if errors.As(err, &sve) {
+		status = http.StatusUnprocessableEntity
+		code = "schema_validation_failed"
+		payload["code"] = code
+		payload["message"] = sve.Error()
+		payload["issues"] = sve.Issues
+	} else {
+		switch {
+		case errors.Is(err, profiles.ErrNotFound):
+			status = http.StatusNotFound
+			code = "entity_not_found"
+			payload["code"] = code
+		case errors.Is(err, profiles.ErrVersionNotFound):
+			status = http.StatusNotFound
+			code = "version_not_found"
+			payload["code"] = code
+		case errors.Is(err, profiles.ErrEntityTypeNotFound):
+			status = http.StatusNotFound
+			code = "entity_type_not_found"
+			payload["code"] = code
+		case errors.Is(err, profiles.ErrEntityTypeNotPublished):
+			status = http.StatusConflict
+			code = "entity_type_not_published"
+			payload["code"] = code
+		case errors.Is(err, profiles.ErrExternalMappingConflict):
+			status = http.StatusConflict
+			code = "external_mapping_conflict"
+			payload["code"] = code
+		case errors.Is(err, profiles.ErrAuthorityAllBlocked):
+			status = http.StatusConflict
+			code = "authority_all_blocked"
+			payload["code"] = code
+		case errors.Is(err, profiles.ErrInvalidBindingUpgrade):
+			status = http.StatusBadRequest
+			code = "invalid_binding_upgrade"
+			payload["code"] = code
+		case errors.Is(err, profiles.ErrInvalidCursor):
+			status = http.StatusUnprocessableEntity
+			code = "invalid_cursor"
+			payload["code"] = code
+		}
+	}
+	ErrorWithRequestID(w, status, payload, RequestIDFromContext(r.Context()))
 }
 
 func handleListProfileConflicts(admin ProfileAdmin) http.HandlerFunc {
