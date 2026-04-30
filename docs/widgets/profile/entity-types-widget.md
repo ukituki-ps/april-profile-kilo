@@ -8,7 +8,7 @@
 | `widgetId` | `entity-types-widget` |
 | `packageName` | `@april/profile-ui` |
 | `contractVersion` | `v1` (на старте; эволюция по [`../../VERSIONING_AND_COMPATIBILITY.md`](../../VERSIONING_AND_COMPATIBILITY.md)) |
-| `lifecycleStatus` | `planned` → `beta` → `stable` (фиксируется в REPORT соответствующей задачи) |
+| `lifecycleStatus` | `beta` (задача **054**; далее `stable` по релизной политике) |
 | Владелец | команда AprilProfile (`april-profile`) + интеграция в AprilHub через BFF/OIDC |
 
 Архитектурное решение по домену типов и ревизий: **ADR-0005** — [`../../adr/0005-entity-type-revisions-and-entity-binding.md`](../../adr/0005-entity-type-revisions-and-entity-binding.md).
@@ -64,17 +64,28 @@
 - Версионирование виджета: [`../../VERSIONING_AND_COMPATIBILITY.md`](../../VERSIONING_AND_COMPATIBILITY.md).
 - Чеклист хоста: [`../../WIDGET_INTEGRATION_CHECKLIST.md`](../../WIDGET_INTEGRATION_CHECKLIST.md).
 
-Минимальные props (целевые):
+Публичные props (`EntityTypesWidgetProps` в `@april/profile-ui`, фасад = `EntityTypesApiWidget`):
 
-- `hostContext`, `apiBaseUrl` или эквивалентный adapter;
-- опционально `accessToken`;
-- параметры UX: размер страницы списка, сохранённые фильтры, флаги debug **только** вне production-ветки виджета (не нарушая DS).
+| Prop | Обяз. | Описание |
+|------|--------|----------|
+| `hostContext` | да | `ProfileWidgetHostContext`: `tenant`, опционально `auth`, `telemetry.requestId` и др. (см. [`WIDGET_CONTRACTS.md`](../../WIDGET_CONTRACTS.md)). |
+| `apiBaseUrl` | да | Базовый URL Profile API (часто BFF: `/admin/profile/api`). |
+| `accessToken` | нет | Bearer для сгенерированного клиента. |
+| `pageSize` | нет | Размер страницы `GET /v1/entities` на вкладке **Upgrade** (по умолчанию `20`). |
+| `providerContext` | нет | Переопределение `ProviderContext` без `AbortSignal` (тесты / нестандартный host). |
+| `onAction` | нет | См. тип `EntityTypesWidgetAction` в пакете. |
+| `onError` | нет | `{ message, requestId?, code? }` — без утечки внутренних деталей API. |
+| `onObservability` | нет | `ProfileWidgetTelemetryEvent`; для виджета `widget: "entity_types"` и событий `draft_save_*`, `publish_*`, `upgrade_*`, `batch_upgrade_*`, плюс `list_*` / `details_*`. |
+| `onOpenEntity` | нет | `(entityId) => void` — клик по `entity_id` в таблице апгрейда (навигация к `profiles-widget`). |
 
-События наружу (пример набора):
+События `onAction` (тип `EntityTypesWidgetAction`):
 
-- `onAction`: `draft_saved`, `revision_published`, `family_created`, `entity_upgrade_requested`, `entity_upgrade_succeeded`, `entity_upgrade_failed`, `batch_upgrade_completed`;
-- `onError`: нормализованный `{ code, message, request_id }`;
-- опционально `onOpenEntity` для навигации хоста к `profiles-widget` с выбранным `entity_id`.
+- `family_created`, `family_patched`, `family_deleted`;
+- `draft_saved`, `revision_published`;
+- `entity_upgrade_requested`, `entity_upgrade_succeeded`, `entity_upgrade_failed`;
+- `batch_upgrade_completed` (агрегаты `succeeded` / `failed` / `processed`).
+
+`onError`: нормализованный `{ code?, message, requestId? }`; при наличии `request_id` в теле ошибки API его имеет смысл прокинуть в `requestId` для корреляции с логами бэкенда.
 
 Telemetry: тот же дух, что у `profiles-widget` (корреляция `request_id`, ключи вида `widget = entity_types` + стадии list/detail/save/publish/upgrade). Детальный список событий фиксируется в PLAN задачи на UI.
 

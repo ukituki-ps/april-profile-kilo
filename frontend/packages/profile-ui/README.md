@@ -4,7 +4,7 @@ Embeddable React widget package for AprilProfile scenarios in AprilHub/host apps
 
 ## Observability (фаза 4a)
 
-Все виджеты ниже принимают опциональный **`onObservability`**: колбэк с типом `ProfileWidgetTelemetryEvent` (`widget`, `event`, `request_id`, `correlation_id`, опционально `api_request_id`, `meta`). События: **`view_loaded`**, **`list_requested`**, **`list_succeeded`**, **`list_failed`**, **`details_requested`**, **`details_failed`**, **`save_submitted`**, **`save_succeeded`**, **`save_failed`**. Идентификаторы берутся из `hostContext.telemetry.requestId` и опционально `correlationId` (см. `docs/WIDGET_OBSERVABILITY_GUIDE.md` §3.1). Типы и `emitProfileWidgetTelemetry` экспортируются из пакета.
+Все виджеты ниже принимают опциональный **`onObservability`**: колбэк с типом `ProfileWidgetTelemetryEvent` (`widget`, `event`, `request_id`, `correlation_id`, опционально `api_request_id`, `meta`). Базовые события: **`view_loaded`**, **`list_requested`**, **`list_succeeded`**, **`list_failed`**, **`details_requested`**, **`details_failed`**, **`save_submitted`**, **`save_succeeded`**, **`save_failed`**. Для **`entity_types`** дополнительно: **`draft_save_*`**, **`publish_*`**, **`upgrade_*`**, **`batch_upgrade_*`** (см. `ProfileWidgetTelemetryEventName` в `src/observability.ts`). Идентификаторы берутся из `hostContext.telemetry.requestId` и опционально `correlationId` (см. `docs/WIDGET_OBSERVABILITY_GUIDE.md` §3.1). Типы и `emitProfileWidgetTelemetry` экспортируются из пакета.
 
 ## Public API
 
@@ -63,6 +63,26 @@ Behavior:
 - List rows show profile display name (`document.name` when preview JSON contains it) and version; entity id is secondary.
 - "Plus" opens create modal: entity type from `GET /v1/entity-types` when `listEntityTypes` is implemented, profile name + JSON document.
 - Right card: version `Select` (loads historical versions via provider `getByVersion`), actions as icon buttons (`@tabler/icons-react`), historical snapshot can be saved as a new head version (+1).
+
+### `EntityTypesWidget` (фаза 7)
+
+Публичный фасад каталога семейств типов с ревизиями и апгрейдом привязки сущностей (`widgetId`: `entity-types-widget`). Архитектура: **`EntityTypesWidgetCore` + `EntityTypesApiWidget` + `createOpenApiEntityTypesProvider`**.
+
+Props (`EntityTypesWidgetProps` = `EntityTypesApiWidgetProps`):
+
+- `hostContext`, `apiBaseUrl`, `accessToken?` — как у `ProfilesWidget`.
+- `pageSize?` — размер страницы списка сущностей на вкладке **Upgrade** (по умолчанию `20`).
+- `providerContext?` — переопределение контекста провайдера без `signal` (редко; иначе собирается из `hostContext` + `accessToken`).
+- `onAction?` — доменные события (`EntityTypesWidgetAction` в `src/types.ts`).
+- `onError?`, `onObservability?`, `onOpenEntity?` — как у профилей; `onOpenEntity` вызывается при клике по `entity_id` в таблице апгрейда.
+
+Экспорты для кастомного wiring: `EntityTypesWidgetCore`, `EntityTypesApiWidget`, `EntityTypesDataProvider`, `createOpenApiEntityTypesProvider`.
+
+Поведение:
+
+- Master–detail: слева `CardListColumn` (семейства), справа вкладки **Draft** / **Revisions** / **Upgrade**; корень заполняет высоту embed (`flex`, `minHeight: 0`).
+- Черновик: JSON в моноширинном `Textarea`, сохранение с `if_draft_schema_version`, конфликт **409** — баннер и кнопка «Reload draft».
+- Публикация, PATCH/DELETE семейства, single/batch upgrade через OpenAPI задачи 053.
 
 ### `ProfileInstancesWidget`
 

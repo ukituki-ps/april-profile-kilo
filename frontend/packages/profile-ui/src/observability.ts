@@ -4,6 +4,7 @@ import type { ProfileWidgetHostContext } from "./types";
 export type ProfileWidgetTelemetryKind =
   | "entity_profile"
   | "profiles_list"
+  | "entity_types"
   | "profile_instances"
   | "instance_history"
   | "conflict_queue";
@@ -18,7 +19,19 @@ export type ProfileWidgetTelemetryEventName =
   | "details_failed"
   | "save_submitted"
   | "save_succeeded"
-  | "save_failed";
+  | "save_failed"
+  /** Каталог семейств типов (задача 054). */
+  | "draft_save_submitted"
+  | "draft_save_succeeded"
+  | "draft_save_failed"
+  | "publish_submitted"
+  | "publish_succeeded"
+  | "publish_failed"
+  | "upgrade_submitted"
+  | "upgrade_succeeded"
+  | "upgrade_failed"
+  | "batch_upgrade_submitted"
+  | "batch_upgrade_completed";
 
 export type ProfileWidgetTelemetryEvent = {
   widget: ProfileWidgetTelemetryKind;
