@@ -3,7 +3,7 @@
 - Статус: ✅ выполнено
 - Задача: 055 — контракты embed, docs-site истории, handoff AprilHub/BFF
 - Ветка: `feature/task-055-phase-7-entity-types-contract-docs-hub-handoff` (рекомендуется для PR)
-- Коммиты: `5052915`
+- Коммиты: `5052915` (основной объём), `1ebb01c` (уточнение REPORT)
 - PR: не создавался из среды агента
 
 ## 2) Что сделано
