@@ -1,10 +1,12 @@
 # Прикладной фронтенд (SPA)
 
-Минимальный **Vite + React 18** shell на дизайн-системе April: зависимости **`@april/tokens`** и **`@april/ui`** подключены как `file:` к git submodule **`../design-system/DisignApril`** (см. корневой [`.gitmodules`](../.gitmodules)).
+Минимальный **Vite + React 18** shell на дизайн-системе April: **`@april/tokens`** и **`@april/ui`** сейчас подключены как **`file:vendor/ds-packs/*.tgz`** (зафиксированные архивы из submodule, см. [`package.json`](./package.json)). Для установки **достаточно** `npm ci` **без** токена к GitHub Packages.
+
+Чтобы снова перейти на **только registry** (`npm:@ukituki-ps/…`), задайте **`NODE_AUTH_TOKEN`** (`read:packages`), поменяйте зависимости в `package.json` и выполните `npm install` — см. [`vendor/ds-packs/README.md`](./vendor/ds-packs/README.md) и [`.npmrc`](./.npmrc).
+
+Submodule **`design-system/DisignApril`** нужен для **`ds:prepare`** (SVG в `frontend/public`) и для **`scripts/repack-ds-vendor.sh`** при обновлении vendored tarball’ов.
 
 ## Быстрый старт
-
-После `git submodule update --init --recursive` в корне репозитория:
 
 ```bash
 cd frontend
@@ -12,13 +14,13 @@ npm ci
 npm run dev
 ```
 
-Перед `dev`/`build`/`test` автоматически выполняется **`ds:prepare`**: `pnpm install --frozen-lockfile` и `pnpm build` в `design-system/DisignApril` (нужны **corepack** и **pnpm** — `corepack enable` в `scripts/ds-prepare.sh`).
+Перед `dev`/`build`/`test` автоматически выполняется **`ds:prepare`** (ассеты; при необходимости сборка через `pnpm` в submodule — см. комментарии в [`scripts/ds-prepare.sh`](./scripts/ds-prepare.sh)).
 
 ## Команды
 
 | Команда | Назначение |
 | -------- | ---------- |
-| `npm run ds:prepare` | Сборка пакетов DS в submodule |
+| `npm run ds:prepare` | Ассеты DS (SVG), при необходимости сборка submodule |
 | `npm run dev` | Vite dev server (порт 5173) |
 | `npm run build` | Build shell + build `@april/profile-ui` (with OpenAPI generation) |
 | `npm run lint` | Typecheck shell + typecheck `@april/profile-ui` |
