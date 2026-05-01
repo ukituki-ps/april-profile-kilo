@@ -52,6 +52,28 @@ vi.mock("@april/ui", () => ({
     onChange: (next: string) => void;
   }) => <textarea data-testid="mock-json-source" value={value} onChange={(event) => onChange(event.target.value)} />,
   AprilJsonValidationSummary: () => null,
+  AprilJsonSchemaForm: ({
+    formData,
+    onChange,
+  }: {
+    formData: Record<string, unknown>;
+    onChange: (next: Record<string, unknown>) => void;
+  }) => (
+    <textarea
+      data-testid="mock-rjsf-form"
+      value={JSON.stringify(formData)}
+      onChange={(event) => {
+        try {
+          const parsed = JSON.parse(event.target.value) as unknown;
+          if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+            onChange(parsed as Record<string, unknown>);
+          }
+        } catch {
+          /* ignore */
+        }
+      }}
+    />
+  ),
   CardListColumn: ({
     items,
     heightMode,
@@ -157,6 +179,9 @@ const buildProvider = (): ProfilesDataProvider => ({
     }
     if (typeId === "type-uuid-b") {
       return { type: "object", properties: { code: { type: "string" } } };
+    }
+    if (typeId === "type-a" || typeId === "type-b") {
+      return { type: "object", properties: { name: { type: "string" }, slot: { type: "string" } } };
     }
     return { type: "object" };
   }),
@@ -339,5 +364,54 @@ describe("ProfilesWidgetCore", () => {
 
     expect(onObservability).toHaveBeenCalledWith(expect.objectContaining({ event: "list_requested" }));
     expect(onObservability).toHaveBeenCalledWith(expect.objectContaining({ event: "list_succeeded" }));
+  });
+
+  it("offers Form mode when published schema is available and saves document from Form", async () => {
+    const provider = buildProvider();
+    render(
+      <MantineProvider>
+        <ProfilesWidgetCore hostContext={hostContext} provider={provider} autoSelectFirst />
+      </MantineProvider>,
+    );
+
+    await screen.findByLabelText(`Profile row ${e1}`);
+    fireEvent.click(screen.getByRole("button", { name: /Edit profile/i }));
+
+    const editPanel = await screen.findByTestId("profiles-widget-edit-document");
+    expect(within(editPanel).getByRole("radio", { name: "Form" })).toBeInTheDocument();
+    fireEvent.click(within(editPanel).getByRole("radio", { name: "Form" }));
+
+    const formField = within(editPanel).getByTestId("mock-rjsf-form");
+    fireEvent.change(formField, {
+      target: { value: JSON.stringify({ name: "From form", slot: "current" }) },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+
+    await waitFor(() => {
+      expect(provider.update).toHaveBeenCalledWith(
+        e1,
+        expect.objectContaining({
+          document: expect.objectContaining({ name: "From form" }),
+        }),
+        expect.anything(),
+      );
+    });
+  });
+
+  it("does not show Form segment when getEntityTypePublishedSchema is missing", async () => {
+    const provider = buildProvider();
+    delete provider.getEntityTypePublishedSchema;
+
+    render(
+      <MantineProvider>
+        <ProfilesWidgetCore hostContext={hostContext} provider={provider} autoSelectFirst />
+      </MantineProvider>,
+    );
+
+    await screen.findByLabelText(`Profile row ${e1}`);
+    fireEvent.click(screen.getByRole("button", { name: /Edit profile/i }));
+
+    const editPanel = await screen.findByTestId("profiles-widget-edit-document");
+    expect(within(editPanel).queryByRole("radio", { name: "Form" })).not.toBeInTheDocument();
   });
 });

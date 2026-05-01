@@ -1,15 +1,17 @@
 import {
   AprilJsonCollectionTextEditor,
+  AprilJsonSchemaForm,
   AprilJsonTreeEditor,
   AprilJsonValidationSummary,
 } from "@april/ui";
-import { Alert, SegmentedControl, Stack, Text } from "@mantine/core";
-import { useCallback, useState } from "react";
+import type { RJSFSchema } from "@rjsf/utils";
+import { Alert, Box, SegmentedControl, Stack, Text } from "@mantine/core";
+import { useCallback, useEffect, useState } from "react";
 
 /** Минимальная клиентская проверка: черновик — JSON-объект; полная семантика JSON Schema — на сервере. */
 export const ENTITY_TYPE_DRAFT_ROOT_JSON_SCHEMA = { type: "object" } as const;
 
-export type DraftJsonEditorMode = "tree" | "source";
+export type DraftJsonEditorMode = "tree" | "source" | "form";
 
 export function parseEntityTypeDraftSchemaText(
   text: string,
@@ -38,6 +40,10 @@ export type EntityTypesDraftJsonEditorProps = {
   showSearch?: boolean;
   rootName?: string;
   serverValidationItems?: Array<{ path: string; message: string }>;
+  /** Third segment «Form» (RJSF) when published schema is available from the provider. */
+  withFormMode?: boolean;
+  /** `published_schema` JSON object for `AprilJsonSchemaForm` (sanitized inside DS). */
+  rjsfSchema?: Record<string, unknown>;
 };
 
 /**
@@ -56,8 +62,16 @@ export function EntityTypesDraftJsonEditor({
   showSearch = true,
   rootName = "draft_schema",
   serverValidationItems,
+  withFormMode = false,
+  rjsfSchema,
 }: EntityTypesDraftJsonEditorProps) {
   const [sourceSwitchError, setSourceSwitchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (mode === "form" && !withFormMode) {
+      onModeChange("tree");
+    }
+  }, [mode, onModeChange, withFormMode]);
 
   const handleModeChange = useCallback(
     (next: string) => {
@@ -71,6 +85,22 @@ export function EntityTypesDraftJsonEditor({
         onModeChange("source");
         return;
       }
+      if (m === "form") {
+        if (!withFormMode) {
+          return;
+        }
+        if (mode === "source") {
+          const parsed = parseEntityTypeDraftSchemaText(sourceText);
+          if (!parsed.ok) {
+            setSourceSwitchError(parsed.message);
+            return;
+          }
+          setSourceSwitchError(null);
+          onChange(parsed.value);
+        }
+        onModeChange("form");
+        return;
+      }
       const parsed = parseEntityTypeDraftSchemaText(sourceText);
       if (!parsed.ok) {
         setSourceSwitchError(parsed.message);
@@ -80,10 +110,16 @@ export function EntityTypesDraftJsonEditor({
       onChange(parsed.value);
       onModeChange("tree");
     },
-    [mode, onChange, onModeChange, onSourceTextChange, sourceText, value],
+    [mode, onChange, onModeChange, onSourceTextChange, sourceText, value, withFormMode],
   );
 
   const treeMaxHeight = compact ? 220 : undefined;
+
+  const segmentData = [
+    { label: "Tree", value: "tree" },
+    { label: "Source", value: "source" },
+    ...(withFormMode ? [{ label: "Form", value: "form" as const }] : []),
+  ];
 
   return (
     <Stack gap="xs" style={{ flex: compact ? undefined : 1, minHeight: compact ? 120 : 0 }}>
@@ -92,10 +128,7 @@ export function EntityTypesDraftJsonEditor({
           size="xs"
           value={mode}
           onChange={handleModeChange}
-          data={[
-            { label: "Tree", value: "tree" },
-            { label: "Source", value: "source" },
-          ]}
+          data={segmentData}
           aria-label="Draft schema editor mode"
         />
       ) : null}
@@ -107,6 +140,25 @@ export function EntityTypesDraftJsonEditor({
       ) : null}
 
       <AprilJsonValidationSummary title="Server validation" items={serverValidationItems ?? []} />
+
+      {mode === "form" && withFormMode && rjsfSchema ? (
+        <Box
+          style={{
+            flex: compact ? undefined : 1,
+            minHeight: compact ? 160 : 0,
+            maxHeight: compact ? treeMaxHeight : undefined,
+            overflow: "auto",
+            minWidth: 0,
+          }}
+        >
+          <AprilJsonSchemaForm<Record<string, unknown>>
+            hideDefaultSubmit
+            schema={rjsfSchema as RJSFSchema}
+            formData={value}
+            onChange={(next) => onChange(next as Record<string, unknown>)}
+          />
+        </Box>
+      ) : null}
 
       {mode === "tree" ? (
         <Stack

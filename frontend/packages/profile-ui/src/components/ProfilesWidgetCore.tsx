@@ -74,6 +74,17 @@ type PublishedSchemaPanelState =
   | { status: "none" }
   | { status: "error"; message: string };
 
+function publishedSchemaOkForForm(
+  state: PublishedSchemaPanelState,
+): state is { status: "ok"; data: Record<string, unknown> } {
+  return (
+    state.status === "ok" &&
+    typeof state.data === "object" &&
+    state.data !== null &&
+    !Array.isArray(state.data)
+  );
+}
+
 const mapSecureMessage = (code: ProfilesProviderErrorCode): string => {
   if (code === "unauthorized") {
     return "Authentication required. Please sign in again.";
@@ -151,6 +162,15 @@ export function ProfilesWidgetCore({
   const [createPublishedSchema, setCreatePublishedSchema] = useState<PublishedSchemaPanelState>({ status: "unsupported" });
   const profileSchemaRequestRef = useRef(0);
   const createSchemaRequestRef = useRef(0);
+
+  const profileEditorWithForm = useMemo(
+    () => Boolean(provider.getEntityTypePublishedSchema) && publishedSchemaOkForForm(profilePublishedSchema),
+    [provider, profilePublishedSchema],
+  );
+  const createEditorWithForm = useMemo(
+    () => Boolean(provider.getEntityTypePublishedSchema) && publishedSchemaOkForForm(createPublishedSchema),
+    [provider, createPublishedSchema],
+  );
 
   const requestId = hostContext.telemetry?.requestId;
   const preferredSelectionRef = useRef<string | null>(null);
@@ -465,6 +485,16 @@ export function ProfilesWidgetCore({
   useEffect(() => {
     setProfileDocumentTab("formData");
   }, [selectedEntityId]);
+
+  useEffect(() => {
+    setCreateDraftMode((m) => (m === "form" ? "tree" : m));
+  }, [createTypeId]);
+
+  useEffect(() => {
+    if (editDraftMode === "form" && !profileEditorWithForm) {
+      setEditDraftMode("tree");
+    }
+  }, [editDraftMode, profileEditorWithForm]);
 
   useEffect(() => {
     if (!selectedItem?.entityTypeId || !provider.getEntityTypePublishedSchema) {
@@ -1166,7 +1196,18 @@ export function ProfilesWidgetCore({
                           style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
                           data-testid="profiles-widget-edit-document"
                         >
+                          {provider.getEntityTypePublishedSchema && profilePublishedSchema.status === "none" ? (
+                            <Alert color="gray" mb="xs" title="Form mode">
+                              No published JSON Schema for this entity type. Use Tree or Source to edit the document.
+                            </Alert>
+                          ) : null}
+                          {provider.getEntityTypePublishedSchema && profilePublishedSchema.status === "error" ? (
+                            <Alert color="yellow" mb="xs" title="Form mode">
+                              Published schema failed to load. Form mode is unavailable; use Tree or Source.
+                            </Alert>
+                          ) : null}
                           <EntityTypesDraftJsonEditor
+                            key={`edit-doc-${selectedEntityId}-${selectedItem?.entityTypeId ?? ""}`}
                             mode={editDraftMode}
                             onModeChange={setEditDraftMode}
                             value={editDraftValue}
@@ -1175,6 +1216,10 @@ export function ProfilesWidgetCore({
                             onSourceTextChange={setEditDraftSourceText}
                             rootName="profile_document"
                             serverValidationItems={editApiIssues ?? undefined}
+                            withFormMode={profileEditorWithForm}
+                            rjsfSchema={
+                              publishedSchemaOkForForm(profilePublishedSchema) ? profilePublishedSchema.data : undefined
+                            }
                           />
                         </Tabs.Panel>
                         <Tabs.Panel value="schema" pt="xs" style={{ flex: 1, minHeight: 0, minWidth: 0, overflow: "hidden" }}>
@@ -1256,7 +1301,18 @@ export function ProfilesWidgetCore({
                 <Tabs.Tab value="schema">schema</Tabs.Tab>
               </Tabs.List>
               <Tabs.Panel value="formData" pt="xs" style={{ flex: 1, minHeight: 0 }} data-testid="profiles-widget-create-document">
+                {provider.getEntityTypePublishedSchema && createPublishedSchema.status === "none" ? (
+                  <Alert color="gray" mb="xs" title="Form mode">
+                    No published JSON Schema for this entity type. Use Tree or Source to edit the document.
+                  </Alert>
+                ) : null}
+                {provider.getEntityTypePublishedSchema && createPublishedSchema.status === "error" ? (
+                  <Alert color="yellow" mb="xs" title="Form mode">
+                    Published schema failed to load. Form mode is unavailable; use Tree or Source.
+                  </Alert>
+                ) : null}
                 <EntityTypesDraftJsonEditor
+                  key={`create-doc-${createTypeId ?? "none"}`}
                   mode={createDraftMode}
                   onModeChange={setCreateDraftMode}
                   value={createDraftValue}
@@ -1267,6 +1323,10 @@ export function ProfilesWidgetCore({
                   showSearch={false}
                   rootName="profile_document"
                   serverValidationItems={createApiIssues ?? undefined}
+                  withFormMode={createEditorWithForm}
+                  rjsfSchema={
+                    publishedSchemaOkForForm(createPublishedSchema) ? createPublishedSchema.data : undefined
+                  }
                 />
               </Tabs.Panel>
               <Tabs.Panel value="schema" pt="xs" style={{ flex: 1, minHeight: 160, overflow: "auto" }}>

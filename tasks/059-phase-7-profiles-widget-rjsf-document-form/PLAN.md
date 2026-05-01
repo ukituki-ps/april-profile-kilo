@@ -2,53 +2,60 @@
 
 - **Задача:** [`TASK.md`](./TASK.md)
 - **Дата плана:** 2026-05-01
-- **Статус плана:** черновик к согласованию перед реализацией
+- **Статус плана:** согласован (реализация по этому документу)
 
 ## Исходные допущения
 
-- Источник JSON Schema для документа профиля в v1 — **`published_schema`** из **`GET /v1/entity-types/{id}`** (уже используется для read-only вкладки **schema**). Если позже API отдаст схему **привязанной ревизии** сущности — вынести в отдельную задачу смену источника.
-- Shell уже оборачивает приложение в **`AprilProviders`** (`frontend/src/main.tsx`); **`DensityProvider`** в корне виджета сохраняем.
+- Источник JSON Schema для документа в v1 — **`published_schema`** из **`GET /v1/entity-types/{id}`** через **`getEntityTypePublishedSchema`** (тот же снимок, что read-only вкладка **schema**). Смена на схему конкретной ревизии сущности — **TODO** / отдельная задача при поле в API.
+- Shell оборачивает приложение в **`AprilProviders`**; **`DensityProvider`** в корне виджета сохранён.
 
-## Порядок работ (черновик)
+## UX (зафиксировано)
 
-1. Уточнить UX: третья ось **Tree | Source | Form** внутри зоны `formData` vs вложенные вкладки — согласовать с `TASK.md` (один выбранный вариант, краткое обоснование).
-2. Вынести (при росте файла) общий блок «редактор документа» в подкомпонент в `profile-ui` с пропсами: режимы, `value`/`onChange`, `schema`, `readOnly`, `serverIssues`.
-3. Подключить **`AprilJsonSchemaForm`**: `hideDefaultSubmit`, связь с внешней кнопкой Save/Create (`form` + `id`), `liveValidate` / `showErrorList` по умолчанию DS.
-4. Реализовать синхронизацию состояния Form ↔ объект `Record<string, unknown>` (дерево/Source) по правилам из раздела ниже; добавить тесты.
-5. Обновить MSW / фикстуры при необходимости; прогнать lint/test/build; docs + docs-site + `REPORT.md`.
+- Третья ось **Tree | Source | Form** — как дополнительный сегмент в существующем **`SegmentedControl`** внутри **`EntityTypesDraftJsonEditor`** (единая зона `formData`, без вложенных вкладок): совпадает с привычным паттерном 058 и с витриной «форма + дерево» по смыслу, без дублирования верхних вкладок `formData` / `schema`.
 
-## Правила согласованности (предложение — уточнить при реализации)
+## Правила согласованности Form ↔ Tree ↔ Source
 
-| Событие | Предлагаемое правило |
-|--------|----------------------|
-| Пользователь правит **Form** | Обновляется общий объект `document`; при переключении на Tree/Source отображается тот же объект. |
-| Пользователь правит **Tree** или **Source** | Тот же объект; при переключении на Form — `formData` передаётся в RJSF; если RJSF не может отобразить (ошибка) — показать предупреждение и оставить Form read-only или скрыть Form до следующего «чистого» состояния (зафиксировать выбранный UX). |
-| Переключение **Source → Tree** с невалидным JSON | Как сейчас в `EntityTypesDraftJsonEditor` — блокировка переключения; Form не трогаем до успешного parse. |
-| Смена **версии** профиля или **Cancel** edit | Сброс всех трёх представлений из snapshot; вкладка **formData** сбрасывается на **Tree** (или последний выбор — зафиксировать). |
-| **Create**: смена **entity type** | Перезагрузка схемы; если Form был активен — пересобрать `formData` или сбросить к `{}` по политике в `PLAN.md`. |
+| Событие | Правило |
+|--------|---------|
+| Правка **Form** | `AprilJsonSchemaForm` → `onChange` → общий **`editDraftValue`** / **`createDraftValue`**; Save/Create читают тот же объект (как для Tree). |
+| Правка **Tree** / **Source** | Тот же объект; при входе в **Form** передаётся текущий draft как `formData`. |
+| **Source → Tree** или **Source → Form** при невалидном JSON | Как в 058: блокировка переключения, **`Alert`**, до успешного parse. |
+| **Cancel** edit / смена **версии** / новый snapshot с сервера | **`applyDetailsSnapshot`** / **`onSelectVersion`**: сброс draft и режима на **Tree**. |
+| Потеря схемы (ошибка загрузки / `none`) при активном **Form** | `useEffect` в Core: режим → **Tree**; в редакторе — `useEffect`: если `form` и `!withFormMode` → **Tree**. |
+| **Create**: смена **entity type** | `useEffect` на **`createTypeId`**: если режим был **Form** → **Tree** (схема перезагружается; избегаем рассинхрона без принудительного сброса всего документа). |
+
+## Политика `$ref` и ограничения RJSF
+
+- Как в **057**: дерево документа не резолвит **`$ref`** в браузере (`resolveValidationSchemaRefs={false}`). Схема для RJSF передаётся в **`AprilJsonSchemaForm`** как из API; небезопасный dereference в prod не добавляется.
+- Известные ограничения виджетов DS (**`aprilRjsfWidgets`**, неподдерживаемые конструкции схемы) — fallback: пользователь переключается на **Tree** / **Source**; при отсутствии published-схемы сегмент **Form** не показывается.
+
+## Порядок работ (факт)
+
+1. Расширить **`DraftJsonEditorMode`** и **`EntityTypesDraftJsonEditor`** (`AprilJsonSchemaForm`, опциональные пропсы).
+2. Подключить в **`ProfilesWidgetCore`** (create + edit), подсказки при `none` / `error`, эффекты сброса режима.
+3. Тесты **`ProfilesWidgetCore.test.tsx`**, документация, docs-site, **`REPORT.md`**.
 
 ## Затрагиваемые области
 
 | Область | Изменения |
 |--------|-----------|
-| `frontend/packages/profile-ui` | `ProfilesWidgetCore.tsx` (+ возможный новый компонент), тесты |
-| Документация | `docs/widgets/profile/profiles-widget.md`, docs-site |
-| Backend / OpenAPI | Нет в v1 (см. `TASK.md`) |
+| `frontend/packages/profile-ui` | `EntityTypesDraftJsonEditor.tsx`, `ProfilesWidgetCore.tsx`, тесты, `package.json` devDependency `@rjsf/utils` (типы) |
+| Документация | `docs/widgets/profile/profiles-widget.md`, docs-site, `task_list.md` |
+| Backend / OpenAPI | Нет (v1) |
 
 ## Риски и откат
 
 | Риск | Митигация |
 |------|-----------|
-| Документ с сервера усечён ABAC, а схема полная | Не скрывать поля дерева «молча»; в Form — `readonly`/`extraErrors` или явный текст; задокументировать в `REPORT.md`. |
-| Двойной Ajv (RJSF + сервер) | Как в 057: сервер финальный; клиент — подсказка. |
-| Тяжёлые/небезопасные `$ref` | Политика как в 057; при ошибке загрузки ref — fallback Tree/Source only. |
+| ABAC-усечённый `document` vs полная схема | Сервер остаётся источником истины (**422** / **`schemaIssues`**); клиентский RJSF — подсказка; при необходимости пользователь правит в Tree/Source. |
+| Двойной Ajv (RJSF + сервер) | Как в 057: финальная валидация на сервере. |
 
-**Откат:** revert PR с виджетом; флаг feature в host не требуется, если всё в одном виджете.
+**Откат:** revert PR.
 
 ## Проверка
 
-Команды из `TASK.md`; ручной сценарий на `/profiles-widget-demo` с MSW.
+Команды из `TASK.md`; smoke: `/profiles-widget-demo`.
 
 ## Примечания
 
-- Эталон UI в DS: `JsonTreeEditorSection` — ориентир по композиции, не копипаста размеров/текстов.
+- Эталон композиции DS: `JsonTreeEditorSection` — те же примитивы, без импорта **`UIKit`**.
