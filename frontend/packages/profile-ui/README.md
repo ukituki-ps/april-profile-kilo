@@ -23,7 +23,7 @@ Props (см. также `ProfilesWidgetProps` в исходниках):
 - `pageSize?`, `initialSearch?`, `initialTypeId?`, `initialSort?`, `initialCreateEntityTypeId?`, `autoSelectFirst?`
 - `onAction?`, `onError?`, `onOpenEntity?`, `onObservability?`
 
-Поведение: master-detail (список профилей + карточка), server-side list/search/filter, CRUD, версии через провайдер.
+Поведение: master-detail (список профилей + карточка), server-side list/search/filter, CRUD, версии через провайдер. Спецификация по поверхностям: `docs/widgets/profile/profiles-widget.md` (сборка), `docs/widgets/profile/profiles-widget-list.md`, `docs/widgets/profile/profiles-widget-profile-detail.md`.
 
 Экспорты для кастомного wiring: **`ProfilesWidgetCore`**, **`ProfilesApiWidget`**, **`ProfilesDataProvider`**, **`createOpenApiProfilesProvider`**.
 

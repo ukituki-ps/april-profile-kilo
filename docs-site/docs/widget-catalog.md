@@ -20,7 +20,7 @@ sidebar_position: 8
   - package: `@april/profile-ui`
   - contract: `v1`
   - status: `beta`
-  - где смотреть детали: `docs/widgets/profile/profiles-widget.md`
+  - где смотреть детали: `docs/widgets/profile/profiles-widget.md` (индекс), `docs/widgets/profile/profiles-widget-list.md`, `docs/widgets/profile/profiles-widget-profile-detail.md`
 
 ### `entity-types-admin`
 

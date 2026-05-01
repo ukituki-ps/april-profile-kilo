@@ -12,5 +12,5 @@
 
 | `profileId` | Описание | Виджеты |
 |-------------|----------|---------|
-| `entity-profile` | Домен профилей сущностей в AprilProfile | [`profiles-widget`](./profile/profiles-widget.md) |
+| `entity-profile` | Домен профилей сущностей в AprilProfile | [`profiles-widget`](./profile/profiles-widget.md) (сборка; детали: [`list`](./profile/profiles-widget-list.md), [`profile-detail`](./profile/profiles-widget-profile-detail.md)) |
 | `entity-types-admin` | Администрирование каталога типов сущностей (семейство, черновики, ревизии схемы, апгрейд привязки сущностей) | [`entity-types-widget`](./profile/entity-types-widget.md) |
