@@ -96,7 +96,7 @@ Telemetry: см. [`WIDGET_CONTRACTS.md`](../../WIDGET_CONTRACTS.md) §9 (`widget
 - **Запрещено** обходить дизайн-систему: произвольные CSS-«виджеты», самодельные модалки там, где в `@april/ui` / Mantine есть эквивалент, «временные» экраны без DS **не допускаются**.
 - **Запрещены** упрощающие обходные пути вместо целевого решения (например фиксированный список типов вместо server-driven API, локальное хранилище как source of truth, игнорирование optimistic concurrency, отсутствие обработки 409/422).
 - Master–detail компоновка списка: **`CardListColumn`** (`@april/ui`) или согласованный наследник из DS **без замены на самописный master-detail**.
-- Редактор схемы: только публичные примитивы **`@april/ui` ≥ 0.1.5** — `AprilJsonTreeEditor` (режим дерева), `AprilJsonCollectionTextEditor` (режим исходного текста), `AprilJsonValidationSummary` (ошибки Ajv на клиенте и `issues` с API при 422), обёртка `DensityProvider` из DS; расширение до Monaco **не** входит в контракт без отдельной задачи и согласования DS.
+- Редактор схемы: только публичные примитивы **`@april/ui` ≥ 0.1.6** — `AprilJsonTreeEditor` (режим дерева), `AprilJsonCollectionTextEditor` (режим исходного текста), `AprilJsonValidationSummary` (ошибки Ajv на клиенте и `issues` с API при 422), обёртка `DensityProvider` из DS; расширение до Monaco **не** входит в контракт без отдельной задачи и согласования DS.
 - Иконки: согласованный набор (как у других виджетов профилей, например `@tabler/icons-react` при наличии в peer/dependencies пакета), с **a11y** (`aria-label` / tooltip).
 
 ---
@@ -138,4 +138,4 @@ Handoff для AprilHub/BFF: [`docs/integration/entity-types-widget-hub-handoff.
 | [`tasks/053-phase-7-entity-type-revisions-backend-api-profile-integration`](../../../tasks/053-phase-7-entity-type-revisions-backend-api-profile-integration/TASK.md) | OpenAPI, HTTP handlers, связка с `profiles`, интеграционные тесты |
 | [`tasks/054-phase-7-entity-types-widget-production-ui`](../../../tasks/054-phase-7-entity-types-widget-production-ui/TASK.md) | Виджет UI (Core/Api/Facade/Provider), DS-first |
 | [`tasks/055-phase-7-entity-types-contract-docs-hub-handoff`](../../../tasks/055-phase-7-entity-types-contract-docs-hub-handoff/TASK.md) | WIDGET_CONTRACTS, docs-site stories, индекс, финализация handoff Hub |
-| [`tasks/057-phase-7-profile-ui-ds-json-entity-types-integration`](../../../tasks/057-phase-7-profile-ui-ds-json-entity-types-integration/TASK.md) | Замена textarea на публичные JSON-компоненты `@april/ui` (0.1.5+) в виджете |
+| [`tasks/057-phase-7-profile-ui-ds-json-entity-types-integration`](../../../tasks/057-phase-7-profile-ui-ds-json-entity-types-integration/TASK.md) | Замена textarea на публичные JSON-компоненты `@april/ui` (0.1.6+) в виджете |
