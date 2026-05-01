@@ -28,4 +28,19 @@ describe("App", () => {
     expect(screen.getByText("/profiles-widget-demo")).toBeInTheDocument();
     expect(screen.getByText("/entity-types-api-widget-demo")).toBeInTheDocument();
   });
+
+  it("renders doc surface demo for profiles-widget-list", () => {
+    render(
+      <AprilProviders>
+        <MemoryRouter initialEntries={["/demo/surfaces/profiles-widget-list"]}>
+          <App />
+        </MemoryRouter>
+      </AprilProviders>,
+    );
+    expect(screen.getByRole("link", { name: "profiles-widget-list.md" })).toHaveAttribute(
+      "href",
+      "https://github.com/ukituki-ps/april-profile/blob/develop/docs/widgets/profile/profiles-widget-list.md",
+    );
+    expect(screen.getByRole("heading", { name: /profiles-widget — поверхность списка/i })).toBeInTheDocument();
+  });
 });

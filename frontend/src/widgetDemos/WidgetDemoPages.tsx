@@ -6,7 +6,6 @@ import {
   ProfilesWidget,
   ProfilesWidgetCore,
 } from "@april/profile-ui";
-import type { ProfileWidgetHostContext } from "@april/profile-ui";
 import {
   Alert,
   Anchor,
@@ -23,15 +22,8 @@ import {
 } from "@mantine/core";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { isDemoMswEnabled } from "../mocks/demoEnv";
+import { DEMO_ENTITY_TYPES_HOST, DEMO_PROFILES_HOST, useDemoApiEnv } from "./demoShared";
 import { useOpenApiEntityTypesEmbed, useOpenApiProfilesEmbed } from "./openApiEmbedWiring";
-
-function useDemoApiEnv() {
-  const apiBaseUrl = import.meta.env.VITE_PROFILE_API_BASE_URL ?? "/admin/profile/api";
-  const accessToken = import.meta.env.VITE_PROFILE_ACCESS_TOKEN;
-  const demoMock = isDemoMswEnabled();
-  return { apiBaseUrl, accessToken, demoMock };
-}
 
 function WidgetDemoChrome(props: {
   title: string;
@@ -85,16 +77,6 @@ function WidgetDemoChrome(props: {
     </Container>
   );
 }
-
-const profilesHost: ProfileWidgetHostContext = {
-  tenant: { id: "demo-tenant" },
-  telemetry: { requestId: "local-demo-req-list" },
-};
-
-const entityTypesHost: ProfileWidgetHostContext = {
-  tenant: { id: "demo-tenant" },
-  telemetry: { requestId: "local-demo-req-entity-types" },
-};
 
 function DemoRouteNavLink(props: { to: string; title: string; description: string }) {
   return (
@@ -178,6 +160,43 @@ export function WidgetDemosIndexPage() {
           />
         </DemoSection>
 
+        <DemoSection title="Спеки по поверхностям (markdown + тот же MSW)">
+          <Text size="sm" c="dimmed">
+            Отдельный маршрут на каждый файл в <Code>docs/widgets/profile/</Code>: полный виджет + подсказка, какая
+            часть UI относится к спеке (отдельных npm-компонентов на поверхность пока нет).
+          </Text>
+          <DemoRouteNavLink
+            to="/demo/surfaces/profiles-widget-list"
+            title="profiles-widget-list"
+            description="Список профилей (левая колонка)."
+          />
+          <DemoRouteNavLink
+            to="/demo/surfaces/profiles-widget-profile-detail"
+            title="profiles-widget-profile-detail"
+            description="Карточка и документ (правая колонка)."
+          />
+          <DemoRouteNavLink
+            to="/demo/surfaces/entity-types-widget-catalog-list"
+            title="entity-types-widget-catalog-list"
+            description="Каталог семейств типов."
+          />
+          <DemoRouteNavLink
+            to="/demo/surfaces/entity-types-widget-schema-admin"
+            title="entity-types-widget-schema-admin"
+            description="Черновик, ревизии, публикация."
+          />
+          <DemoRouteNavLink
+            to="/demo/surfaces/entity-types-widget-entities-upgrade"
+            title="entity-types-widget-entities-upgrade"
+            description="Вкладка Upgrade."
+          />
+          <DemoRouteNavLink
+            to="/demo/surfaces/entity-types-widget-integration"
+            title="entity-types-widget-integration"
+            description="Props / вкладки с живыми виджетами."
+          />
+        </DemoSection>
+
         <DemoSection title="Прочее">
           <DemoRouteNavLink to="/showcase" title="UIKit showcase" description="Примитивы дизайн-системы `@april/ui`." />
           <NavLink
@@ -211,7 +230,7 @@ export function ProfilesWidgetDemoPage() {
       actionMessage={actionMessage}
     >
       <ProfilesWidget
-        hostContext={profilesHost}
+        hostContext={DEMO_PROFILES_HOST}
         apiBaseUrl={apiBaseUrl}
         accessToken={accessToken}
         autoSelectFirst
@@ -239,7 +258,7 @@ export function EntityTypesWidgetDemoPage() {
       actionMessage={actionMessage}
     >
       <EntityTypesWidget
-        hostContext={entityTypesHost}
+        hostContext={DEMO_ENTITY_TYPES_HOST}
         apiBaseUrl={apiBaseUrl}
         accessToken={accessToken}
         onAction={(action) => {
@@ -262,7 +281,7 @@ export function ProfilesApiWidgetDemoPage() {
       actionMessage={actionMessage}
     >
       <ProfilesApiWidget
-        hostContext={profilesHost}
+        hostContext={DEMO_PROFILES_HOST}
         apiBaseUrl={apiBaseUrl}
         accessToken={accessToken}
         autoSelectFirst
@@ -290,7 +309,7 @@ export function EntityTypesApiWidgetDemoPage() {
       actionMessage={actionMessage}
     >
       <EntityTypesApiWidget
-        hostContext={entityTypesHost}
+        hostContext={DEMO_ENTITY_TYPES_HOST}
         apiBaseUrl={apiBaseUrl}
         accessToken={accessToken}
         onAction={(action) => {
@@ -304,7 +323,7 @@ export function EntityTypesApiWidgetDemoPage() {
 export function ProfilesWidgetCoreDemoPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const { apiBaseUrl, accessToken } = useDemoApiEnv();
-  const { provider, providerContext } = useOpenApiProfilesEmbed(apiBaseUrl, accessToken, profilesHost);
+  const { provider, providerContext } = useOpenApiProfilesEmbed(apiBaseUrl, accessToken, DEMO_PROFILES_HOST);
 
   return (
     <WidgetDemoChrome
@@ -314,7 +333,7 @@ export function ProfilesWidgetCoreDemoPage() {
       actionMessage={actionMessage}
     >
       <ProfilesWidgetCore
-        hostContext={profilesHost}
+        hostContext={DEMO_PROFILES_HOST}
         provider={provider}
         providerContext={providerContext}
         autoSelectFirst
@@ -333,7 +352,7 @@ export function ProfilesWidgetCoreDemoPage() {
 export function EntityTypesWidgetCoreDemoPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const { apiBaseUrl, accessToken } = useDemoApiEnv();
-  const { provider, providerContext } = useOpenApiEntityTypesEmbed(apiBaseUrl, accessToken, entityTypesHost);
+  const { provider, providerContext } = useOpenApiEntityTypesEmbed(apiBaseUrl, accessToken, DEMO_ENTITY_TYPES_HOST);
 
   return (
     <WidgetDemoChrome
@@ -343,7 +362,7 @@ export function EntityTypesWidgetCoreDemoPage() {
       actionMessage={actionMessage}
     >
       <EntityTypesWidgetCore
-        hostContext={entityTypesHost}
+        hostContext={DEMO_ENTITY_TYPES_HOST}
         provider={provider}
         providerContext={providerContext}
         onAction={(action) => {

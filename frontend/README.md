@@ -20,7 +20,7 @@ npm run dev
 
 В режиме **`npm run dev`** поднимается **MSW**: перехватываются запросы к тому же базовому URL, что и у виджета (`VITE_PROFILE_API_BASE_URL` или по умолчанию `/admin/profile/api` на хосте Vite). Примеры данных — в [`src/mocks/handlers.ts`](./src/mocks/handlers.ts).
 
-Индекс всех демо: **`/widget-demos`** (фасады `ProfilesWidget` / `EntityTypesWidget`, Api-слой `ProfilesApiWidget` / `EntityTypesApiWidget`, варианты **`WidgetCore` + OpenAPI-провайдер**, showcase DS).
+Индекс всех демо: **`/widget-demos`** (фасады, Api-слой, `WidgetCore` + OpenAPI, **демо по markdown-спекам поверхностей**, showcase DS).
 
 Прямые ссылки:
 
@@ -33,6 +33,12 @@ npm run dev
 | `/entity-types-api-widget-demo` | `EntityTypesApiWidget` |
 | `/profiles-widget-core-demo` | `ProfilesWidgetCore` + `createOpenApiProfilesProvider` |
 | `/entity-types-widget-core-demo` | `EntityTypesWidgetCore` + `createOpenApiEntityTypesProvider` |
+| `/demo/surfaces/profiles-widget-list` | Спека `profiles-widget-list.md` + тот же `ProfilesWidget` (MSW) |
+| `/demo/surfaces/profiles-widget-profile-detail` | `profiles-widget-profile-detail.md` + `ProfilesWidget` |
+| `/demo/surfaces/entity-types-widget-catalog-list` | `entity-types-widget-catalog-list.md` + `EntityTypesWidget` |
+| `/demo/surfaces/entity-types-widget-schema-admin` | `entity-types-widget-schema-admin.md` + `EntityTypesWidget` |
+| `/demo/surfaces/entity-types-widget-entities-upgrade` | `entity-types-widget-entities-upgrade.md` + `EntityTypesWidget` |
+| `/demo/surfaces/entity-types-widget-integration` | `entity-types-widget-integration.md` + вкладки (таблица props, виджеты) |
 | `/showcase` | `UIKit` (дизайн-система) |
 
 - Чтобы ходить в **настоящий** API по этому URL: `VITE_PROFILE_DEMO_MOCK=false`.

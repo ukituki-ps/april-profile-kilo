@@ -10,6 +10,14 @@ import {
   ProfilesWidgetDemoPage,
   WidgetDemosIndexPage,
 } from "./widgetDemos/WidgetDemoPages";
+import {
+  EntityTypesWidgetCatalogListSurfaceDemoPage,
+  EntityTypesWidgetEntitiesUpgradeSurfaceDemoPage,
+  EntityTypesWidgetIntegrationSurfaceDemoPage,
+  EntityTypesWidgetSchemaAdminSurfaceDemoPage,
+  ProfilesWidgetListSurfaceDemoPage,
+  ProfilesWidgetProfileDetailSurfaceDemoPage,
+} from "./widgetDemos/surfaceDemos/SurfaceDocDemoPages";
 
 function ColorSchemeToggle() {
   const { colorScheme, setColorScheme } = useMantineColorScheme();
@@ -85,6 +93,27 @@ export default function App() {
         <Route path="/entity-types-api-widget-demo" element={<EntityTypesApiWidgetDemoPage />} />
         <Route path="/profiles-widget-core-demo" element={<ProfilesWidgetCoreDemoPage />} />
         <Route path="/entity-types-widget-core-demo" element={<EntityTypesWidgetCoreDemoPage />} />
+        <Route path="/demo/surfaces/profiles-widget-list" element={<ProfilesWidgetListSurfaceDemoPage />} />
+        <Route
+          path="/demo/surfaces/profiles-widget-profile-detail"
+          element={<ProfilesWidgetProfileDetailSurfaceDemoPage />}
+        />
+        <Route
+          path="/demo/surfaces/entity-types-widget-catalog-list"
+          element={<EntityTypesWidgetCatalogListSurfaceDemoPage />}
+        />
+        <Route
+          path="/demo/surfaces/entity-types-widget-schema-admin"
+          element={<EntityTypesWidgetSchemaAdminSurfaceDemoPage />}
+        />
+        <Route
+          path="/demo/surfaces/entity-types-widget-entities-upgrade"
+          element={<EntityTypesWidgetEntitiesUpgradeSurfaceDemoPage />}
+        />
+        <Route
+          path="/demo/surfaces/entity-types-widget-integration"
+          element={<EntityTypesWidgetIntegrationSurfaceDemoPage />}
+        />
       </Routes>
     </>
   );
