@@ -58,6 +58,7 @@ sidebar_position: 20
 - [052 — Ревизии типов: модель БД и миграции](./task-story-052-phase-7-entity-type-revisions-data-model)
 - [053 — Ревизии типов: API и OpenAPI](./task-story-053-phase-7-entity-type-revisions-api)
 - [054 — Виджет `entity-types-widget` в `@april/profile-ui`](./task-story-054-phase-7-entity-types-widget)
+- [057 — DS JSON-редакторы в `entity-types-widget`](./task-story-057-phase-7-profile-ui-ds-json-entity-types)
 
 ## Быстрый статус
 
@@ -108,3 +109,4 @@ sidebar_position: 20
 | 053 Entity type revisions (API) | ✅ | [053](./task-story-053-phase-7-entity-type-revisions-api) | OpenAPI + Go: каталог, draft/publish, ревизии, single/batch upgrade профилей; SDK |
 | 054 `entity-types-widget` UI | ✅ | [054](./task-story-054-phase-7-entity-types-widget) | Production-first виджет Core+Api+facade, DS, telemetry, handoff подготовлен в репозитории |
 | 055 Contracts + docs-site + Hub handoff docs | ✅ | [контракты](/docs/widget-contracts) §9, [handoff](https://github.com/ukituki-ps/april-profile/blob/develop/docs/integration/entity-types-widget-hub-handoff.md), отчёт `tasks/055-phase-7-entity-types-contract-docs-hub-handoff/REPORT.md` | Синхронизация `WIDGET_CONTRACTS` / чеклистов / каталога; три story-страницы 052–054; финальный handoff Hub/BFF |
+| 057 DS JSON в `entity-types-widget` | ✅ | [057](./task-story-057-phase-7-profile-ui-ds-json-entity-types) | `AprilJsonTreeEditor` / Source на DS, read-only ревизии, `schemaIssues` из 422, `peerDependencies` на `@april/ui` |

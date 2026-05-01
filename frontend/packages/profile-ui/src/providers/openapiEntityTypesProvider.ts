@@ -1,15 +1,9 @@
-import { ApiError } from "../generated";
 import type { EntityType } from "../generated/models/EntityType";
 import type { EntityTypeRevision } from "../generated/models/EntityTypeRevision";
 import type { OpenAPIConfig } from "../generated/core/OpenAPI";
 import { request as openApiRequest } from "../generated/core/request";
-import type {
-  ProfileDetails,
-  ProfilesListPage,
-  ProfilesProviderError,
-  ProfilesProviderErrorCode,
-  ProviderContext,
-} from "./profilesDataProvider";
+import type { ProfileDetails, ProfilesListPage, ProviderContext } from "./profilesDataProvider";
+import { mapApiErrorToProfilesProviderError } from "./apiErrorMapping";
 import type {
   BatchUpgradeInput,
   BatchUpgradeResult,
@@ -26,45 +20,6 @@ import type {
 type OpenApiProviderConfig = {
   apiBaseUrl: string;
   accessToken?: string;
-};
-
-const statusToCode = (status: number): ProfilesProviderErrorCode => {
-  if (status === 401) {
-    return "unauthorized";
-  }
-  if (status === 403) {
-    return "forbidden";
-  }
-  if (status === 404) {
-    return "not_found";
-  }
-  if (status === 409) {
-    return "conflict";
-  }
-  if (status === 422 || status === 400) {
-    return "validation";
-  }
-  if (status === 429) {
-    return "rate_limited";
-  }
-  return "unknown";
-};
-
-const toProviderError = (error: unknown): ProfilesProviderError => {
-  if (error instanceof ApiError) {
-    const body = error.body as { request_id?: string; message?: string } | undefined;
-    return {
-      code: statusToCode(error.status),
-      message: body?.message ?? error.message,
-      requestId: body?.request_id,
-      status: error.status,
-      retryable: error.status >= 500 || error.status === 429,
-    };
-  }
-  if (error instanceof TypeError) {
-    return { code: "network", message: "Network error", retryable: true };
-  }
-  return { code: "unknown", message: "Unknown API error" };
 };
 
 const buildConfig = (config: OpenApiProviderConfig, ctx: ProviderContext): OpenAPIConfig => ({
@@ -162,7 +117,7 @@ export const createOpenApiEntityTypesProvider = (config: OpenApiProviderConfig):
         const response = await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() }));
         return response.items.map(mapEntityType);
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async getFamily(id, ctx) {
@@ -180,7 +135,7 @@ export const createOpenApiEntityTypesProvider = (config: OpenApiProviderConfig):
         });
         return mapEntityTypeDetail(await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() })));
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async createFamily(input, ctx) {
@@ -203,7 +158,7 @@ export const createOpenApiEntityTypesProvider = (config: OpenApiProviderConfig):
         });
         return mapEntityTypeDetail(await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() })));
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async patchFamily(id, input, ctx) {
@@ -224,7 +179,7 @@ export const createOpenApiEntityTypesProvider = (config: OpenApiProviderConfig):
         });
         return mapEntityTypeDetail(await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() })));
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async deleteFamily(id, ctx) {
@@ -243,7 +198,7 @@ export const createOpenApiEntityTypesProvider = (config: OpenApiProviderConfig):
         });
         await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() }));
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async saveDraft(id, input, ctx) {
@@ -268,7 +223,7 @@ export const createOpenApiEntityTypesProvider = (config: OpenApiProviderConfig):
         });
         return mapEntityTypeDetail(await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() })));
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async publishDraft(id, ctx) {
@@ -287,7 +242,7 @@ export const createOpenApiEntityTypesProvider = (config: OpenApiProviderConfig):
         });
         return mapEntityTypeDetail(await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() })));
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async listRevisions(familyId, ctx) {
@@ -305,7 +260,7 @@ export const createOpenApiEntityTypesProvider = (config: OpenApiProviderConfig):
         const response = await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() }));
         return response.items.map(mapRevision);
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async listProfilesForType(entityTypeId, query, ctx) {
@@ -353,7 +308,7 @@ export const createOpenApiEntityTypesProvider = (config: OpenApiProviderConfig):
         };
         return page;
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async upgradeEntityProfileBinding(entityId, input, ctx) {
@@ -388,7 +343,7 @@ export const createOpenApiEntityTypesProvider = (config: OpenApiProviderConfig):
         });
         return toProfileDetails(await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() })));
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async batchUpgradeEntityBindings(input, ctx) {
@@ -441,7 +396,7 @@ export const createOpenApiEntityTypesProvider = (config: OpenApiProviderConfig):
         };
         return result;
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
   };

@@ -2,6 +2,10 @@
 
 Embeddable React widgets for AprilProfile in AprilHub/host apps. Публичная поверхность пакета: **`ProfilesWidget`** (`profiles-widget`) и **`EntityTypesWidget`** (`entity-types-widget`), плюс провайдеры/OpenAPI-клиент для кастомного wiring.
 
+### Зависимости host
+
+Пакет объявляет **`peerDependencies`**: `@april/ui` (≥ **0.1.5**, JSON-редакторы и `CardListColumn`), `@mantine/core`, `@emotion/react`, `react`, `react-dom`. Хост должен монтировать виджеты под **`AprilProviders`** из `@april/ui` (или эквивалент: `MantineProvider` + `DensityProvider`), иначе JSON-редакторы дизайн-системы не инициализируются.
+
 ## Observability
 
 Виджеты принимают опциональный **`onObservability`**: колбэк с типом `ProfileWidgetTelemetryEvent` (`widget`, `event`, `request_id`, `correlation_id`, опционально `api_request_id`, `meta`). Базовые события: **`view_loaded`**, **`list_requested`**, **`list_succeeded`**, **`list_failed`**, **`details_requested`**, **`details_failed`**, **`save_submitted`**, **`save_succeeded`**, **`save_failed`**. Для **`entity_types`** дополнительно: **`draft_save_*`**, **`publish_*`**, **`upgrade_*`**, **`batch_upgrade_*`** (см. `ProfileWidgetTelemetryEventName` в `src/observability.ts`). Идентификаторы — из `hostContext.telemetry.requestId` и опционально `correlationId` (см. `docs/WIDGET_OBSERVABILITY_GUIDE.md` §3.1). Экспортируются `emitProfileWidgetTelemetry`, `buildTelemetryIds` и типы событий.
