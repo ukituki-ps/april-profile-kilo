@@ -56,6 +56,32 @@ describe("createOpenApiEntityTypesProvider", () => {
     ]);
   });
 
+  it("maps 422 with schema issues to provider error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            code: "schema_validation_failed",
+            message: "invalid",
+            request_id: "api-422",
+            issues: [{ path: "/name", message: "must be string" }],
+          }),
+          { status: 422, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+    const provider = createOpenApiEntityTypesProvider({
+      apiBaseUrl: "http://localhost:8080/admin/profile/api",
+    });
+
+    await expect(provider.createFamily({ namespace: "a", code: "b", draftSchema: {} }, baseCtx)).rejects.toMatchObject({
+      code: "validation",
+      requestId: "api-422",
+      schemaIssues: [{ path: "/name", message: "must be string" }],
+    });
+  });
+
   it("maps 403 with request_id to provider error", async () => {
     vi.stubGlobal(
       "fetch",

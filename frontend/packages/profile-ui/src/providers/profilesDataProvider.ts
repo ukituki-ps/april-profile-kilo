@@ -56,6 +56,8 @@ export type ProfilesProviderError = {
   requestId?: string;
   status?: number;
   retryable?: boolean;
+  /** Детали валидации из тела ошибки API (например `issues` при `schema_validation_failed`). */
+  schemaIssues?: Array<{ path: string; message: string }>;
 };
 
 export type ProviderContext = {

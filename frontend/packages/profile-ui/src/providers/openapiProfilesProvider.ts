@@ -1,4 +1,3 @@
-import { ApiError } from "../generated";
 import type { EntityTypeListResponse, ProfileListItem, ProfileListResponse, ProfileSnapshot } from "../generated";
 import type { OpenAPIConfig } from "../generated/core/OpenAPI";
 import { request as openApiRequest } from "../generated/core/request";
@@ -8,12 +7,11 @@ import type {
   ProfilesDataProvider,
   ProfilesListPage,
   ProfilesListQuery,
-  ProfilesProviderError,
-  ProfilesProviderErrorCode,
   ProviderContext,
   EntityTypeOption,
   UpdateProfileInput,
 } from "./profilesDataProvider";
+import { mapApiErrorToProfilesProviderError } from "./apiErrorMapping";
 
 type OpenApiProviderConfig = {
   apiBaseUrl: string;
@@ -35,45 +33,6 @@ const toDetails = (snapshot: ProfileSnapshot): ProfileDetails => ({
   updatedAt: snapshot.created_at,
   document: snapshot.document,
 });
-
-const statusToCode = (status: number): ProfilesProviderErrorCode => {
-  if (status === 401) {
-    return "unauthorized";
-  }
-  if (status === 403) {
-    return "forbidden";
-  }
-  if (status === 404) {
-    return "not_found";
-  }
-  if (status === 409) {
-    return "conflict";
-  }
-  if (status === 422 || status === 400) {
-    return "validation";
-  }
-  if (status === 429) {
-    return "rate_limited";
-  }
-  return "unknown";
-};
-
-const toProviderError = (error: unknown): ProfilesProviderError => {
-  if (error instanceof ApiError) {
-    const body = error.body as { request_id?: string; message?: string } | undefined;
-    return {
-      code: statusToCode(error.status),
-      message: body?.message ?? error.message,
-      requestId: body?.request_id,
-      status: error.status,
-      retryable: error.status >= 500 || error.status === 429,
-    };
-  }
-  if (error instanceof TypeError) {
-    return { code: "network", message: "Network error", retryable: true };
-  }
-  return { code: "unknown", message: "Unknown API error" };
-};
 
 const toPage = (response: ProfileListResponse): ProfilesListPage => ({
   items: response.items.map(toListItem),
@@ -147,7 +106,7 @@ export const createOpenApiProfilesProvider = (config: OpenApiProviderConfig): Pr
         const response = await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() }));
         return toPage(response);
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async get(entityId: string, ctx: ProviderContext) {
@@ -165,7 +124,7 @@ export const createOpenApiProfilesProvider = (config: OpenApiProviderConfig): Pr
         });
         return toDetails(await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() })));
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async getByVersion(entityId: string, version: number, ctx: ProviderContext) {
@@ -183,7 +142,7 @@ export const createOpenApiProfilesProvider = (config: OpenApiProviderConfig): Pr
         });
         return toDetails(await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() })));
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async listEntityTypes(ctx: ProviderContext) {
@@ -204,7 +163,7 @@ export const createOpenApiProfilesProvider = (config: OpenApiProviderConfig): Pr
         }));
         return items;
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async create(input: CreateProfileInput, ctx: ProviderContext) {
@@ -228,7 +187,7 @@ export const createOpenApiProfilesProvider = (config: OpenApiProviderConfig): Pr
         });
         return toDetails(await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() })));
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async update(entityId: string, input: UpdateProfileInput, ctx: ProviderContext) {
@@ -252,7 +211,7 @@ export const createOpenApiProfilesProvider = (config: OpenApiProviderConfig): Pr
         });
         return toDetails(await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() })));
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
     async remove(entityId: string, ctx: ProviderContext) {
@@ -270,7 +229,7 @@ export const createOpenApiProfilesProvider = (config: OpenApiProviderConfig): Pr
         });
         await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() }));
       } catch (error) {
-        throw toProviderError(error);
+        throw mapApiErrorToProfilesProviderError(error);
       }
     },
   };

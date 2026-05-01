@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { EntityTypesWidgetCore } from "./EntityTypesWidgetCore";
 import type {
@@ -20,6 +20,7 @@ vi.mock("@mantine/core", async () => {
 });
 
 vi.mock("@april/ui", () => ({
+  DensityProvider: ({ children }: { children: ReactNode }) => <div data-testid="density-provider">{children}</div>,
   CardListColumn: ({
     items,
     heightMode,
@@ -40,6 +41,28 @@ vi.mock("@april/ui", () => ({
       ))}
     </div>
   ),
+  AprilJsonTreeEditor: ({ data, readOnly }: { data: unknown; readOnly?: boolean }) => (
+    <div data-testid="april-json-tree" data-readonly={readOnly ? "true" : "false"}>
+      {JSON.stringify(data)}
+    </div>
+  ),
+  AprilJsonCollectionTextEditor: ({
+    value,
+    onChange,
+    onKeyDown,
+  }: {
+    value: string;
+    onChange: (v: string) => void;
+    onKeyDown?: (e: KeyboardEvent) => void;
+  }) => (
+    <textarea
+      aria-label="JSON source editor"
+      value={value}
+      onChange={(e) => onChange(e.currentTarget.value)}
+      onKeyDown={onKeyDown}
+    />
+  ),
+  AprilJsonValidationSummary: () => null,
 }));
 
 const famId = "11111111-1111-1111-1111-111111111111";

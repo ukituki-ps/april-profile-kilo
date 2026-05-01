@@ -1,4 +1,4 @@
-import { CardListColumn } from "@april/ui";
+import { AprilJsonTreeEditor, CardListColumn, DensityProvider } from "@april/ui";
 import {
   IconDeviceFloppy,
   IconRocket,
@@ -24,7 +24,6 @@ import {
   Tabs,
   Text,
   TextInput,
-  Textarea,
   Title,
   Tooltip,
 } from "@mantine/core";
@@ -40,6 +39,11 @@ import type {
   EntityTypeRevisionRow,
   EntityTypesDataProvider,
 } from "../providers/entityTypesDataProvider";
+import {
+  EntityTypesDraftJsonEditor,
+  parseEntityTypeDraftSchemaText,
+  type DraftJsonEditorMode,
+} from "./EntityTypesDraftJsonEditor";
 
 export type EntityTypesWidgetCoreProps = {
   hostContext: ProfileWidgetHostContext;
@@ -81,8 +85,6 @@ const mapSecureMessage = (code: ProfilesProviderErrorCode): string => {
   return "Operation failed. Please try again.";
 };
 
-const monoTextareaSx = { fontFamily: "var(--mantine-font-family-monospace)", fontSize: "12px" } as const;
-
 export function EntityTypesWidgetCore({
   hostContext,
   provider,
@@ -101,12 +103,16 @@ export function EntityTypesWidgetCore({
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailErrorMessage, setDetailErrorMessage] = useState<string | null>(null);
   const [familyDetail, setFamilyDetail] = useState<EntityTypeFamilyDetail | null>(null);
-  const [draftText, setDraftText] = useState("{}");
+  const [draftSchema, setDraftSchema] = useState<Record<string, unknown>>({});
+  const [draftMode, setDraftMode] = useState<DraftJsonEditorMode>("tree");
+  const [draftSourceText, setDraftSourceText] = useState("{}");
   const [draftConflict, setDraftConflict] = useState(false);
   const [mutationMessage, setMutationMessage] = useState<string | null>(null);
+  const [draftApiIssues, setDraftApiIssues] = useState<Array<{ path: string; message: string }> | null>(null);
 
   const [revisions, setRevisions] = useState<EntityTypeRevisionRow[]>([]);
   const [revisionsLoading, setRevisionsLoading] = useState(false);
+  const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<string>("draft");
 
@@ -122,7 +128,10 @@ export function EntityTypesWidgetCore({
   const [createOpened, setCreateOpened] = useState(false);
   const [createNamespace, setCreateNamespace] = useState("");
   const [createCode, setCreateCode] = useState("");
-  const [createDraft, setCreateDraft] = useState("{}");
+  const [createDraftSchema, setCreateDraftSchema] = useState<Record<string, unknown>>({});
+  const [createDraftMode, setCreateDraftMode] = useState<DraftJsonEditorMode>("tree");
+  const [createDraftSourceText, setCreateDraftSourceText] = useState("{}");
+  const [createApiIssues, setCreateApiIssues] = useState<Array<{ path: string; message: string }> | null>(null);
 
   const [patchOpened, setPatchOpened] = useState(false);
   const [patchNamespace, setPatchNamespace] = useState("");
@@ -231,9 +240,12 @@ export function EntityTypesWidgetCore({
 
   const applyFamilyDetail = useCallback((detail: EntityTypeFamilyDetail) => {
     setFamilyDetail(detail);
-    setDraftText(JSON.stringify(detail.draftSchema, null, 2));
+    setDraftSchema(detail.draftSchema);
+    setDraftSourceText(JSON.stringify(detail.draftSchema, null, 2));
+    setDraftMode("tree");
     setDraftConflict(false);
     setMutationMessage(null);
+    setDraftApiIssues(null);
   }, []);
 
   const loadFamilyDetail = useCallback(
@@ -264,6 +276,7 @@ export function EntityTypesWidgetCore({
         setRevisions(sorted);
         const latest = sorted.length > 0 ? sorted[sorted.length - 1] : null;
         setTargetRevisionId(latest?.id ?? null);
+        setSelectedRevisionId(latest?.id ?? null);
       } catch (error) {
         if ((error as Error)?.name === "AbortError") {
           return;
@@ -291,8 +304,12 @@ export function EntityTypesWidgetCore({
   useEffect(() => {
     if (!selectedFamilyId) {
       setFamilyDetail(null);
-      setDraftText("{}");
+      setDraftSchema({});
+      setDraftSourceText("{}");
+      setDraftMode("tree");
+      setDraftApiIssues(null);
       setRevisions([]);
+      setSelectedRevisionId(null);
       setUpgradeEntities([]);
       setUpgradeNextCursor(undefined);
       setSelectedEntityIds(new Set());
@@ -315,6 +332,12 @@ export function EntityTypesWidgetCore({
       setRevisions(sorted);
       const latest = sorted.length > 0 ? sorted[sorted.length - 1] : null;
       setTargetRevisionId((current) => {
+        if (current && sorted.some((r) => r.id === current)) {
+          return current;
+        }
+        return latest?.id ?? null;
+      });
+      setSelectedRevisionId((current) => {
         if (current && sorted.some((r) => r.id === current)) {
           return current;
         }
@@ -370,24 +393,41 @@ export function EntityTypesWidgetCore({
     void loadUpgradePage({ append: false });
   }, [activeTab, loadUpgradePage, selectedFamilyId]);
 
-  const parsedDraftObject = useMemo((): Record<string, unknown> | null => {
-    try {
-      const parsed = JSON.parse(draftText);
-      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-        return null;
-      }
-      return parsed as Record<string, unknown>;
-    } catch {
-      return null;
+  const draftSaveParseOk = useMemo(() => {
+    if (draftMode === "source") {
+      return parseEntityTypeDraftSchemaText(draftSourceText).ok;
     }
-  }, [draftText]);
+    return true;
+  }, [draftMode, draftSourceText]);
+
+  const createDraftSaveOk = useMemo(() => {
+    if (createDraftMode === "source") {
+      return parseEntityTypeDraftSchemaText(createDraftSourceText).ok;
+    }
+    return true;
+  }, [createDraftMode, createDraftSourceText]);
+
+  const selectedRevision = useMemo(
+    () => revisions.find((r) => r.id === selectedRevisionId) ?? null,
+    [revisions, selectedRevisionId],
+  );
 
   const handleSaveDraft = async () => {
-    if (!selectedFamilyId || !familyDetail || !parsedDraftObject) {
-      setMutationMessage("Draft must be a valid JSON object.");
+    if (!selectedFamilyId || !familyDetail) {
       return;
     }
+    let schemaPayload = draftSchema;
+    if (draftMode === "source") {
+      const parsed = parseEntityTypeDraftSchemaText(draftSourceText);
+      if (!parsed.ok) {
+        setMutationMessage(parsed.message);
+        return;
+      }
+      schemaPayload = parsed.value;
+      setDraftSchema(parsed.value);
+    }
     setMutationMessage(null);
+    setDraftApiIssues(null);
     setDraftConflict(false);
     setBusy("save-draft");
     emitProfileWidgetTelemetry(onObservability, hostContext, {
@@ -398,7 +438,7 @@ export function EntityTypesWidgetCore({
     try {
       const updated = await provider.saveDraft(
         selectedFamilyId,
-        { draftSchema: parsedDraftObject, ifDraftSchemaVersion: familyDetail.draftSchemaVersion },
+        { draftSchema: schemaPayload, ifDraftSchemaVersion: familyDetail.draftSchemaVersion },
         { ...providerContextBaseRef.current },
       );
       applyFamilyDetail(updated);
@@ -411,6 +451,11 @@ export function EntityTypesWidgetCore({
       });
       await loadFamilies();
     } catch (error) {
+      if (isProfilesProviderError(error) && error.schemaIssues?.length) {
+        setDraftApiIssues(error.schemaIssues);
+      } else {
+        setDraftApiIssues(null);
+      }
       if (isProfilesProviderError(error) && error.code === "conflict") {
         setDraftConflict(true);
         setMutationMessage(mapSecureMessage("conflict"));
@@ -432,6 +477,7 @@ export function EntityTypesWidgetCore({
       return;
     }
     setMutationMessage(null);
+    setDraftApiIssues(null);
     setBusy("publish");
     emitProfileWidgetTelemetry(onObservability, hostContext, {
       widget: "entity_types",
@@ -453,6 +499,9 @@ export function EntityTypesWidgetCore({
         void loadUpgradePage({ append: false });
       }
     } catch (error) {
+      if (isProfilesProviderError(error) && error.schemaIssues?.length) {
+        setDraftApiIssues(error.schemaIssues);
+      }
       reportError(error, setMutationMessage);
       emitProfileWidgetTelemetry(onObservability, hostContext, {
         widget: "entity_types",
@@ -482,17 +531,17 @@ export function EntityTypesWidgetCore({
 
   const handleCreateFamily = async () => {
     let draftObj: Record<string, unknown>;
-    try {
-      const parsed = JSON.parse(createDraft);
-      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-        setMutationMessage("Initial draft must be a JSON object.");
+    if (createDraftMode === "source") {
+      const parsed = parseEntityTypeDraftSchemaText(createDraftSourceText);
+      if (!parsed.ok) {
+        setMutationMessage(parsed.message);
         return;
       }
-      draftObj = parsed as Record<string, unknown>;
-    } catch {
-      setMutationMessage("Initial draft must be valid JSON.");
-      return;
+      draftObj = parsed.value;
+    } else {
+      draftObj = createDraftSchema;
     }
+    setCreateApiIssues(null);
     setBusy("create");
     try {
       const created = await provider.createFamily(
@@ -502,7 +551,9 @@ export function EntityTypesWidgetCore({
       setCreateOpened(false);
       setCreateNamespace("");
       setCreateCode("");
-      setCreateDraft("{}");
+      setCreateDraftSchema({});
+      setCreateDraftSourceText("{}");
+      setCreateDraftMode("tree");
       await loadFamilies();
       setSelectedFamilyId(created.id);
       onAction?.({
@@ -512,6 +563,9 @@ export function EntityTypesWidgetCore({
         code: created.code,
       });
     } catch (error) {
+      if (isProfilesProviderError(error) && error.schemaIssues?.length) {
+        setCreateApiIssues(error.schemaIssues);
+      }
       reportError(error, setMutationMessage);
     } finally {
       setBusy(null);
@@ -727,6 +781,7 @@ export function EntityTypesWidgetCore({
   }
 
   return (
+    <DensityProvider>
     <Stack gap="md" style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {listErrorMessage ? <Alert color="red">{listErrorMessage}</Alert> : null}
       {mutationMessage ? <Alert color="red">{mutationMessage}</Alert> : null}
@@ -755,6 +810,10 @@ export function EntityTypesWidgetCore({
             withAdd
             onAddItem={() => {
               setMutationMessage(null);
+              setCreateApiIssues(null);
+              setCreateDraftSchema({});
+              setCreateDraftSourceText("{}");
+              setCreateDraftMode("tree");
               setCreateOpened(true);
             }}
             totalItems={families.length}
@@ -849,15 +908,17 @@ export function EntityTypesWidgetCore({
                     </Alert>
                   ) : null}
                   <Box style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-                    <Textarea
-                      label="Draft JSON Schema (object)"
-                      aria-label="Draft JSON schema"
-                      value={draftText}
-                      onChange={(e) => setDraftText(e.currentTarget.value)}
-                      styles={{ input: { ...monoTextareaSx, width: "100%" } }}
-                      style={{ flex: 1, display: "flex", flexDirection: "column" }}
-                      autosize
-                      minRows={12}
+                    <Text size="sm" fw={500} mb="xs">
+                      Draft JSON Schema
+                    </Text>
+                    <EntityTypesDraftJsonEditor
+                      mode={draftMode}
+                      onModeChange={setDraftMode}
+                      value={draftSchema}
+                      onChange={setDraftSchema}
+                      sourceText={draftSourceText}
+                      onSourceTextChange={setDraftSourceText}
+                      serverValidationItems={draftApiIssues ?? undefined}
                     />
                   </Box>
                   <Group mt="sm" justify="flex-end">
@@ -866,7 +927,7 @@ export function EntityTypesWidgetCore({
                         leftSection={<IconDeviceFloppy size={16} />}
                         onClick={() => void handleSaveDraft()}
                         loading={busy === "save-draft"}
-                        disabled={!parsedDraftObject}
+                        disabled={!draftSaveParseOk}
                       >
                         Save draft
                       </Button>
@@ -884,36 +945,59 @@ export function EntityTypesWidgetCore({
                   </Group>
                 </Tabs.Panel>
 
-                <Tabs.Panel value="revisions" pt="sm" style={{ flex: 1, minHeight: 0 }}>
+                <Tabs.Panel value="revisions" pt="sm" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: "sm" }}>
                   {revisionsLoading ? (
                     <Loader size="sm" />
                   ) : revisions.length === 0 ? (
                     <Alert color="gray">No published revisions yet. Publish a draft to create revision 1.</Alert>
                   ) : (
-                    <ScrollArea style={{ maxHeight: "100%" }}>
-                      <Table striped highlightOnHover withTableBorder>
-                        <Table.Thead>
-                          <Table.Tr>
-                            <Table.Th>No.</Table.Th>
-                            <Table.Th>Published</Table.Th>
-                            <Table.Th>Revision id</Table.Th>
-                          </Table.Tr>
-                        </Table.Thead>
-                        <Table.Tbody>
-                          {revisions.map((r) => (
-                            <Table.Tr key={r.id}>
-                              <Table.Td>{r.revisionNo}</Table.Td>
-                              <Table.Td>{r.publishedAt}</Table.Td>
-                              <Table.Td>
-                                <Text size="xs" ff="monospace">
-                                  {r.id}
-                                </Text>
-                              </Table.Td>
+                    <>
+                      <ScrollArea style={{ flex: "0 0 auto", maxHeight: "42%" }}>
+                        <Table striped highlightOnHover withTableBorder>
+                          <Table.Thead>
+                            <Table.Tr>
+                              <Table.Th>No.</Table.Th>
+                              <Table.Th>Published</Table.Th>
+                              <Table.Th>Revision id</Table.Th>
                             </Table.Tr>
-                          ))}
-                        </Table.Tbody>
-                      </Table>
-                    </ScrollArea>
+                          </Table.Thead>
+                          <Table.Tbody>
+                            {revisions.map((r) => (
+                              <Table.Tr
+                                key={r.id}
+                                onClick={() => setSelectedRevisionId(r.id)}
+                                style={{
+                                  cursor: "pointer",
+                                  backgroundColor: r.id === selectedRevisionId ? "var(--mantine-color-blue-light)" : undefined,
+                                }}
+                              >
+                                <Table.Td>{r.revisionNo}</Table.Td>
+                                <Table.Td>{r.publishedAt}</Table.Td>
+                                <Table.Td>
+                                  <Text size="xs" ff="monospace">
+                                    {r.id}
+                                  </Text>
+                                </Table.Td>
+                              </Table.Tr>
+                            ))}
+                          </Table.Tbody>
+                        </Table>
+                      </ScrollArea>
+                      {selectedRevision ? (
+                        <Box style={{ flex: 1, minHeight: 160, overflow: "auto" }}>
+                          <Text size="sm" fw={500} mb="xs">
+                            Schema snapshot (revision {selectedRevision.revisionNo}, read-only)
+                          </Text>
+                          <AprilJsonTreeEditor
+                            data={selectedRevision.schema}
+                            readOnly
+                            rootName={`revision_${selectedRevision.revisionNo}`}
+                            resolveValidationSchemaRefs={false}
+                            showSearch
+                          />
+                        </Box>
+                      ) : null}
+                    </>
                   )}
                 </Tabs.Panel>
 
@@ -1025,12 +1109,30 @@ export function EntityTypesWidgetCore({
         <Stack gap="sm">
           <TextInput label="Namespace" value={createNamespace} onChange={(e) => setCreateNamespace(e.currentTarget.value)} required />
           <TextInput label="Code" value={createCode} onChange={(e) => setCreateCode(e.currentTarget.value)} required />
-          <Textarea label="Initial draft schema (JSON object)" value={createDraft} onChange={(e) => setCreateDraft(e.currentTarget.value)} minRows={4} styles={{ input: monoTextareaSx }} />
+          <Text size="sm" fw={500}>
+            Initial draft schema
+          </Text>
+          <EntityTypesDraftJsonEditor
+            mode={createDraftMode}
+            onModeChange={setCreateDraftMode}
+            value={createDraftSchema}
+            onChange={setCreateDraftSchema}
+            sourceText={createDraftSourceText}
+            onSourceTextChange={setCreateDraftSourceText}
+            compact
+            showSearch={false}
+            rootName="initial_draft"
+            serverValidationItems={createApiIssues ?? undefined}
+          />
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setCreateOpened(false)}>
               Cancel
             </Button>
-            <Button onClick={() => void handleCreateFamily()} loading={busy === "create"} disabled={!createNamespace.trim() || !createCode.trim()}>
+            <Button
+              onClick={() => void handleCreateFamily()}
+              loading={busy === "create"}
+              disabled={!createNamespace.trim() || !createCode.trim() || !createDraftSaveOk}
+            >
               Create
             </Button>
           </Group>
@@ -1066,5 +1168,6 @@ export function EntityTypesWidgetCore({
         </Group>
       </Modal>
     </Stack>
+    </DensityProvider>
   );
 }
