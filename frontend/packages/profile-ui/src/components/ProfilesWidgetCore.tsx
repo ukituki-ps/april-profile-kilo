@@ -25,6 +25,7 @@ import {
   Title,
   Tooltip,
 } from "@mantine/core";
+import type { TextareaProps } from "@mantine/core";
 import { emitProfileWidgetTelemetry } from "../observability";
 import type { ProfileWidgetObservabilityHandler } from "../observability";
 import {
@@ -96,6 +97,13 @@ const mapSecureMessage = (code: ProfilesProviderErrorCode): string => {
   }
   return "Profile operation failed. Please try again.";
 };
+
+/** Правая панель: `root` = внешний Input.Wrapper, `wrapper` = оболочка поля ввода (`Input`); оба с `height: 100%`. */
+const profileDetailsDocumentTextareaStyles = {
+  root: { flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, height: "100%" },
+  wrapper: { flex: 1, minHeight: 0, height: "100%" },
+  input: { flex: 1, minHeight: 0, height: "100%", resize: "none" as const },
+} satisfies TextareaProps["styles"];
 
 export function ProfilesWidgetCore({
   hostContext,
@@ -948,11 +956,7 @@ export function ProfilesWidgetCore({
                     <Textarea
                       label="Updated document (JSON object)"
                       autosize={false}
-                      styles={{
-                        root: { flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
-                        wrapper: { flex: 1, minHeight: 0, height: "100%" },
-                        input: { flex: 1, minHeight: 0, height: "100%", resize: "none" },
-                      }}
+                      styles={profileDetailsDocumentTextareaStyles}
                       value={editDocument}
                       onChange={(event) => setEditDocument(event.currentTarget.value)}
                     />
@@ -962,11 +966,7 @@ export function ProfilesWidgetCore({
                       value={JSON.stringify(selectedDocument ?? {}, null, 2)}
                       readOnly
                       autosize={false}
-                      styles={{
-                        root: { flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
-                        wrapper: { flex: 1, minHeight: 0, height: "100%" },
-                        input: { flex: 1, minHeight: 0, height: "100%", resize: "none" },
-                      }}
+                      styles={profileDetailsDocumentTextareaStyles}
                     />
                   )}
                 </Box>
