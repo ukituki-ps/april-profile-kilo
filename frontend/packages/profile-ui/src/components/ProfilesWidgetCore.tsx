@@ -8,6 +8,7 @@ import {
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  DraftJsonEditorToolbar,
   EntityTypesDraftJsonEditor,
   ENTITY_TYPE_DRAFT_ROOT_JSON_SCHEMA,
   parseEntityTypeDraftSchemaText,
@@ -65,6 +66,10 @@ export type ProfilesWidgetCoreProps = {
 };
 
 const DEFAULT_PAGE_SIZE = 20;
+
+/** Совпадает с `aria-label` кнопок `CardListColumn` в `@april/ui` (RU + EN на будущее). */
+const CARD_LIST_COLLAPSE_ARIA = new Set(["Свернуть список", "Collapse list"]);
+const CARD_LIST_EXPAND_ARIA = new Set(["Развернуть список", "Expand list"]);
 
 type PublishedSchemaPanelState =
   | { status: "unsupported" }
@@ -969,21 +974,24 @@ export function ProfilesWidgetCore({
         style={{
           flex: 1,
           minHeight: 0,
+          minWidth: 0,
           display: "flex",
           flexDirection: "row",
           alignItems: "stretch",
           gap: "1rem",
+          width: "100%",
         }}
       >
         <Stack
           gap="xs"
           onClickCapture={(event) => {
-            const target = event.target as HTMLElement | null;
-            if (target?.closest('button[aria-label="Collapse list"]')) {
+            const btn = (event.target as HTMLElement | null)?.closest("button[aria-label]");
+            const label = btn?.getAttribute("aria-label");
+            if (label && CARD_LIST_COLLAPSE_ARIA.has(label)) {
               setListCollapsed(true);
               return;
             }
-            if (target?.closest('button[aria-label="Expand list"]')) {
+            if (label && CARD_LIST_EXPAND_ARIA.has(label)) {
               setListCollapsed(false);
             }
           }}
@@ -1068,34 +1076,61 @@ export function ProfilesWidgetCore({
           ) : null}
         </Stack>
 
-        <Stack gap="sm" style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <Stack
+          gap="sm"
+          style={{ flex: "1 1 0%", minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}
+        >
           {items.length === 0 ? <Alert color="gray">No profiles found for current query.</Alert> : null}
           {selectedItem ? (
             <>
               <Box style={{ flexShrink: 0 }}>
                 <Group justify="space-between" align="flex-start" wrap="wrap" gap="sm">
                   <Stack gap={4} style={{ flex: "1 1 200px", minWidth: 0 }}>
-                    <Title order={5}>Profile</Title>
-                    <Text size="sm" fw={600} lineClamp={1}>
+                    <Title order={5} lineClamp={1}>
                       {displayNameForCard}
-                    </Text>
-                    <Text size="xs" c="dimmed" lineClamp={2}>
-                      {selectedItem.entityTypeId} · id {selectedItem.entityId}
-                    </Text>
-                    <Group gap="xs" wrap="wrap" align="center">
-                      <Select
-                        label="Version"
-                        size="xs"
-                        w={200}
-                        disabled={detailsLoading || Object.keys(versionDetailsByNum).length === 0}
-                        data={versionSelectData}
-                        value={viewedVersion !== null ? String(viewedVersion) : null}
-                        onChange={onSelectVersion}
-                        rightSection={versionsLoading ? <Loader size="xs" /> : undefined}
-                      />
-                    </Group>
+                    </Title>
                   </Stack>
-                  <Group gap={4} justify="flex-end" wrap="wrap">
+                  <Group gap="xs" justify="flex-end" wrap="wrap" align="center" style={{ flexShrink: 0 }}>
+                    <Select
+                      aria-label="Version"
+                      size="xs"
+                      w={150}
+                      disabled={detailsLoading || Object.keys(versionDetailsByNum).length === 0}
+                      data={versionSelectData}
+                      value={viewedVersion !== null ? String(viewedVersion) : null}
+                      onChange={onSelectVersion}
+                      rightSection={versionsLoading ? <Loader size="xs" /> : undefined}
+                      comboboxProps={{ withinPortal: false }}
+                    />
+                    {!detailsLoading && editMode && !historicalView ? (
+                      <DraftJsonEditorToolbar
+                        mode={editDraftMode}
+                        onModeChange={setEditDraftMode}
+                        value={editDraftValue}
+                        onChange={setEditDraftValue}
+                        sourceText={editDraftSourceText}
+                        onSourceTextChange={setEditDraftSourceText}
+                        readOnly={false}
+                        compact={false}
+                        withFormMode={profileEditorWithForm}
+                        withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+                      />
+                    ) : null}
+                    {!detailsLoading && (!editMode || historicalView) ? (
+                      <DraftJsonEditorToolbar
+                        mode={viewDocumentMode}
+                        onModeChange={setViewDocumentMode}
+                        value={selectedDocument ?? {}}
+                        onChange={() => {}}
+                        sourceText={viewDocumentSourceText}
+                        onSourceTextChange={setViewDocumentSourceText}
+                        readOnly
+                        compact={false}
+                        withFormMode={profileEditorWithForm}
+                        withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+                      />
+                    ) : null}
+                    <Group gap={4} justify="flex-end" wrap="wrap">
                     {historicalView ? (
                       <Tooltip label="Save snapshot as new version (+1)">
                         <ActionIcon
@@ -1182,6 +1217,7 @@ export function ProfilesWidgetCore({
                         <IconTrash size={18} />
                       </ActionIcon>
                     </Tooltip>
+                    </Group>
                   </Group>
                 </Group>
               </Box>
@@ -1200,69 +1236,61 @@ export function ProfilesWidgetCore({
               ) : (
                 <Box style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", minWidth: 0 }}>
                   {editMode && !historicalView ? (
-                    <Stack gap="xs" style={{ flex: 1, minHeight: 0 }}>
-                      <Text size="sm" fw={500}>
-                        Profile document
-                      </Text>
-                      <Box
-                        data-testid="profiles-widget-edit-document"
-                        style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
-                      >
-                        <EntityTypesDraftJsonEditor
-                          key={`edit-doc-${selectedEntityId}-${selectedItem?.entityTypeId ?? ""}`}
-                          mode={editDraftMode}
-                          onModeChange={setEditDraftMode}
-                          value={editDraftValue}
-                          onChange={setEditDraftValue}
-                          sourceText={editDraftSourceText}
-                          onSourceTextChange={setEditDraftSourceText}
-                          rootName="profile_document"
-                          serverValidationItems={editApiIssues ?? undefined}
-                          withFormMode={profileEditorWithForm}
-                          rjsfSchema={
-                            publishedSchemaOkForForm(profilePublishedSchema) ? profilePublishedSchema.data : undefined
-                          }
-                          withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
-                          schemaPanel={
-                            <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-                              {renderPublishedSchemaPanel(profilePublishedSchema)}
-                            </Box>
-                          }
-                        />
-                      </Box>
-                    </Stack>
+                    <Box
+                      data-testid="profiles-widget-edit-document"
+                      style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+                    >
+                      <EntityTypesDraftJsonEditor
+                        key={`edit-doc-${selectedEntityId}-${selectedItem?.entityTypeId ?? ""}`}
+                        mode={editDraftMode}
+                        onModeChange={setEditDraftMode}
+                        value={editDraftValue}
+                        onChange={setEditDraftValue}
+                        sourceText={editDraftSourceText}
+                        onSourceTextChange={setEditDraftSourceText}
+                        rootName="profile_document"
+                        serverValidationItems={editApiIssues ?? undefined}
+                        withFormMode={profileEditorWithForm}
+                        rjsfSchema={
+                          publishedSchemaOkForForm(profilePublishedSchema) ? profilePublishedSchema.data : undefined
+                        }
+                        withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+                        schemaPanel={
+                          <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+                            {renderPublishedSchemaPanel(profilePublishedSchema)}
+                          </Box>
+                        }
+                        hideModeToolbar
+                      />
+                    </Box>
                   ) : (
-                    <Stack gap="xs" style={{ flex: 1, minHeight: 0 }}>
-                      <Text size="sm" fw={500}>
-                        Profile document
-                      </Text>
-                      <Box
-                        data-testid="profiles-widget-view-document"
-                        style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}
-                      >
-                        <EntityTypesDraftJsonEditor
-                          key={`view-doc-${selectedEntityId}-${viewedVersion ?? ""}-${selectedItem?.entityTypeId ?? ""}`}
-                          mode={viewDocumentMode}
-                          onModeChange={setViewDocumentMode}
-                          value={selectedDocument ?? {}}
-                          onChange={() => {}}
-                          sourceText={viewDocumentSourceText}
-                          onSourceTextChange={setViewDocumentSourceText}
-                          readOnly
-                          rootName="profile_document"
-                          withFormMode={profileEditorWithForm}
-                          rjsfSchema={
-                            publishedSchemaOkForForm(profilePublishedSchema) ? profilePublishedSchema.data : undefined
-                          }
-                          withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
-                          schemaPanel={
-                            <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-                              {renderPublishedSchemaPanel(profilePublishedSchema)}
-                            </Box>
-                          }
-                        />
-                      </Box>
-                    </Stack>
+                    <Box
+                      data-testid="profiles-widget-view-document"
+                      style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}
+                    >
+                      <EntityTypesDraftJsonEditor
+                        key={`view-doc-${selectedEntityId}-${viewedVersion ?? ""}-${selectedItem?.entityTypeId ?? ""}`}
+                        mode={viewDocumentMode}
+                        onModeChange={setViewDocumentMode}
+                        value={selectedDocument ?? {}}
+                        onChange={() => {}}
+                        sourceText={viewDocumentSourceText}
+                        onSourceTextChange={setViewDocumentSourceText}
+                        readOnly
+                        rootName="profile_document"
+                        withFormMode={profileEditorWithForm}
+                        rjsfSchema={
+                          publishedSchemaOkForForm(profilePublishedSchema) ? profilePublishedSchema.data : undefined
+                        }
+                        withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+                        schemaPanel={
+                          <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+                            {renderPublishedSchemaPanel(profilePublishedSchema)}
+                          </Box>
+                        }
+                        hideModeToolbar
+                      />
+                    </Box>
                   )}
                 </Box>
               )}

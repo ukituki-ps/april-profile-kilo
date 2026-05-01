@@ -15,45 +15,44 @@ vi.mock("@mantine/core", async () => {
 });
 
 async function pickTreeDocumentView(container: HTMLElement) {
-  if (within(container).queryByRole("button", { name: "Form" })) {
-    fireEvent.click(within(container).getByTestId("draft-json-editor-more"));
-    fireEvent.click(await screen.findByRole("menuitem", { name: /^Tree$/ }));
-  } else {
-    fireEvent.click(within(container).getByRole("button", { name: "Tree" }));
-  }
+  const scope = within(container).queryByTestId("draft-json-editor-mode") ? within(container) : within(document.body);
+  fireEvent.click(scope.getByRole("radio", { name: "Tree" }));
 }
 
-vi.mock("@april/ui", () => ({
-  DensityProvider: ({ children }: { children: ReactNode }) => <div data-testid="density-provider">{children}</div>,
-  AprilJsonTreeEditor: ({
-    data,
-    setData,
-    readOnly,
-  }: {
-    data: Record<string, unknown>;
-    setData?: (next: Record<string, unknown> | unknown[]) => void;
-    readOnly?: boolean;
-  }) => (
-    <textarea
-      data-testid={readOnly ? "mock-json-tree-readonly" : "mock-json-tree-edit"}
-      readOnly={readOnly}
-      value={JSON.stringify(data, null, 2)}
-      onChange={(event) => {
-        if (readOnly) {
-          return;
-        }
-        try {
-          const parsed = JSON.parse(event.target.value) as unknown;
-          if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
-            setData?.(parsed as Record<string, unknown>);
+vi.mock("@april/ui", async () => {
+  const { SegmentedControl } = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
+  return {
+    AprilGradientSegmentedControl: SegmentedControl,
+    DensityProvider: ({ children }: { children: ReactNode }) => <div data-testid="density-provider">{children}</div>,
+    AprilJsonTreeEditor: ({
+      data,
+      setData,
+      readOnly,
+    }: {
+      data: Record<string, unknown>;
+      setData?: (next: Record<string, unknown> | unknown[]) => void;
+      readOnly?: boolean;
+    }) => (
+      <textarea
+        data-testid={readOnly ? "mock-json-tree-readonly" : "mock-json-tree-edit"}
+        readOnly={readOnly}
+        value={JSON.stringify(data, null, 2)}
+        onChange={(event) => {
+          if (readOnly) {
+            return;
           }
-        } catch {
-          /* ignore invalid JSON in tests */
-        }
-      }}
-    />
-  ),
-  AprilJsonCollectionTextEditor: ({
+          try {
+            const parsed = JSON.parse(event.target.value) as unknown;
+            if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+              setData?.(parsed as Record<string, unknown>);
+            }
+          } catch {
+            /* ignore invalid JSON in tests */
+          }
+        }}
+      />
+    ),
+    AprilJsonCollectionTextEditor: ({
     value,
     onChange,
   }: {
@@ -116,7 +115,8 @@ vi.mock("@april/ui", () => ({
       ))}
     </div>
   ),
-}));
+  };
+});
 
 const p1 = "Alpha profile";
 const p2 = "Beta profile";
@@ -391,7 +391,7 @@ describe("ProfilesWidgetCore", () => {
     fireEvent.click(screen.getByRole("button", { name: /Edit profile/i }));
 
     const editPanel = await screen.findByTestId("profiles-widget-edit-document");
-    expect(within(editPanel).getByRole("button", { name: "Form" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Form" })).toBeInTheDocument();
 
     const formField = within(editPanel).getByTestId("mock-rjsf-form");
     fireEvent.change(formField, {
@@ -423,7 +423,7 @@ describe("ProfilesWidgetCore", () => {
     await screen.findByLabelText(`Profile row ${e1}`);
     fireEvent.click(screen.getByRole("button", { name: /Edit profile/i }));
 
-    const editPanel = await screen.findByTestId("profiles-widget-edit-document");
-    expect(within(editPanel).queryByRole("button", { name: "Form" })).not.toBeInTheDocument();
+    await screen.findByTestId("profiles-widget-edit-document");
+    expect(screen.queryByRole("radio", { name: "Form" })).not.toBeInTheDocument();
   });
 });

@@ -1,16 +1,59 @@
 import {
+  AprilGradientSegmentedControl,
   AprilJsonCollectionTextEditor,
   AprilJsonSchemaForm,
   AprilJsonTreeEditor,
   AprilJsonValidationSummary,
 } from "@april/ui";
-import { IconBraces, IconBrackets, IconCheck, IconCode, IconDotsVertical, IconForms } from "@tabler/icons-react";
+import { IconBraces, IconBrackets, IconCode, IconForms } from "@tabler/icons-react";
 import type { RJSFSchema } from "@rjsf/utils";
-import { ActionIcon, Alert, Box, Group, Menu, Stack, Text, Textarea } from "@mantine/core";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import type { SegmentedControlProps } from "@mantine/core";
+import { Alert, Box, Stack, Text, Textarea, VisuallyHidden } from "@mantine/core";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
-const ICON_PX = 16;
-const ICON_STROKE = 1.75;
+const MODE_ICON_PX = 16;
+const MODE_ICON_STROKE = 1.75;
+
+/** Центр сегмента по X/Y; активный сегмент — как в `AprilGradientSegmentedControl` по умолчанию. */
+const DRAFT_JSON_MODE_SEGMENTED_STYLES = {
+  innerLabel: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    height: "100%",
+  },
+  label: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100%",
+    "&, &:hover": {
+      "&[data-active]": {
+        color: "var(--mantine-color-white)",
+      },
+    },
+  },
+} satisfies NonNullable<SegmentedControlProps["styles"]>;
+
+/** Содержимое сегмента: иконка + скрытое имя для a11y. */
+function segmentedIconLabel(icon: ReactNode, accessibleName: string) {
+  return (
+    <Box
+      component="span"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "100%",
+        height: "100%",
+      }}
+    >
+      {icon}
+      <VisuallyHidden>{accessibleName}</VisuallyHidden>
+    </Box>
+  );
+}
 
 /** Минимальная клиентская проверка: черновик — JSON-объект; полная семантика JSON Schema — на сервере. */
 export const ENTITY_TYPE_DRAFT_ROOT_JSON_SCHEMA = { type: "object" } as const;
@@ -32,7 +75,7 @@ export function parseEntityTypeDraftSchemaText(
   return { ok: true, value: parsed as Record<string, unknown> };
 }
 
-export type EntityTypesDraftJsonEditorProps = {
+export type DraftJsonEditorToolbarProps = {
   mode: DraftJsonEditorMode;
   onModeChange: (mode: DraftJsonEditorMode) => void;
   value: Record<string, unknown>;
@@ -41,22 +84,14 @@ export type EntityTypesDraftJsonEditorProps = {
   onSourceTextChange: (text: string) => void;
   readOnly?: boolean;
   compact?: boolean;
-  showSearch?: boolean;
-  rootName?: string;
-  serverValidationItems?: Array<{ path: string; message: string }>;
-  /** Сегмент Form (RJSF), если есть опубликованная схема для документа. */
   withFormMode?: boolean;
-  /** `published_schema` для `AprilJsonSchemaForm`. */
-  rjsfSchema?: Record<string, unknown>;
-  /** Сегмент Schema после Source: read-only опубликованная JSON Schema типа (контент снаружи). */
   withSchemaPanel?: boolean;
-  schemaPanel?: ReactNode;
 };
 
 /**
- * JSON-объект: **Form** (если `withFormMode`) и **Tree** (если нет Form) — снаружи; **Tree**, **Source**, **Schema** — в меню «⋯».
+ * Переключатель режимов документа: **AprilGradientSegmentedControl** (иконки + `VisuallyHidden` для a11y).
  */
-export function EntityTypesDraftJsonEditor({
+export function DraftJsonEditorToolbar({
   mode,
   onModeChange,
   value,
@@ -65,15 +100,14 @@ export function EntityTypesDraftJsonEditor({
   onSourceTextChange,
   readOnly = false,
   compact = false,
-  showSearch = true,
-  rootName = "draft_schema",
-  serverValidationItems,
   withFormMode = false,
-  rjsfSchema,
   withSchemaPanel = false,
-  schemaPanel,
-}: EntityTypesDraftJsonEditorProps) {
+}: DraftJsonEditorToolbarProps) {
   const [sourceSwitchError, setSourceSwitchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSourceSwitchError(null);
+  }, [sourceText]);
 
   useEffect(() => {
     if (mode === "form" && !withFormMode) {
@@ -153,113 +187,133 @@ export function EntityTypesDraftJsonEditor({
     [mode, onChange, onModeChange, onSourceTextChange, sourceText, value, withFormMode, withSchemaPanel],
   );
 
-  const treeMaxHeight = compact ? 220 : undefined;
+  const segmentedData = useMemo(() => {
+    const rows: Array<{ value: DraftJsonEditorMode; label: ReactNode }> = [];
+    if (withFormMode) {
+      rows.push({
+        value: "form",
+        label: segmentedIconLabel(
+          <IconForms size={MODE_ICON_PX} stroke={MODE_ICON_STROKE} aria-hidden />,
+          "Form",
+        ),
+      });
+    }
+    rows.push(
+      {
+        value: "tree",
+        label: segmentedIconLabel(
+          <IconBraces size={MODE_ICON_PX} stroke={MODE_ICON_STROKE} aria-hidden />,
+          "Tree",
+        ),
+      },
+      {
+        value: "source",
+        label: segmentedIconLabel(
+          <IconCode size={MODE_ICON_PX} stroke={MODE_ICON_STROKE} aria-hidden />,
+          "Source",
+        ),
+      },
+    );
+    if (withSchemaPanel) {
+      rows.push({
+        value: "schema",
+        label: segmentedIconLabel(
+          <IconBrackets size={MODE_ICON_PX} stroke={MODE_ICON_STROKE} aria-hidden />,
+          "Schema",
+        ),
+      });
+    }
+    return rows;
+  }, [withFormMode, withSchemaPanel]);
 
-  const overflowModes: DraftJsonEditorMode[] = [];
-  if (withFormMode) {
-    overflowModes.push("tree", "source");
-  } else {
-    overflowModes.push("source");
-  }
-  if (withSchemaPanel) {
-    overflowModes.push("schema");
-  }
+  const allowedValues = useMemo(() => new Set(segmentedData.map((row) => row.value)), [segmentedData]);
+  const segmentedValue = allowedValues.has(mode) ? mode : segmentedData[0]?.value ?? "tree";
 
-  const modeInOverflow = overflowModes.includes(mode);
-  const iconBtnSize = compact ? "sm" : "md";
-
-  const menuItem = (m: DraftJsonEditorMode, label: string, icon: ReactNode) => (
-    <Menu.Item
-      key={m}
-      leftSection={icon}
-      rightSection={mode === m ? <IconCheck size={14} stroke={2} aria-hidden /> : null}
-      onClick={() => handleModeChange(m)}
-    >
-      {label}
-    </Menu.Item>
+  return (
+    <Stack gap="xs" style={{ minWidth: 0 }}>
+      <AprilGradientSegmentedControl
+        data-testid="draft-json-editor-mode"
+        size={compact ? "xs" : "sm"}
+        radius="md"
+        value={segmentedValue}
+        onChange={(next) => {
+          if (next !== null) {
+            handleModeChange(next);
+          }
+        }}
+        data={segmentedData}
+        styles={DRAFT_JSON_MODE_SEGMENTED_STYLES}
+      />
+      {!readOnly && sourceSwitchError ? (
+        <Alert color="red" title="Cannot change document view">
+          <Text size="sm">{sourceSwitchError}</Text>
+        </Alert>
+      ) : null}
+    </Stack>
   );
+}
+
+export type EntityTypesDraftJsonEditorProps = {
+  mode: DraftJsonEditorMode;
+  onModeChange: (mode: DraftJsonEditorMode) => void;
+  value: Record<string, unknown>;
+  onChange: (next: Record<string, unknown>) => void;
+  sourceText: string;
+  onSourceTextChange: (text: string) => void;
+  readOnly?: boolean;
+  compact?: boolean;
+  showSearch?: boolean;
+  rootName?: string;
+  serverValidationItems?: Array<{ path: string; message: string }>;
+  /** Сегмент Form (RJSF), если есть опубликованная схема для документа. */
+  withFormMode?: boolean;
+  /** `published_schema` для `AprilJsonSchemaForm`. */
+  rjsfSchema?: Record<string, unknown>;
+  /** Сегмент Schema после Source: read-only опубликованная JSON Schema типа (контент снаружи). */
+  withSchemaPanel?: boolean;
+  schemaPanel?: ReactNode;
+  /** Скрыть встроенный тулбар режимов (рендер снаружи, например в шапке виджета). */
+  hideModeToolbar?: boolean;
+};
+
+/**
+ * JSON-объект: режимы **Form** (если `withFormMode`), **Tree**, **Source**, **Schema** — через `DraftJsonEditorToolbar` / сегменты DS.
+ */
+export function EntityTypesDraftJsonEditor({
+  mode,
+  onModeChange,
+  value,
+  onChange,
+  sourceText,
+  onSourceTextChange,
+  readOnly = false,
+  compact = false,
+  showSearch = true,
+  rootName = "draft_schema",
+  serverValidationItems,
+  withFormMode = false,
+  rjsfSchema,
+  withSchemaPanel = false,
+  schemaPanel,
+  hideModeToolbar = false,
+}: EntityTypesDraftJsonEditorProps) {
+  const treeMaxHeight = compact ? 220 : undefined;
 
   return (
     <Stack gap="xs" style={{ flex: compact ? undefined : 1, minHeight: compact ? 120 : 0 }}>
-      <Group gap={6} wrap="nowrap" align="center">
-        {withFormMode ? (
-          <ActionIcon
-            size={iconBtnSize}
-            variant={mode === "form" ? "filled" : "default"}
-            aria-label="Form"
-            title="Form"
-            onClick={() => handleModeChange("form")}
-          >
-            <IconForms size={ICON_PX} stroke={ICON_STROKE} aria-hidden />
-          </ActionIcon>
-        ) : (
-          <ActionIcon
-            size={iconBtnSize}
-            variant={mode === "tree" ? "filled" : "default"}
-            aria-label="Tree"
-            title="Tree"
-            onClick={() => handleModeChange("tree")}
-          >
-            <IconBraces size={ICON_PX} stroke={ICON_STROKE} aria-hidden />
-          </ActionIcon>
-        )}
-
-        <Menu position="bottom-end" withinPortal={false}>
-          <Menu.Target>
-            <ActionIcon
-              size={iconBtnSize}
-              variant={modeInOverflow ? "light" : "default"}
-              aria-label="More document views"
-              title={
-                withFormMode
-                  ? withSchemaPanel
-                    ? "Tree, Source, Schema"
-                    : "Tree, Source"
-                  : withSchemaPanel
-                    ? "Source, Schema"
-                    : "Source"
-              }
-              data-testid="draft-json-editor-more"
-            >
-              <IconDotsVertical size={ICON_PX} stroke={ICON_STROKE} aria-hidden />
-            </ActionIcon>
-          </Menu.Target>
-          <Menu.Dropdown>
-            {withFormMode ? (
-              <>
-                {menuItem(
-                  "tree",
-                  "Tree",
-                  <IconBraces size={ICON_PX} stroke={ICON_STROKE} aria-hidden />,
-                )}
-                {menuItem(
-                  "source",
-                  "Source",
-                  <IconCode size={ICON_PX} stroke={ICON_STROKE} aria-hidden />,
-                )}
-              </>
-            ) : (
-              menuItem(
-                "source",
-                "Source",
-                <IconCode size={ICON_PX} stroke={ICON_STROKE} aria-hidden />,
-              )
-            )}
-            {withSchemaPanel
-              ? menuItem(
-                  "schema",
-                  "Schema",
-                  <IconBrackets size={ICON_PX} stroke={ICON_STROKE} aria-hidden />,
-                )
-              : null}
-          </Menu.Dropdown>
-        </Menu>
-      </Group>
-
-      {!readOnly && sourceSwitchError ? (
-        <Alert color="red" title="Cannot switch to tree">
-          <Text size="sm">{sourceSwitchError}</Text>
-        </Alert>
+      {!hideModeToolbar ? (
+        <DraftJsonEditorToolbar
+          mode={mode}
+          onModeChange={onModeChange}
+          value={value}
+          onChange={onChange}
+          sourceText={sourceText}
+          onSourceTextChange={onSourceTextChange}
+          readOnly={readOnly}
+          compact={compact}
+          withFormMode={withFormMode}
+          withSchemaPanel={withSchemaPanel}
+        />
       ) : null}
 
       <AprilJsonValidationSummary title="Server validation" items={serverValidationItems ?? []} />
@@ -337,7 +391,6 @@ export function EntityTypesDraftJsonEditor({
             value={sourceText}
             onChange={(next) => {
               onSourceTextChange(next);
-              setSourceSwitchError(null);
             }}
             onKeyDown={() => {}}
           />

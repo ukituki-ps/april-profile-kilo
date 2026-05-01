@@ -22,9 +22,12 @@ vi.mock("@mantine/core", async () => {
   };
 });
 
-vi.mock("@april/ui", () => ({
-  DensityProvider: ({ children }: { children: ReactNode }) => <div data-testid="density-provider">{children}</div>,
-  AprilJsonTreeEditor: ({
+vi.mock("@april/ui", async () => {
+  const { SegmentedControl } = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
+  return {
+    AprilGradientSegmentedControl: SegmentedControl,
+    DensityProvider: ({ children }: { children: ReactNode }) => <div data-testid="density-provider">{children}</div>,
+    AprilJsonTreeEditor: ({
     data,
     setData,
     readOnly,
@@ -123,7 +126,8 @@ vi.mock("@april/ui", () => ({
       ))}
     </div>
   ),
-}));
+  };
+});
 
 const apiBaseUrl = "http://localhost:8080/admin/profile/api";
 const entityTypeId = "89ac9958-fec8-43d7-8908-f0438e8e0e39";
@@ -242,12 +246,8 @@ afterEach(() => {
 afterAll(() => server.close());
 
 async function pickTreeDocumentView(container: HTMLElement) {
-  if (within(container).queryByRole("button", { name: "Form" })) {
-    fireEvent.click(within(container).getByTestId("draft-json-editor-more"));
-    fireEvent.click(await screen.findByRole("menuitem", { name: /^Tree$/ }));
-  } else {
-    fireEvent.click(within(container).getByRole("button", { name: "Tree" }));
-  }
+  const scope = within(container).queryByTestId("draft-json-editor-mode") ? within(container) : within(document.body);
+  fireEvent.click(scope.getByRole("radio", { name: "Tree" }));
 }
 
 const renderWidget = (props?: Partial<ProfilesWidgetProps>) =>
@@ -285,7 +285,7 @@ describe("ProfilesWidget", () => {
     expect(await screen.findByLabelText(`Profile row ${e1}`)).toBeInTheDocument();
     expect(screen.getByLabelText(`Profile row ${e2}`)).toBeInTheDocument();
     expect(screen.queryByLabelText(`Profile row ${e3}`)).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Profile" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Jane A" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Load more cards/i }));
     expect(await screen.findByLabelText(`Profile row ${e3}`)).toBeInTheDocument();
