@@ -196,7 +196,7 @@ Host собирает страницу из layout, провайдеров (те
 
 ## 12. Каркас в этом репозитории
 
-Каталог **`frontend/`** — Vite + React + Mantine; дизайн-система — пакеты **`@april/ui`** / **`@april/tokens`** (сейчас через `frontend/vendor/ds-packs`, далее — **GitHub Packages** по эпику Hub `049`), плюс **git submodule** `design-system/DisignApril` для исходников и ассетов. Пакет **`@april/profile-ui`** и сценарии Hub — см. [дизайн-система April](/guides/DESIGN_SYSTEM) и [версионирование](/docs/versioning-and-compatibility).
+Каталог **`frontend/`** — Vite + React + Mantine; дизайн-система — **`@april/ui`** / **`@april/tokens`** через **`file:vendor/ds-packs/*.tgz`** (см. [дизайн-система April](/guides/DESIGN_SYSTEM)); переключение на **GitHub Packages** — в `frontend/vendor/ds-packs/README.md`. **git submodule** `design-system/DisignApril` — для SVG и пересборки tarball’ов. Пакет **`@april/profile-ui`** и сценарии Hub — см. [версионирование](/docs/versioning-and-compatibility).
 
 ---
 
