@@ -24,7 +24,6 @@ import {
   Modal,
   Select,
   Stack,
-  Tabs,
   Text,
   TextInput,
   Title,
@@ -142,13 +141,13 @@ export function ProfilesWidgetCore({
   const [viewedVersion, setViewedVersion] = useState<number | null>(null);
   const [versionDetailsByNum, setVersionDetailsByNum] = useState<Record<number, ProfileDetails>>({});
   const [editMode, setEditMode] = useState(false);
-  const [editDraftMode, setEditDraftMode] = useState<DraftJsonEditorMode>("tree");
+  const [editDraftMode, setEditDraftMode] = useState<DraftJsonEditorMode>("form");
   const [editDraftValue, setEditDraftValue] = useState<Record<string, unknown>>({});
   const [editDraftSourceText, setEditDraftSourceText] = useState("{}");
   const [editApiIssues, setEditApiIssues] = useState<Array<{ path: string; message: string }> | null>(null);
   const [createTypeId, setCreateTypeId] = useState<string | null>(null);
   const [createProfileName, setCreateProfileName] = useState("New profile");
-  const [createDraftMode, setCreateDraftMode] = useState<DraftJsonEditorMode>("tree");
+  const [createDraftMode, setCreateDraftMode] = useState<DraftJsonEditorMode>("form");
   const [createDraftValue, setCreateDraftValue] = useState<Record<string, unknown>>({});
   const [createDraftSourceText, setCreateDraftSourceText] = useState("{}");
   const [createApiIssues, setCreateApiIssues] = useState<Array<{ path: string; message: string }> | null>(null);
@@ -156,10 +155,10 @@ export function ProfilesWidgetCore({
   const [busyEntityId, setBusyEntityId] = useState<string | null>(null);
   const [entityTypeOptions, setEntityTypeOptions] = useState<{ value: string; label: string }[]>([]);
   const [listCollapsed, setListCollapsed] = useState(false);
-  const [profileDocumentTab, setProfileDocumentTab] = useState<"formData" | "schema">("formData");
-  const [createDocumentTab, setCreateDocumentTab] = useState<"formData" | "schema">("formData");
   const [profilePublishedSchema, setProfilePublishedSchema] = useState<PublishedSchemaPanelState>({ status: "unsupported" });
   const [createPublishedSchema, setCreatePublishedSchema] = useState<PublishedSchemaPanelState>({ status: "unsupported" });
+  const [viewDocumentMode, setViewDocumentMode] = useState<DraftJsonEditorMode>("form");
+  const [viewDocumentSourceText, setViewDocumentSourceText] = useState("{}");
   const profileSchemaRequestRef = useRef(0);
   const createSchemaRequestRef = useRef(0);
 
@@ -367,7 +366,7 @@ export function ProfilesWidgetCore({
     setViewedVersion(details.version);
     setEditDraftValue(structuredClone(details.document));
     setEditDraftSourceText(JSON.stringify(details.document, null, 2));
-    setEditDraftMode("tree");
+    setEditDraftMode("form");
     setEditApiIssues(null);
     setEditMode(false);
   }, []);
@@ -483,11 +482,7 @@ export function ProfilesWidgetCore({
   }, [hostContext.tenant.id, provider, requestId, selectedEntityId, onObservability, applyDetailsSnapshot, loadVersionMap]);
 
   useEffect(() => {
-    setProfileDocumentTab("formData");
-  }, [selectedEntityId]);
-
-  useEffect(() => {
-    setCreateDraftMode((m) => (m === "form" ? "tree" : m));
+    setCreateDraftMode("form");
   }, [createTypeId]);
 
   useEffect(() => {
@@ -495,6 +490,24 @@ export function ProfilesWidgetCore({
       setEditDraftMode("tree");
     }
   }, [editDraftMode, profileEditorWithForm]);
+
+  useEffect(() => {
+    if (editDraftMode === "schema" && !provider.getEntityTypePublishedSchema) {
+      setEditDraftMode("form");
+    }
+  }, [editDraftMode, provider]);
+
+  useEffect(() => {
+    if (createDraftMode === "schema" && !provider.getEntityTypePublishedSchema) {
+      setCreateDraftMode("form");
+    }
+  }, [createDraftMode, provider]);
+
+  useEffect(() => {
+    if (viewDocumentMode === "schema" && !provider.getEntityTypePublishedSchema) {
+      setViewDocumentMode("form");
+    }
+  }, [viewDocumentMode, provider]);
 
   useEffect(() => {
     if (!selectedItem?.entityTypeId || !provider.getEntityTypePublishedSchema) {
@@ -573,13 +586,23 @@ export function ProfilesWidgetCore({
     };
   }, [createModalOpened, createTypeId, provider]);
 
+  useEffect(() => {
+    setViewDocumentSourceText(JSON.stringify(selectedDocument ?? {}, null, 2));
+  }, [selectedDocument]);
+
+  useEffect(() => {
+    if (!selectedEntityId) {
+      return;
+    }
+    setViewDocumentMode("form");
+  }, [selectedEntityId, viewedVersion]);
+
   const handleOpenCreateModal = () => {
     setMutationErrorMessage(null);
-    setCreateDocumentTab("formData");
     setCreateProfileName("New profile");
     setCreateDraftValue({});
     setCreateDraftSourceText("{}");
-    setCreateDraftMode("tree");
+    setCreateDraftMode("form");
     setCreateApiIssues(null);
     const loadTypes = async () => {
       if (!provider.listEntityTypes) {
@@ -856,7 +879,7 @@ export function ProfilesWidgetCore({
       setSelectedDocument(detail.document);
       setEditDraftValue(structuredClone(detail.document));
       setEditDraftSourceText(JSON.stringify(detail.document, null, 2));
-      setEditDraftMode("tree");
+      setEditDraftMode("form");
       setEditApiIssues(null);
       setEditMode(false);
     }
@@ -1114,7 +1137,7 @@ export function ProfilesWidgetCore({
                                   if (selectedDocument) {
                                     setEditDraftValue(structuredClone(selectedDocument));
                                     setEditDraftSourceText(JSON.stringify(selectedDocument, null, 2));
-                                    setEditDraftMode("tree");
+                                    setEditDraftMode("form");
                                   }
                                   setEditApiIssues(null);
                                 }}
@@ -1133,7 +1156,7 @@ export function ProfilesWidgetCore({
                                 if (selectedDocument) {
                                   setEditDraftValue(structuredClone(selectedDocument));
                                   setEditDraftSourceText(JSON.stringify(selectedDocument, null, 2));
-                                  setEditDraftMode("tree");
+                                  setEditDraftMode("form");
                                 }
                                 setEditApiIssues(null);
                               }}
@@ -1179,82 +1202,66 @@ export function ProfilesWidgetCore({
                   {editMode && !historicalView ? (
                     <Stack gap="xs" style={{ flex: 1, minHeight: 0 }}>
                       <Text size="sm" fw={500}>
-                        Updated document (JSON object)
+                        Profile document
                       </Text>
-                      <Tabs
-                        value={profileDocumentTab}
-                        onChange={(v) => setProfileDocumentTab(v === "schema" ? "schema" : "formData")}
+                      <Box
+                        data-testid="profiles-widget-edit-document"
                         style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
                       >
-                        <Tabs.List>
-                          <Tabs.Tab value="formData">formData</Tabs.Tab>
-                          <Tabs.Tab value="schema">schema</Tabs.Tab>
-                        </Tabs.List>
-                        <Tabs.Panel
-                          value="formData"
-                          pt="xs"
-                          style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
-                          data-testid="profiles-widget-edit-document"
-                        >
-                          {provider.getEntityTypePublishedSchema && profilePublishedSchema.status === "none" ? (
-                            <Alert color="gray" mb="xs" title="Form mode">
-                              No published JSON Schema for this entity type. Use Tree or Source to edit the document.
-                            </Alert>
-                          ) : null}
-                          {provider.getEntityTypePublishedSchema && profilePublishedSchema.status === "error" ? (
-                            <Alert color="yellow" mb="xs" title="Form mode">
-                              Published schema failed to load. Form mode is unavailable; use Tree or Source.
-                            </Alert>
-                          ) : null}
-                          <EntityTypesDraftJsonEditor
-                            key={`edit-doc-${selectedEntityId}-${selectedItem?.entityTypeId ?? ""}`}
-                            mode={editDraftMode}
-                            onModeChange={setEditDraftMode}
-                            value={editDraftValue}
-                            onChange={setEditDraftValue}
-                            sourceText={editDraftSourceText}
-                            onSourceTextChange={setEditDraftSourceText}
-                            rootName="profile_document"
-                            serverValidationItems={editApiIssues ?? undefined}
-                            withFormMode={profileEditorWithForm}
-                            rjsfSchema={
-                              publishedSchemaOkForForm(profilePublishedSchema) ? profilePublishedSchema.data : undefined
-                            }
-                          />
-                        </Tabs.Panel>
-                        <Tabs.Panel value="schema" pt="xs" style={{ flex: 1, minHeight: 0, minWidth: 0, overflow: "hidden" }}>
-                          {renderPublishedSchemaPanel(profilePublishedSchema)}
-                        </Tabs.Panel>
-                      </Tabs>
+                        <EntityTypesDraftJsonEditor
+                          key={`edit-doc-${selectedEntityId}-${selectedItem?.entityTypeId ?? ""}`}
+                          mode={editDraftMode}
+                          onModeChange={setEditDraftMode}
+                          value={editDraftValue}
+                          onChange={setEditDraftValue}
+                          sourceText={editDraftSourceText}
+                          onSourceTextChange={setEditDraftSourceText}
+                          rootName="profile_document"
+                          serverValidationItems={editApiIssues ?? undefined}
+                          withFormMode={profileEditorWithForm}
+                          rjsfSchema={
+                            publishedSchemaOkForForm(profilePublishedSchema) ? profilePublishedSchema.data : undefined
+                          }
+                          withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+                          schemaPanel={
+                            <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+                              {renderPublishedSchemaPanel(profilePublishedSchema)}
+                            </Box>
+                          }
+                        />
+                      </Box>
                     </Stack>
                   ) : (
                     <Stack gap="xs" style={{ flex: 1, minHeight: 0 }}>
                       <Text size="sm" fw={500}>
                         Profile document
                       </Text>
-                      <Tabs
-                        value={profileDocumentTab}
-                        onChange={(v) => setProfileDocumentTab(v === "schema" ? "schema" : "formData")}
-                        style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+                      <Box
+                        data-testid="profiles-widget-view-document"
+                        style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}
                       >
-                        <Tabs.List>
-                          <Tabs.Tab value="formData">formData</Tabs.Tab>
-                          <Tabs.Tab value="schema">schema</Tabs.Tab>
-                        </Tabs.List>
-                        <Tabs.Panel value="formData" pt="xs" style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-                          <AprilJsonTreeEditor
-                            data={selectedDocument ?? {}}
-                            readOnly
-                            rootName="profile_document"
-                            validationSchema={ENTITY_TYPE_DRAFT_ROOT_JSON_SCHEMA}
-                            resolveValidationSchemaRefs={false}
-                            showSearch
-                          />
-                        </Tabs.Panel>
-                        <Tabs.Panel value="schema" pt="xs" style={{ flex: 1, minHeight: 0, minWidth: 0, overflow: "hidden" }}>
-                          {renderPublishedSchemaPanel(profilePublishedSchema)}
-                        </Tabs.Panel>
-                      </Tabs>
+                        <EntityTypesDraftJsonEditor
+                          key={`view-doc-${selectedEntityId}-${viewedVersion ?? ""}-${selectedItem?.entityTypeId ?? ""}`}
+                          mode={viewDocumentMode}
+                          onModeChange={setViewDocumentMode}
+                          value={selectedDocument ?? {}}
+                          onChange={() => {}}
+                          sourceText={viewDocumentSourceText}
+                          onSourceTextChange={setViewDocumentSourceText}
+                          readOnly
+                          rootName="profile_document"
+                          withFormMode={profileEditorWithForm}
+                          rjsfSchema={
+                            publishedSchemaOkForForm(profilePublishedSchema) ? profilePublishedSchema.data : undefined
+                          }
+                          withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+                          schemaPanel={
+                            <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+                              {renderPublishedSchemaPanel(profilePublishedSchema)}
+                            </Box>
+                          }
+                        />
+                      </Box>
                     </Stack>
                   )}
                 </Box>
@@ -1291,48 +1298,31 @@ export function ProfilesWidgetCore({
             <Text size="sm" fw={500}>
               Document (JSON object)
             </Text>
-            <Tabs
-              value={createDocumentTab}
-              onChange={(v) => setCreateDocumentTab(v === "schema" ? "schema" : "formData")}
-              style={{ minHeight: 220, display: "flex", flexDirection: "column" }}
-            >
-              <Tabs.List>
-                <Tabs.Tab value="formData">formData</Tabs.Tab>
-                <Tabs.Tab value="schema">schema</Tabs.Tab>
-              </Tabs.List>
-              <Tabs.Panel value="formData" pt="xs" style={{ flex: 1, minHeight: 0 }} data-testid="profiles-widget-create-document">
-                {provider.getEntityTypePublishedSchema && createPublishedSchema.status === "none" ? (
-                  <Alert color="gray" mb="xs" title="Form mode">
-                    No published JSON Schema for this entity type. Use Tree or Source to edit the document.
-                  </Alert>
-                ) : null}
-                {provider.getEntityTypePublishedSchema && createPublishedSchema.status === "error" ? (
-                  <Alert color="yellow" mb="xs" title="Form mode">
-                    Published schema failed to load. Form mode is unavailable; use Tree or Source.
-                  </Alert>
-                ) : null}
-                <EntityTypesDraftJsonEditor
-                  key={`create-doc-${createTypeId ?? "none"}`}
-                  mode={createDraftMode}
-                  onModeChange={setCreateDraftMode}
-                  value={createDraftValue}
-                  onChange={setCreateDraftValue}
-                  sourceText={createDraftSourceText}
-                  onSourceTextChange={setCreateDraftSourceText}
-                  compact
-                  showSearch={false}
-                  rootName="profile_document"
-                  serverValidationItems={createApiIssues ?? undefined}
-                  withFormMode={createEditorWithForm}
-                  rjsfSchema={
-                    publishedSchemaOkForForm(createPublishedSchema) ? createPublishedSchema.data : undefined
-                  }
-                />
-              </Tabs.Panel>
-              <Tabs.Panel value="schema" pt="xs" style={{ flex: 1, minHeight: 160, overflow: "auto" }}>
-                {renderPublishedSchemaPanel(createPublishedSchema)}
-              </Tabs.Panel>
-            </Tabs>
+            <Box data-testid="profiles-widget-create-document" style={{ minHeight: 220, display: "flex", flexDirection: "column" }}>
+              <EntityTypesDraftJsonEditor
+                key={`create-doc-${createTypeId ?? "none"}`}
+                mode={createDraftMode}
+                onModeChange={setCreateDraftMode}
+                value={createDraftValue}
+                onChange={setCreateDraftValue}
+                sourceText={createDraftSourceText}
+                onSourceTextChange={setCreateDraftSourceText}
+                compact
+                showSearch={false}
+                rootName="profile_document"
+                serverValidationItems={createApiIssues ?? undefined}
+                withFormMode={createEditorWithForm}
+                rjsfSchema={
+                  publishedSchemaOkForForm(createPublishedSchema) ? createPublishedSchema.data : undefined
+                }
+                withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+                schemaPanel={
+                  <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+                    {renderPublishedSchemaPanel(createPublishedSchema)}
+                  </Box>
+                }
+              />
+            </Box>
           </Stack>
           <Button
             onClick={() => void handleCreate()}

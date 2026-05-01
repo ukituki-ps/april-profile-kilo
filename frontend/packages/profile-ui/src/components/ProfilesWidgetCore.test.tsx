@@ -14,6 +14,15 @@ vi.mock("@mantine/core", async () => {
   };
 });
 
+async function pickTreeDocumentView(container: HTMLElement) {
+  if (within(container).queryByRole("button", { name: "Form" })) {
+    fireEvent.click(within(container).getByTestId("draft-json-editor-more"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /^Tree$/ }));
+  } else {
+    fireEvent.click(within(container).getByRole("button", { name: "Tree" }));
+  }
+}
+
 vi.mock("@april/ui", () => ({
   DensityProvider: ({ children }: { children: ReactNode }) => <div data-testid="density-provider">{children}</div>,
   AprilJsonTreeEditor: ({
@@ -265,7 +274,9 @@ describe("ProfilesWidgetCore", () => {
     fireEvent.click(screen.getByRole("button", { name: /Add new item/i }));
     expect(await screen.findByLabelText("Profile name")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Profile name"), { target: { value: "Unique created" } });
-    fireEvent.change(within(screen.getByTestId("profiles-widget-create-document")).getByTestId("mock-json-tree-edit"), {
+    const createDoc = await screen.findByTestId("profiles-widget-create-document");
+    await pickTreeDocumentView(createDoc);
+    fireEvent.change(within(createDoc).getByTestId("mock-json-tree-edit"), {
       target: { value: "{}" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Create profile/i }));
@@ -277,7 +288,9 @@ describe("ProfilesWidgetCore", () => {
     fireEvent.click(screen.getByLabelText(`Profile row ${e1}`));
     expect(onOpenEntity).toHaveBeenCalledWith(e1);
     fireEvent.click(await screen.findByRole("button", { name: /Edit profile/i }));
-    fireEvent.change(within(screen.getByTestId("profiles-widget-edit-document")).getByTestId("mock-json-tree-edit"), {
+    const editDoc = await screen.findByTestId("profiles-widget-edit-document");
+    await pickTreeDocumentView(editDoc);
+    fireEvent.change(within(editDoc).getByTestId("mock-json-tree-edit"), {
       target: { value: '{"name":"Updated via test"}' },
     });
     fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
@@ -378,8 +391,7 @@ describe("ProfilesWidgetCore", () => {
     fireEvent.click(screen.getByRole("button", { name: /Edit profile/i }));
 
     const editPanel = await screen.findByTestId("profiles-widget-edit-document");
-    expect(within(editPanel).getByRole("radio", { name: "Form" })).toBeInTheDocument();
-    fireEvent.click(within(editPanel).getByRole("radio", { name: "Form" }));
+    expect(within(editPanel).getByRole("button", { name: "Form" })).toBeInTheDocument();
 
     const formField = within(editPanel).getByTestId("mock-rjsf-form");
     fireEvent.change(formField, {
@@ -412,6 +424,6 @@ describe("ProfilesWidgetCore", () => {
     fireEvent.click(screen.getByRole("button", { name: /Edit profile/i }));
 
     const editPanel = await screen.findByTestId("profiles-widget-edit-document");
-    expect(within(editPanel).queryByRole("radio", { name: "Form" })).not.toBeInTheDocument();
+    expect(within(editPanel).queryByRole("button", { name: "Form" })).not.toBeInTheDocument();
   });
 });

@@ -60,6 +60,34 @@ vi.mock("@april/ui", () => ({
     onChange: (next: string) => void;
   }) => <textarea data-testid="mock-json-source" value={value} onChange={(event) => onChange(event.target.value)} />,
   AprilJsonValidationSummary: () => null,
+  AprilJsonSchemaForm: ({
+    formData,
+    onChange,
+    readOnly,
+  }: {
+    formData: Record<string, unknown>;
+    onChange: (next: Record<string, unknown>) => void;
+    readOnly?: boolean;
+  }) => (
+    <textarea
+      data-testid="mock-rjsf-form"
+      readOnly={readOnly}
+      value={JSON.stringify(formData)}
+      onChange={(event) => {
+        if (readOnly) {
+          return;
+        }
+        try {
+          const parsed = JSON.parse(event.target.value) as unknown;
+          if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+            onChange(parsed as Record<string, unknown>);
+          }
+        } catch {
+          /* ignore */
+        }
+      }}
+    />
+  ),
   CardListColumn: ({
     items,
     onSearchChange,
@@ -213,6 +241,15 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
+async function pickTreeDocumentView(container: HTMLElement) {
+  if (within(container).queryByRole("button", { name: "Form" })) {
+    fireEvent.click(within(container).getByTestId("draft-json-editor-more"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /^Tree$/ }));
+  } else {
+    fireEvent.click(within(container).getByRole("button", { name: "Tree" }));
+  }
+}
+
 const renderWidget = (props?: Partial<ProfilesWidgetProps>) =>
   render(
     <MantineProvider>
@@ -234,7 +271,9 @@ const fillCreateModal = async (profileName: string, documentJson: string) => {
   expect(await screen.findByLabelText("Profile name")).toBeInTheDocument();
   await userEvent.clear(screen.getByLabelText("Profile name"));
   await userEvent.type(screen.getByLabelText("Profile name"), profileName);
-  fireEvent.change(within(screen.getByTestId("profiles-widget-create-document")).getByTestId("mock-json-tree-edit"), {
+  const createDoc = await screen.findByTestId("profiles-widget-create-document");
+  await pickTreeDocumentView(createDoc);
+  fireEvent.change(within(createDoc).getByTestId("mock-json-tree-edit"), {
     target: { value: documentJson },
   });
 };
@@ -277,7 +316,9 @@ describe("ProfilesWidget", () => {
 
       selectCard(e1);
       fireEvent.click(await screen.findByRole("button", { name: /Edit profile/i }));
-      fireEvent.change(within(screen.getByTestId("profiles-widget-edit-document")).getByTestId("mock-json-tree-edit"), {
+      const editDoc = await screen.findByTestId("profiles-widget-edit-document");
+      await pickTreeDocumentView(editDoc);
+      fireEvent.change(within(editDoc).getByTestId("mock-json-tree-edit"), {
         target: { value: '{"name":"Updated via test"}' },
       });
       fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
