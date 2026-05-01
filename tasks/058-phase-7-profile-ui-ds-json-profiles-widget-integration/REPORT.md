@@ -3,7 +3,7 @@
 - Статус: ✅ выполнено
 - Задача: 058 — JSON-редакторы `@april/ui` в `profiles-widget` (документ профиля)
 - Ветка: `feature/task-058-phase-7-profile-ui-ds-json-profiles-widget-integration`
-- Коммиты: `3ecc8ca`
+- Коммиты: см. `git log` на ветке (последний squash-коммит задачи)
 - PR: не создавался из среды агента
 
 ## 2) Что сделано
