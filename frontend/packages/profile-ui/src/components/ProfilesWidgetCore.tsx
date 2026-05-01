@@ -24,6 +24,7 @@ import {
   Modal,
   Select,
   Stack,
+  Tabs,
   Text,
   TextInput,
   Title,
@@ -65,6 +66,13 @@ export type ProfilesWidgetCoreProps = {
 };
 
 const DEFAULT_PAGE_SIZE = 20;
+
+type PublishedSchemaPanelState =
+  | { status: "unsupported" }
+  | { status: "loading" }
+  | { status: "ok"; data: Record<string, unknown> }
+  | { status: "none" }
+  | { status: "error"; message: string };
 
 const mapSecureMessage = (code: ProfilesProviderErrorCode): string => {
   if (code === "unauthorized") {
@@ -137,6 +145,12 @@ export function ProfilesWidgetCore({
   const [busyEntityId, setBusyEntityId] = useState<string | null>(null);
   const [entityTypeOptions, setEntityTypeOptions] = useState<{ value: string; label: string }[]>([]);
   const [listCollapsed, setListCollapsed] = useState(false);
+  const [profileDocumentTab, setProfileDocumentTab] = useState<"formData" | "schema">("formData");
+  const [createDocumentTab, setCreateDocumentTab] = useState<"formData" | "schema">("formData");
+  const [profilePublishedSchema, setProfilePublishedSchema] = useState<PublishedSchemaPanelState>({ status: "unsupported" });
+  const [createPublishedSchema, setCreatePublishedSchema] = useState<PublishedSchemaPanelState>({ status: "unsupported" });
+  const profileSchemaRequestRef = useRef(0);
+  const createSchemaRequestRef = useRef(0);
 
   const requestId = hostContext.telemetry?.requestId;
   const preferredSelectionRef = useRef<string | null>(null);
@@ -448,8 +462,90 @@ export function ProfilesWidgetCore({
     };
   }, [hostContext.tenant.id, provider, requestId, selectedEntityId, onObservability, applyDetailsSnapshot, loadVersionMap]);
 
+  useEffect(() => {
+    setProfileDocumentTab("formData");
+  }, [selectedEntityId]);
+
+  useEffect(() => {
+    if (!selectedItem?.entityTypeId || !provider.getEntityTypePublishedSchema) {
+      setProfilePublishedSchema({ status: "unsupported" });
+      return;
+    }
+    const req = ++profileSchemaRequestRef.current;
+    const abortController = new AbortController();
+    setProfilePublishedSchema({ status: "loading" });
+    void provider
+      .getEntityTypePublishedSchema(selectedItem.entityTypeId, {
+        ...providerContextBaseRef.current,
+        signal: abortController.signal,
+      })
+      .then((doc) => {
+        if (req !== profileSchemaRequestRef.current || abortController.signal.aborted) {
+          return;
+        }
+        if (doc == null) {
+          setProfilePublishedSchema({ status: "none" });
+        } else {
+          setProfilePublishedSchema({ status: "ok", data: doc });
+        }
+      })
+      .catch((error) => {
+        if (req !== profileSchemaRequestRef.current || abortController.signal.aborted) {
+          return;
+        }
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        const message = isProfilesProviderError(error) ? mapSecureMessage(error.code) : "Failed to load schema.";
+        setProfilePublishedSchema({ status: "error", message });
+      });
+    return () => {
+      abortController.abort();
+    };
+  }, [selectedEntityId, selectedItem?.entityTypeId, provider]);
+
+  useEffect(() => {
+    if (!createModalOpened) {
+      setCreatePublishedSchema({ status: "unsupported" });
+      return;
+    }
+    if (!createTypeId || !provider.getEntityTypePublishedSchema) {
+      setCreatePublishedSchema({ status: "unsupported" });
+      return;
+    }
+    const req = ++createSchemaRequestRef.current;
+    const abortController = new AbortController();
+    setCreatePublishedSchema({ status: "loading" });
+    void provider
+      .getEntityTypePublishedSchema(createTypeId, { ...providerContextBaseRef.current, signal: abortController.signal })
+      .then((doc) => {
+        if (req !== createSchemaRequestRef.current || abortController.signal.aborted) {
+          return;
+        }
+        if (doc == null) {
+          setCreatePublishedSchema({ status: "none" });
+        } else {
+          setCreatePublishedSchema({ status: "ok", data: doc });
+        }
+      })
+      .catch((error) => {
+        if (req !== createSchemaRequestRef.current || abortController.signal.aborted) {
+          return;
+        }
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        const message = isProfilesProviderError(error) ? mapSecureMessage(error.code) : "Failed to load schema.";
+        setCreatePublishedSchema({ status: "error", message });
+      });
+    return () => {
+      abortController.abort();
+    };
+  }, [createModalOpened, createTypeId, provider]);
+
   const handleOpenCreateModal = () => {
     setMutationErrorMessage(null);
+    setCreateDocumentTab("formData");
     setCreateProfileName("New profile");
     setCreateDraftValue({});
     setCreateDraftSourceText("{}");
@@ -758,6 +854,49 @@ export function ProfilesWidgetCore({
     searchText: `${item.entityId} ${item.preview} ${item.entityTypeId} ${listPrimaryLabel(item)}`,
   }));
 
+  const renderPublishedSchemaPanel = (state: PublishedSchemaPanelState) => {
+    if (state.status === "unsupported") {
+      return (
+        <Text size="sm" c="dimmed" p="sm">
+          Published schema is not available from this data provider.
+        </Text>
+      );
+    }
+    if (state.status === "loading") {
+      return (
+        <Box p="md" style={{ display: "flex", justifyContent: "center" }}>
+          <Loader size="sm" />
+        </Box>
+      );
+    }
+    if (state.status === "error") {
+      return (
+        <Alert color="red" title="Schema">
+          {state.message}
+        </Alert>
+      );
+    }
+    if (state.status === "none") {
+      return (
+        <Text size="sm" c="dimmed" p="sm">
+          This entity type has no published schema yet.
+        </Text>
+      );
+    }
+    return (
+      <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+        <AprilJsonTreeEditor
+          data={state.data}
+          readOnly
+          rootName="published_schema"
+          validationSchema={ENTITY_TYPE_DRAFT_ROOT_JSON_SCHEMA}
+          resolveValidationSchemaRefs={false}
+          showSearch
+        />
+      </Box>
+    );
+  };
+
   if (listLoading) {
     return (
       <Box aria-label="profiles-list-loading" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -1008,36 +1147,69 @@ export function ProfilesWidgetCore({
               ) : (
                 <Box style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", minWidth: 0 }}>
                   {editMode && !historicalView ? (
-                    <Stack gap="xs" style={{ flex: 1, minHeight: 0 }} data-testid="profiles-widget-edit-document">
+                    <Stack gap="xs" style={{ flex: 1, minHeight: 0 }}>
                       <Text size="sm" fw={500}>
                         Updated document (JSON object)
                       </Text>
-                      <EntityTypesDraftJsonEditor
-                        mode={editDraftMode}
-                        onModeChange={setEditDraftMode}
-                        value={editDraftValue}
-                        onChange={setEditDraftValue}
-                        sourceText={editDraftSourceText}
-                        onSourceTextChange={setEditDraftSourceText}
-                        rootName="profile_document"
-                        serverValidationItems={editApiIssues ?? undefined}
-                      />
+                      <Tabs
+                        value={profileDocumentTab}
+                        onChange={(v) => setProfileDocumentTab(v === "schema" ? "schema" : "formData")}
+                        style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+                      >
+                        <Tabs.List>
+                          <Tabs.Tab value="formData">formData</Tabs.Tab>
+                          <Tabs.Tab value="schema">schema</Tabs.Tab>
+                        </Tabs.List>
+                        <Tabs.Panel
+                          value="formData"
+                          pt="xs"
+                          style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+                          data-testid="profiles-widget-edit-document"
+                        >
+                          <EntityTypesDraftJsonEditor
+                            mode={editDraftMode}
+                            onModeChange={setEditDraftMode}
+                            value={editDraftValue}
+                            onChange={setEditDraftValue}
+                            sourceText={editDraftSourceText}
+                            onSourceTextChange={setEditDraftSourceText}
+                            rootName="profile_document"
+                            serverValidationItems={editApiIssues ?? undefined}
+                          />
+                        </Tabs.Panel>
+                        <Tabs.Panel value="schema" pt="xs" style={{ flex: 1, minHeight: 0, minWidth: 0, overflow: "hidden" }}>
+                          {renderPublishedSchemaPanel(profilePublishedSchema)}
+                        </Tabs.Panel>
+                      </Tabs>
                     </Stack>
                   ) : (
                     <Stack gap="xs" style={{ flex: 1, minHeight: 0 }}>
                       <Text size="sm" fw={500}>
                         Profile document
                       </Text>
-                      <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-                        <AprilJsonTreeEditor
-                          data={selectedDocument ?? {}}
-                          readOnly
-                          rootName="profile_document"
-                          validationSchema={ENTITY_TYPE_DRAFT_ROOT_JSON_SCHEMA}
-                          resolveValidationSchemaRefs={false}
-                          showSearch
-                        />
-                      </Box>
+                      <Tabs
+                        value={profileDocumentTab}
+                        onChange={(v) => setProfileDocumentTab(v === "schema" ? "schema" : "formData")}
+                        style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+                      >
+                        <Tabs.List>
+                          <Tabs.Tab value="formData">formData</Tabs.Tab>
+                          <Tabs.Tab value="schema">schema</Tabs.Tab>
+                        </Tabs.List>
+                        <Tabs.Panel value="formData" pt="xs" style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+                          <AprilJsonTreeEditor
+                            data={selectedDocument ?? {}}
+                            readOnly
+                            rootName="profile_document"
+                            validationSchema={ENTITY_TYPE_DRAFT_ROOT_JSON_SCHEMA}
+                            resolveValidationSchemaRefs={false}
+                            showSearch
+                          />
+                        </Tabs.Panel>
+                        <Tabs.Panel value="schema" pt="xs" style={{ flex: 1, minHeight: 0, minWidth: 0, overflow: "hidden" }}>
+                          {renderPublishedSchemaPanel(profilePublishedSchema)}
+                        </Tabs.Panel>
+                      </Tabs>
                     </Stack>
                   )}
                 </Box>
@@ -1070,22 +1242,37 @@ export function ProfilesWidgetCore({
             />
           )}
           <TextInput label="Profile name" value={createProfileName} onChange={(e) => setCreateProfileName(e.currentTarget.value)} />
-          <Stack gap="xs" data-testid="profiles-widget-create-document">
+          <Stack gap="xs">
             <Text size="sm" fw={500}>
               Document (JSON object)
             </Text>
-            <EntityTypesDraftJsonEditor
-              mode={createDraftMode}
-              onModeChange={setCreateDraftMode}
-              value={createDraftValue}
-              onChange={setCreateDraftValue}
-              sourceText={createDraftSourceText}
-              onSourceTextChange={setCreateDraftSourceText}
-              compact
-              showSearch={false}
-              rootName="profile_document"
-              serverValidationItems={createApiIssues ?? undefined}
-            />
+            <Tabs
+              value={createDocumentTab}
+              onChange={(v) => setCreateDocumentTab(v === "schema" ? "schema" : "formData")}
+              style={{ minHeight: 220, display: "flex", flexDirection: "column" }}
+            >
+              <Tabs.List>
+                <Tabs.Tab value="formData">formData</Tabs.Tab>
+                <Tabs.Tab value="schema">schema</Tabs.Tab>
+              </Tabs.List>
+              <Tabs.Panel value="formData" pt="xs" style={{ flex: 1, minHeight: 0 }} data-testid="profiles-widget-create-document">
+                <EntityTypesDraftJsonEditor
+                  mode={createDraftMode}
+                  onModeChange={setCreateDraftMode}
+                  value={createDraftValue}
+                  onChange={setCreateDraftValue}
+                  sourceText={createDraftSourceText}
+                  onSourceTextChange={setCreateDraftSourceText}
+                  compact
+                  showSearch={false}
+                  rootName="profile_document"
+                  serverValidationItems={createApiIssues ?? undefined}
+                />
+              </Tabs.Panel>
+              <Tabs.Panel value="schema" pt="xs" style={{ flex: 1, minHeight: 160, overflow: "auto" }}>
+                {renderPublishedSchemaPanel(createPublishedSchema)}
+              </Tabs.Panel>
+            </Tabs>
           </Stack>
           <Button
             onClick={() => void handleCreate()}

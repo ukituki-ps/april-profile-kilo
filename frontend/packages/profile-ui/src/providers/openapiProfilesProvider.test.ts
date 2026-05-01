@@ -114,7 +114,38 @@ describe("createOpenApiProfilesProvider", () => {
     });
 
     const rows = await provider.listEntityTypes!(baseCtx);
-    expect(rows).toEqual([{ id: "etype-1", label: "ns/person" }]);
+    expect(rows).toEqual([{ id: "etype-1", label: "ns/person", publishedSchema: {} }]);
+  });
+
+  it("returns published schema from entity type detail", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        expect(String(input)).toContain("/v1/entity-types/etype-1");
+        return new Response(
+          JSON.stringify({
+            id: "etype-1",
+            namespace: "ns",
+            code: "person",
+            status: "published",
+            draft_schema: {},
+            draft_schema_version: 1,
+            published_schema: { type: "object", title: "ProfileDoc" },
+            published_schema_version: 1,
+            published_at: "2026-01-01T00:00:00Z",
+            created_at: "2026-01-01T00:00:00Z",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }),
+    );
+    const provider = createOpenApiProfilesProvider({
+      apiBaseUrl: "http://localhost:8080/admin/profile/api",
+      accessToken: "config-token",
+    });
+
+    const schema = await provider.getEntityTypePublishedSchema!("etype-1", baseCtx);
+    expect(schema).toEqual({ type: "object", title: "ProfileDoc" });
   });
 
   it("maps profile snapshot by version", async () => {

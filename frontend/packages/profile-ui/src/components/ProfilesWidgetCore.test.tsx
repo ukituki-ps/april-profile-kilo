@@ -151,6 +151,15 @@ const buildProvider = (): ProfilesDataProvider => ({
     document: { name: "Updated" },
   })),
   remove: vi.fn(async () => undefined),
+  getEntityTypePublishedSchema: vi.fn(async (typeId: string) => {
+    if (typeId === "type-uuid-a") {
+      return { type: "object", properties: { name: { type: "string" } } };
+    }
+    if (typeId === "type-uuid-b") {
+      return { type: "object", properties: { code: { type: "string" } } };
+    }
+    return { type: "object" };
+  }),
 });
 
 describe("ProfilesWidgetCore", () => {

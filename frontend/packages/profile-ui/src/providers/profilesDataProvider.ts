@@ -38,6 +38,8 @@ export type UpdateProfileInput = {
 export type EntityTypeOption = {
   id: string;
   label: string;
+  /** Опубликованная JSON Schema документа (если пришла в ответе `GET /v1/entity-types`). */
+  publishedSchema?: Record<string, unknown> | null;
 };
 
 export type ProfilesProviderErrorCode =
@@ -84,6 +86,11 @@ export interface ProfilesDataProvider {
   remove(entityId: string, ctx: ProviderContext): Promise<void>;
   /** Каталог типов для модалки создания (если не реализовано — остаётся пустой Select). */
   listEntityTypes?(ctx: ProviderContext): Promise<EntityTypeOption[]>;
+  /**
+   * Опубликованная JSON Schema документа профиля для типа (`GET /v1/entity-types/{id}`).
+   * Возвращает `null`, если у типа ещё нет опубликованной схемы.
+   */
+  getEntityTypePublishedSchema?(entityTypeId: string, ctx: ProviderContext): Promise<Record<string, unknown> | null>;
 }
 
 export const isProfilesProviderError = (error: unknown): error is ProfilesProviderError => {

@@ -140,6 +140,11 @@ const server = setupServer(
       items: [entityTypeRow(entityTypeId, "code-a"), entityTypeRow(entityTypeIdB, "code-b")],
     }),
   ),
+  http.get(`${apiBaseUrl}/v1/entity-types/:entityTypeId`, ({ params }) => {
+    const id = params.entityTypeId as string;
+    const code = id === entityTypeIdB ? "code-b" : "code-a";
+    return HttpResponse.json(entityTypeRow(id, code));
+  }),
   http.get(`${apiBaseUrl}/v1/entities`, ({ request }) => {
     const url = new URL(request.url);
     const search = (url.searchParams.get("search") ?? "").toLowerCase();
