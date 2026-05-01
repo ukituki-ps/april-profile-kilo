@@ -28,7 +28,7 @@ sidebar_position: 8
   - package: `@april/profile-ui`
   - contract: `v1`
   - status: `beta`
-  - где смотреть детали: `docs/widgets/profile/entity-types-widget.md`
+  - где смотреть детали: `docs/widgets/profile/entity-types-widget.md` (индекс), `docs/widgets/profile/entity-types-widget-catalog-list.md`, `docs/widgets/profile/entity-types-widget-schema-admin.md`, `docs/widgets/profile/entity-types-widget-entities-upgrade.md`, `docs/widgets/profile/entity-types-widget-integration.md`
 
 ## Быстрый смысл статусов
 

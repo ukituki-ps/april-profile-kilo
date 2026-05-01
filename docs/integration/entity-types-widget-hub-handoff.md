@@ -83,7 +83,8 @@ const hostContext = {
 ## Ссылки
 
 - ADR: [`../adr/0005-entity-type-revisions-and-entity-binding.md`](../adr/0005-entity-type-revisions-and-entity-binding.md)
-- Карточка виджета: [`../widgets/profile/entity-types-widget.md`](../widgets/profile/entity-types-widget.md)
+- Карточка виджета (сборка, точка входа): [`../widgets/profile/entity-types-widget.md`](../widgets/profile/entity-types-widget.md)
+- Под-спеки: [`../widgets/profile/entity-types-widget-catalog-list.md`](../widgets/profile/entity-types-widget-catalog-list.md), [`../widgets/profile/entity-types-widget-schema-admin.md`](../widgets/profile/entity-types-widget-schema-admin.md), [`../widgets/profile/entity-types-widget-entities-upgrade.md`](../widgets/profile/entity-types-widget-entities-upgrade.md), [`../widgets/profile/entity-types-widget-integration.md`](../widgets/profile/entity-types-widget-integration.md)
 - Контракт embed §9: [`../WIDGET_CONTRACTS.md`](../WIDGET_CONTRACTS.md)
 - Чеклист host: [`../WIDGET_INTEGRATION_CHECKLIST.md`](../WIDGET_INTEGRATION_CHECKLIST.md)
 

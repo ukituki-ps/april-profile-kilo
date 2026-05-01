@@ -33,6 +33,8 @@ Props (см. также `ProfilesWidgetProps` в исходниках):
 
 Props: как у профилей по `hostContext` / `apiBaseUrl` / `accessToken`, плюс `pageSize?`, `providerContext?`, `onAction?`, `onError?`, `onObservability?`, `onOpenEntity?`.
 
+Спецификация по поверхностям: `docs/widgets/profile/entity-types-widget.md` (сборка), `docs/widgets/profile/entity-types-widget-catalog-list.md`, `docs/widgets/profile/entity-types-widget-schema-admin.md`, `docs/widgets/profile/entity-types-widget-entities-upgrade.md`, `docs/widgets/profile/entity-types-widget-integration.md`.
+
 Экспорты: **`EntityTypesWidgetCore`**, **`EntityTypesApiWidget`**, **`EntityTypesDataProvider`**, **`createOpenApiEntityTypesProvider`**.
 
 ## Generated OpenAPI client
