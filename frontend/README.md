@@ -16,12 +16,18 @@ npm run dev
 
 Перед `dev`/`build`/`test` автоматически выполняется **`ds:prepare`** (ассеты; при необходимости сборка через `pnpm` в submodule — см. комментарии в [`scripts/ds-prepare.sh`](./scripts/ds-prepare.sh)).
 
+## Демо виджетов без бэкенда
+
+На маршрутах `/profiles-widget-demo` и `/entity-types-widget-demo` в режиме **`npm run dev`** поднимается **MSW**: перехватываются запросы к тому же базовому URL, что и у виджета (`VITE_PROFILE_API_BASE_URL` или по умолчанию `/admin/profile/api` на хосте Vite). Примеры данных — в [`src/mocks/handlers.ts`](./src/mocks/handlers.ts).
+
+- Чтобы ходить в **настоящий** API по этому URL: `VITE_PROFILE_DEMO_MOCK=false`.
+
 ## Команды
 
 | Команда | Назначение |
 | -------- | ---------- |
 | `npm run ds:prepare` | Ассеты DS (SVG), при необходимости сборка submodule |
-| `npm run dev` | Vite dev server (порт 5173) |
+| `npm run dev` | Vite dev server (порт 5174) |
 | `npm run build` | Build shell + build `@april/profile-ui` (with OpenAPI generation) |
 | `npm run lint` | Typecheck shell + typecheck `@april/profile-ui` |
 | `npm test` | Vitest for shell + `@april/profile-ui` |

@@ -3,6 +3,7 @@ import { EntityTypesWidget, ProfilesWidget } from "@april/profile-ui";
 import { Affix, Alert, Anchor, Box, Button, Container, Stack, Text, Title, useMantineColorScheme } from "@mantine/core";
 import { useState } from "react";
 import { Link, Route, Routes } from "react-router-dom";
+import { isDemoMswEnabled } from "./mocks/demoEnv";
 
 function ColorSchemeToggle() {
   const { colorScheme, setColorScheme } = useMantineColorScheme();
@@ -65,6 +66,7 @@ function ProfilesWidgetDemoPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const apiBaseUrl = import.meta.env.VITE_PROFILE_API_BASE_URL ?? "/admin/profile/api";
   const accessToken = import.meta.env.VITE_PROFILE_ACCESS_TOKEN;
+  const demoMock = isDemoMswEnabled();
 
   return (
     <Container
@@ -87,12 +89,19 @@ function ProfilesWidgetDemoPage() {
         <Text size="sm" c="dimmed">
           Демо `ProfilesWidget`: список, поиск, фильтры, пагинация, CRUD.
         </Text>
+        {demoMock ? (
+          <Alert color="blue" title="Локальные примеры данных">
+            Запросы к <Text span fw={600} component="span">{apiBaseUrl}</Text> в dev перехватываются MSW. Чтобы ходить на
+            настоящий сервис по этому URL, задайте <Text span component="span" ff="monospace">VITE_PROFILE_DEMO_MOCK=false</Text>.
+          </Alert>
+        ) : null}
         {actionMessage ? <Alert color="green">{actionMessage}</Alert> : null}
         <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
           <ProfilesWidget
             hostContext={{ tenant: { id: "demo-tenant" }, telemetry: { requestId: "local-demo-req-list" } }}
             apiBaseUrl={apiBaseUrl}
             accessToken={accessToken}
+            autoSelectFirst
             onAction={(action) => {
               if (action.type === "deleted") {
                 setActionMessage(`Deleted entity ${action.entityId}`);
@@ -111,6 +120,7 @@ function EntityTypesWidgetDemoPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const apiBaseUrl = import.meta.env.VITE_PROFILE_API_BASE_URL ?? "/admin/profile/api";
   const accessToken = import.meta.env.VITE_PROFILE_ACCESS_TOKEN;
+  const demoMock = isDemoMswEnabled();
 
   return (
     <Container
@@ -133,6 +143,12 @@ function EntityTypesWidgetDemoPage() {
         <Text size="sm" c="dimmed">
           Демо `EntityTypesWidget`: семейства типов, черновики, ревизии, апгрейд привязки.
         </Text>
+        {demoMock ? (
+          <Alert color="blue" title="Локальные примеры данных">
+            Запросы к <Text span fw={600} component="span">{apiBaseUrl}</Text> в dev перехватываются MSW. Чтобы ходить на
+            настоящий сервис по этому URL, задайте <Text span component="span" ff="monospace">VITE_PROFILE_DEMO_MOCK=false</Text>.
+          </Alert>
+        ) : null}
         {actionMessage ? <Alert color="green">{actionMessage}</Alert> : null}
         <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
           <EntityTypesWidget
