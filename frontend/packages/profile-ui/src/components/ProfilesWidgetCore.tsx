@@ -1,13 +1,18 @@
-import { CardListColumn } from "@april/ui";
+import { AprilJsonTreeEditor, CardListColumn, DensityProvider } from "@april/ui";
 import {
   IconDeviceFloppy,
   IconEdit,
-  IconRotateClockwise,
   IconSparkles,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  EntityTypesDraftJsonEditor,
+  ENTITY_TYPE_DRAFT_ROOT_JSON_SCHEMA,
+  parseEntityTypeDraftSchemaText,
+  type DraftJsonEditorMode,
+} from "./EntityTypesDraftJsonEditor";
 import {
   ActionIcon,
   Alert,
@@ -21,11 +26,9 @@ import {
   Stack,
   Text,
   TextInput,
-  Textarea,
   Title,
   Tooltip,
 } from "@mantine/core";
-import type { TextareaProps } from "@mantine/core";
 import { emitProfileWidgetTelemetry } from "../observability";
 import type { ProfileWidgetObservabilityHandler } from "../observability";
 import {
@@ -33,7 +36,6 @@ import {
   isDuplicateProfileName,
   listPrimaryLabel,
   listSecondaryLabel,
-  tryParsePreviewDocument,
 } from "../profileDisplay";
 import type { ProfileWidgetHostContext, ProfilesListAction, ProfilesListItem } from "../types";
 import type {
@@ -64,18 +66,6 @@ export type ProfilesWidgetCoreProps = {
 
 const DEFAULT_PAGE_SIZE = 20;
 
-const parseJsonObject = (value: string): Record<string, unknown> | null => {
-  try {
-    const parsed = JSON.parse(value);
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-      return null;
-    }
-    return parsed as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-};
-
 const mapSecureMessage = (code: ProfilesProviderErrorCode): string => {
   if (code === "unauthorized") {
     return "Authentication required. Please sign in again.";
@@ -97,13 +87,6 @@ const mapSecureMessage = (code: ProfilesProviderErrorCode): string => {
   }
   return "Profile operation failed. Please try again.";
 };
-
-/** Правая панель: `root` = внешний Input.Wrapper, `wrapper` = оболочка поля ввода (`Input`); оба с `height: 100%`. */
-const profileDetailsDocumentTextareaStyles = {
-  root: { flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, height: "100%" },
-  wrapper: { flex: 1, minHeight: 0, height: "100%" },
-  input: { flex: 1, minHeight: 0, height: "100%", resize: "none" as const },
-} satisfies TextareaProps["styles"];
 
 export function ProfilesWidgetCore({
   hostContext,
@@ -140,10 +123,16 @@ export function ProfilesWidgetCore({
   const [viewedVersion, setViewedVersion] = useState<number | null>(null);
   const [versionDetailsByNum, setVersionDetailsByNum] = useState<Record<number, ProfileDetails>>({});
   const [editMode, setEditMode] = useState(false);
-  const [editDocument, setEditDocument] = useState("{}");
+  const [editDraftMode, setEditDraftMode] = useState<DraftJsonEditorMode>("tree");
+  const [editDraftValue, setEditDraftValue] = useState<Record<string, unknown>>({});
+  const [editDraftSourceText, setEditDraftSourceText] = useState("{}");
+  const [editApiIssues, setEditApiIssues] = useState<Array<{ path: string; message: string }> | null>(null);
   const [createTypeId, setCreateTypeId] = useState<string | null>(null);
   const [createProfileName, setCreateProfileName] = useState("New profile");
-  const [createDocument, setCreateDocument] = useState("{}");
+  const [createDraftMode, setCreateDraftMode] = useState<DraftJsonEditorMode>("tree");
+  const [createDraftValue, setCreateDraftValue] = useState<Record<string, unknown>>({});
+  const [createDraftSourceText, setCreateDraftSourceText] = useState("{}");
+  const [createApiIssues, setCreateApiIssues] = useState<Array<{ path: string; message: string }> | null>(null);
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [busyEntityId, setBusyEntityId] = useState<string | null>(null);
   const [entityTypeOptions, setEntityTypeOptions] = useState<{ value: string; label: string }[]>([]);
@@ -191,6 +180,20 @@ export function ProfilesWidgetCore({
   const selectedItem = selectedEntityId ? items.find((item) => item.entityId === selectedEntityId) ?? null : null;
 
   const historicalView = viewedVersion !== null && headVersion !== null && viewedVersion < headVersion;
+
+  const editDraftSaveOk = useMemo(() => {
+    if (editDraftMode === "source") {
+      return parseEntityTypeDraftSchemaText(editDraftSourceText).ok;
+    }
+    return true;
+  }, [editDraftMode, editDraftSourceText]);
+
+  const createDraftSaveOk = useMemo(() => {
+    if (createDraftMode === "source") {
+      return parseEntityTypeDraftSchemaText(createDraftSourceText).ok;
+    }
+    return true;
+  }, [createDraftMode, createDraftSourceText]);
 
   const reportError = (error: unknown, setter: (message: string) => void) => {
     if (isProfilesProviderError(error)) {
@@ -328,7 +331,10 @@ export function ProfilesWidgetCore({
     setSelectedDocument(details.document);
     setHeadVersion(details.version);
     setViewedVersion(details.version);
-    setEditDocument(JSON.stringify(details.document, null, 2));
+    setEditDraftValue(structuredClone(details.document));
+    setEditDraftSourceText(JSON.stringify(details.document, null, 2));
+    setEditDraftMode("tree");
+    setEditApiIssues(null);
     setEditMode(false);
   }, []);
 
@@ -445,7 +451,10 @@ export function ProfilesWidgetCore({
   const handleOpenCreateModal = () => {
     setMutationErrorMessage(null);
     setCreateProfileName("New profile");
-    setCreateDocument("{}");
+    setCreateDraftValue({});
+    setCreateDraftSourceText("{}");
+    setCreateDraftMode("tree");
+    setCreateApiIssues(null);
     const loadTypes = async () => {
       if (!provider.listEntityTypes) {
         setCreateTypeId(null);
@@ -471,10 +480,26 @@ export function ProfilesWidgetCore({
 
   const handleCreate = async () => {
     setMutationErrorMessage(null);
-    const parsed = parseJsonObject(createDocument);
+    let parsed: Record<string, unknown>;
+    if (createDraftMode === "source") {
+      const sourceParsed = parseEntityTypeDraftSchemaText(createDraftSourceText);
+      if (!sourceParsed.ok) {
+        setMutationErrorMessage(sourceParsed.message);
+        emitProfileWidgetTelemetry(onObservability, hostContext, {
+          widget: "profiles_list",
+          event: "save_failed",
+          meta: { operation: "create_entity_profile", phase: "validation" },
+        });
+        return;
+      }
+      parsed = sourceParsed.value;
+      setCreateDraftValue(sourceParsed.value);
+    } else {
+      parsed = createDraftValue;
+    }
     const trimmedName = createProfileName.trim();
-    if (!createTypeId || !parsed || !trimmedName) {
-      setMutationErrorMessage("Choose entity type, profile name, and valid JSON document.");
+    if (!createTypeId || !trimmedName) {
+      setMutationErrorMessage("Choose entity type and profile name.");
       emitProfileWidgetTelemetry(onObservability, hostContext, {
         widget: "profiles_list",
         event: "save_failed",
@@ -495,6 +520,7 @@ export function ProfilesWidgetCore({
     }
 
     setBusyEntityId("create");
+    setCreateApiIssues(null);
     emitProfileWidgetTelemetry(onObservability, hostContext, {
       widget: "profiles_list",
       event: "save_submitted",
@@ -520,6 +546,11 @@ export function ProfilesWidgetCore({
       setCreateModalOpened(false);
       await loadList({ append: false });
     } catch (error) {
+      if (isProfilesProviderError(error) && error.schemaIssues?.length) {
+        setCreateApiIssues(error.schemaIssues);
+      } else {
+        setCreateApiIssues(null);
+      }
       reportError(error, (message) => setMutationErrorMessage(message));
       emitProfileWidgetTelemetry(onObservability, hostContext, {
         widget: "profiles_list",
@@ -536,15 +567,22 @@ export function ProfilesWidgetCore({
       return;
     }
     setMutationErrorMessage(null);
-    const parsed = parseJsonObject(editDocument);
-    if (!parsed) {
-      setMutationErrorMessage("Edit form expects JSON object document.");
-      emitProfileWidgetTelemetry(onObservability, hostContext, {
-        widget: "profiles_list",
-        event: "save_failed",
-        meta: { operation: "update_entity_profile", phase: "validation" },
-      });
-      return;
+    let parsed: Record<string, unknown>;
+    if (editDraftMode === "source") {
+      const sourceParsed = parseEntityTypeDraftSchemaText(editDraftSourceText);
+      if (!sourceParsed.ok) {
+        setMutationErrorMessage(sourceParsed.message);
+        emitProfileWidgetTelemetry(onObservability, hostContext, {
+          widget: "profiles_list",
+          event: "save_failed",
+          meta: { operation: "update_entity_profile", phase: "validation" },
+        });
+        return;
+      }
+      parsed = sourceParsed.value;
+      setEditDraftValue(sourceParsed.value);
+    } else {
+      parsed = editDraftValue;
     }
 
     const nameFromDoc = extractProfileNameFromDocument(parsed);
@@ -554,6 +592,7 @@ export function ProfilesWidgetCore({
     }
 
     setBusyEntityId(selectedEntityId);
+    setEditApiIssues(null);
     emitProfileWidgetTelemetry(onObservability, hostContext, {
       widget: "profiles_list",
       event: "save_submitted",
@@ -584,6 +623,11 @@ export function ProfilesWidgetCore({
       });
       await loadVersionMap(selectedEntityId, updated, new AbortController().signal, detailsRequestIdRef.current);
     } catch (error) {
+      if (isProfilesProviderError(error) && error.schemaIssues?.length) {
+        setEditApiIssues(error.schemaIssues);
+      } else {
+        setEditApiIssues(null);
+      }
       reportError(error, (message) => setMutationErrorMessage(message));
       emitProfileWidgetTelemetry(onObservability, hostContext, {
         widget: "profiles_list",
@@ -684,7 +728,10 @@ export function ProfilesWidgetCore({
     const detail = versionDetailsByNum[version];
     if (detail) {
       setSelectedDocument(detail.document);
-      setEditDocument(JSON.stringify(detail.document, null, 2));
+      setEditDraftValue(structuredClone(detail.document));
+      setEditDraftSourceText(JSON.stringify(detail.document, null, 2));
+      setEditDraftMode("tree");
+      setEditApiIssues(null);
       setEditMode(false);
     }
   };
@@ -721,7 +768,8 @@ export function ProfilesWidgetCore({
   }
 
   return (
-    <Stack gap="md" style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <DensityProvider>
+      <Stack gap="md" style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {listErrorMessage ? <Alert color="red">{listErrorMessage}</Alert> : null}
       {mutationErrorMessage ? <Alert color="red">{mutationErrorMessage}</Alert> : null}
 
@@ -879,6 +927,7 @@ export function ProfilesWidgetCore({
                               <ActionIcon
                                 variant="filled"
                                 aria-label="Save changes"
+                                disabled={!editDraftSaveOk}
                                 onClick={() => {
                                   void handleUpdate();
                                 }}
@@ -894,8 +943,11 @@ export function ProfilesWidgetCore({
                                 onClick={() => {
                                   setEditMode(false);
                                   if (selectedDocument) {
-                                    setEditDocument(JSON.stringify(selectedDocument, null, 2));
+                                    setEditDraftValue(structuredClone(selectedDocument));
+                                    setEditDraftSourceText(JSON.stringify(selectedDocument, null, 2));
+                                    setEditDraftMode("tree");
                                   }
+                                  setEditApiIssues(null);
                                 }}
                               >
                                 <IconX size={18} />
@@ -910,8 +962,11 @@ export function ProfilesWidgetCore({
                               onClick={() => {
                                 setEditMode(true);
                                 if (selectedDocument) {
-                                  setEditDocument(JSON.stringify(selectedDocument, null, 2));
+                                  setEditDraftValue(structuredClone(selectedDocument));
+                                  setEditDraftSourceText(JSON.stringify(selectedDocument, null, 2));
+                                  setEditDraftMode("tree");
                                 }
+                                setEditApiIssues(null);
                               }}
                             >
                               <IconEdit size={18} />
@@ -951,23 +1006,39 @@ export function ProfilesWidgetCore({
                   <Text size="sm">Loading selected profile...</Text>
                 </Box>
               ) : (
-                <Box style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+                <Box style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", minWidth: 0 }}>
                   {editMode && !historicalView ? (
-                    <Textarea
-                      label="Updated document (JSON object)"
-                      autosize={false}
-                      styles={profileDetailsDocumentTextareaStyles}
-                      value={editDocument}
-                      onChange={(event) => setEditDocument(event.currentTarget.value)}
-                    />
+                    <Stack gap="xs" style={{ flex: 1, minHeight: 0 }} data-testid="profiles-widget-edit-document">
+                      <Text size="sm" fw={500}>
+                        Updated document (JSON object)
+                      </Text>
+                      <EntityTypesDraftJsonEditor
+                        mode={editDraftMode}
+                        onModeChange={setEditDraftMode}
+                        value={editDraftValue}
+                        onChange={setEditDraftValue}
+                        sourceText={editDraftSourceText}
+                        onSourceTextChange={setEditDraftSourceText}
+                        rootName="profile_document"
+                        serverValidationItems={editApiIssues ?? undefined}
+                      />
+                    </Stack>
                   ) : (
-                    <Textarea
-                      label="Profile document"
-                      value={JSON.stringify(selectedDocument ?? {}, null, 2)}
-                      readOnly
-                      autosize={false}
-                      styles={profileDetailsDocumentTextareaStyles}
-                    />
+                    <Stack gap="xs" style={{ flex: 1, minHeight: 0 }}>
+                      <Text size="sm" fw={500}>
+                        Profile document
+                      </Text>
+                      <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+                        <AprilJsonTreeEditor
+                          data={selectedDocument ?? {}}
+                          readOnly
+                          rootName="profile_document"
+                          validationSchema={ENTITY_TYPE_DRAFT_ROOT_JSON_SCHEMA}
+                          resolveValidationSchemaRefs={false}
+                          showSearch
+                        />
+                      </Box>
+                    </Stack>
                   )}
                 </Box>
               )}
@@ -999,18 +1070,33 @@ export function ProfilesWidgetCore({
             />
           )}
           <TextInput label="Profile name" value={createProfileName} onChange={(e) => setCreateProfileName(e.currentTarget.value)} />
-          <Textarea
-            label="Document (JSON object)"
-            autosize
-            minRows={6}
-            value={createDocument}
-            onChange={(event) => setCreateDocument(event.currentTarget.value)}
-          />
-          <Button onClick={() => void handleCreate()} loading={busyEntityId === "create"}>
+          <Stack gap="xs" data-testid="profiles-widget-create-document">
+            <Text size="sm" fw={500}>
+              Document (JSON object)
+            </Text>
+            <EntityTypesDraftJsonEditor
+              mode={createDraftMode}
+              onModeChange={setCreateDraftMode}
+              value={createDraftValue}
+              onChange={setCreateDraftValue}
+              sourceText={createDraftSourceText}
+              onSourceTextChange={setCreateDraftSourceText}
+              compact
+              showSearch={false}
+              rootName="profile_document"
+              serverValidationItems={createApiIssues ?? undefined}
+            />
+          </Stack>
+          <Button
+            onClick={() => void handleCreate()}
+            loading={busyEntityId === "create"}
+            disabled={!createDraftSaveOk}
+          >
             Create profile
           </Button>
         </Stack>
       </Modal>
-    </Stack>
+      </Stack>
+    </DensityProvider>
   );
 }

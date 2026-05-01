@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MantineProvider } from "@mantine/core";
@@ -23,6 +23,43 @@ vi.mock("@mantine/core", async () => {
 });
 
 vi.mock("@april/ui", () => ({
+  DensityProvider: ({ children }: { children: ReactNode }) => <div data-testid="density-provider">{children}</div>,
+  AprilJsonTreeEditor: ({
+    data,
+    setData,
+    readOnly,
+  }: {
+    data: Record<string, unknown>;
+    setData?: (next: Record<string, unknown> | unknown[]) => void;
+    readOnly?: boolean;
+  }) => (
+    <textarea
+      data-testid={readOnly ? "mock-json-tree-readonly" : "mock-json-tree-edit"}
+      readOnly={readOnly}
+      value={JSON.stringify(data, null, 2)}
+      onChange={(event) => {
+        if (readOnly) {
+          return;
+        }
+        try {
+          const parsed = JSON.parse(event.target.value) as unknown;
+          if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+            setData?.(parsed as Record<string, unknown>);
+          }
+        } catch {
+          /* ignore */
+        }
+      }}
+    />
+  ),
+  AprilJsonCollectionTextEditor: ({
+    value,
+    onChange,
+  }: {
+    value: string;
+    onChange: (next: string) => void;
+  }) => <textarea data-testid="mock-json-source" value={value} onChange={(event) => onChange(event.target.value)} />,
+  AprilJsonValidationSummary: () => null,
   CardListColumn: ({
     items,
     onSearchChange,
@@ -192,7 +229,9 @@ const fillCreateModal = async (profileName: string, documentJson: string) => {
   expect(await screen.findByLabelText("Profile name")).toBeInTheDocument();
   await userEvent.clear(screen.getByLabelText("Profile name"));
   await userEvent.type(screen.getByLabelText("Profile name"), profileName);
-  fireEvent.change(screen.getByLabelText("Document (JSON object)"), { target: { value: documentJson } });
+  fireEvent.change(within(screen.getByTestId("profiles-widget-create-document")).getByTestId("mock-json-tree-edit"), {
+    target: { value: documentJson },
+  });
 };
 
 describe("ProfilesWidget", () => {
@@ -233,7 +272,7 @@ describe("ProfilesWidget", () => {
 
       selectCard(e1);
       fireEvent.click(await screen.findByRole("button", { name: /Edit profile/i }));
-      fireEvent.change(screen.getByLabelText("Updated document (JSON object)"), {
+      fireEvent.change(within(screen.getByTestId("profiles-widget-edit-document")).getByTestId("mock-json-tree-edit"), {
         target: { value: '{"name":"Updated via test"}' },
       });
       fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
