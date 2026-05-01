@@ -25,6 +25,7 @@
     "@april/profile-ui": "file:./packages/profile-ui",
     "@april/tokens": "file:vendor/ds-packs/april-tokens-0.1.5.tgz",
     "@april/ui": "file:vendor/ds-packs/april-ui-0.1.5.tgz",
+    "@ukituki-ps/april-tokens": "file:vendor/ds-packs/april-tokens-0.1.5.tgz",
     "@emotion/react": "^11.14.0",
     "@mantine/core": "^7.17.8",
     "@xyflow/react": "^12.10.2",
