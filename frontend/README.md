@@ -18,7 +18,22 @@ npm run dev
 
 ## Демо виджетов без бэкенда
 
-На маршрутах `/profiles-widget-demo` и `/entity-types-widget-demo` в режиме **`npm run dev`** поднимается **MSW**: перехватываются запросы к тому же базовому URL, что и у виджета (`VITE_PROFILE_API_BASE_URL` или по умолчанию `/admin/profile/api` на хосте Vite). Примеры данных — в [`src/mocks/handlers.ts`](./src/mocks/handlers.ts).
+В режиме **`npm run dev`** поднимается **MSW**: перехватываются запросы к тому же базовому URL, что и у виджета (`VITE_PROFILE_API_BASE_URL` или по умолчанию `/admin/profile/api` на хосте Vite). Примеры данных — в [`src/mocks/handlers.ts`](./src/mocks/handlers.ts).
+
+Индекс всех демо: **`/widget-demos`** (фасады `ProfilesWidget` / `EntityTypesWidget`, Api-слой `ProfilesApiWidget` / `EntityTypesApiWidget`, варианты **`WidgetCore` + OpenAPI-провайдер**, showcase DS).
+
+Прямые ссылки:
+
+| Маршрут | Что смотреть |
+|---------|----------------|
+| `/widget-demos` | Оглавление |
+| `/profiles-widget-demo` | `ProfilesWidget` |
+| `/entity-types-widget-demo` | `EntityTypesWidget` |
+| `/profiles-api-widget-demo` | `ProfilesApiWidget` |
+| `/entity-types-api-widget-demo` | `EntityTypesApiWidget` |
+| `/profiles-widget-core-demo` | `ProfilesWidgetCore` + `createOpenApiProfilesProvider` |
+| `/entity-types-widget-core-demo` | `EntityTypesWidgetCore` + `createOpenApiEntityTypesProvider` |
+| `/showcase` | `UIKit` (дизайн-система) |
 
 - Чтобы ходить в **настоящий** API по этому URL: `VITE_PROFILE_DEMO_MOCK=false`.
 

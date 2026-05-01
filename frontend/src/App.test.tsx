@@ -15,4 +15,15 @@ describe("App", () => {
     );
     expect(screen.getByRole("heading", { name: /April Profile/i })).toBeInTheDocument();
   });
+
+  it("renders widget demos index", () => {
+    render(
+      <AprilProviders>
+        <MemoryRouter initialEntries={["/widget-demos"]}>
+          <App />
+        </MemoryRouter>
+      </AprilProviders>,
+    );
+    expect(screen.getByRole("heading", { name: /@april\/profile-ui/i })).toBeInTheDocument();
+  });
 });

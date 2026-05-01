@@ -2,6 +2,8 @@
 
 Embeddable React widgets for AprilProfile in AprilHub/host apps. Публичная поверхность пакета: **`ProfilesWidget`** (`profiles-widget`) и **`EntityTypesWidget`** (`entity-types-widget`), плюс провайдеры/OpenAPI-клиент для кастомного wiring.
 
+Локальные демо с MSW (в репозитории `april-profile`, Vite shell): см. **`frontend/README.md`** — маршрут **`/widget-demos`** и вложенные страницы для фасадов, `*ApiWidget`, `*WidgetCore` + OpenAPI.
+
 ### Зависимости host
 
 Пакет объявляет **`peerDependencies`**: `@april/ui` (≥ **0.1.6**, JSON-редакторы и `CardListColumn`), `@mantine/core`, `@emotion/react`, `react`, `react-dom`. Хост должен монтировать виджеты под **`AprilProviders`** из `@april/ui` (или эквивалент: `MantineProvider` + `DensityProvider`), иначе JSON-редакторы дизайн-системы не инициализируются.
