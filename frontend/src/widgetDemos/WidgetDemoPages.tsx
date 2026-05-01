@@ -7,7 +7,20 @@ import {
   ProfilesWidgetCore,
 } from "@april/profile-ui";
 import type { ProfileWidgetHostContext } from "@april/profile-ui";
-import { Alert, Anchor, Box, Container, Stack, Text, Title } from "@mantine/core";
+import {
+  Alert,
+  Anchor,
+  Box,
+  Code,
+  Container,
+  Divider,
+  Group,
+  NavLink,
+  Paper,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { isDemoMswEnabled } from "../mocks/demoEnv";
@@ -83,44 +96,104 @@ const entityTypesHost: ProfileWidgetHostContext = {
   telemetry: { requestId: "local-demo-req-entity-types" },
 };
 
+function DemoRouteNavLink(props: { to: string; title: string; description: string }) {
+  return (
+    <NavLink
+      component={Link}
+      to={props.to}
+      label={
+        <Group justify="space-between" align="flex-start" wrap="wrap" gap="xs">
+          <Text fw={600} component="span">
+            {props.title}
+          </Text>
+          <Code fz="sm">{props.to}</Code>
+        </Group>
+      }
+      description={props.description}
+    />
+  );
+}
+
+function DemoSection(props: { title: string; children: ReactNode }) {
+  return (
+    <Paper withBorder p="md" radius="md">
+      <Stack gap="xs">
+        <Title order={4}>{props.title}</Title>
+        <Divider />
+        {props.children}
+      </Stack>
+    </Paper>
+  );
+}
+
 export function WidgetDemosIndexPage() {
   return (
-    <Container py="xl" size="sm">
-      <Stack gap="md">
-        <Title order={1}>Демо `@april/profile-ui`</Title>
-        <Text c="dimmed" size="sm">
-          В dev с <Text span ff="monospace">VITE_PROFILE_DEMO_MOCK=true</Text> (или по умолчанию) все страницы ниже
-          используют один и тот же MSW-хендлер к <Text span ff="monospace">VITE_PROFILE_API_BASE_URL</Text> (по
-          умолчанию <Text span ff="monospace">/admin/profile/api</Text>).
-        </Text>
-        <Title order={3}>Фасады (embed)</Title>
-        <Anchor component={Link} to="/profiles-widget-demo">
-          ProfilesWidget — список профилей и карточка
-        </Anchor>
-        <Anchor component={Link} to="/entity-types-widget-demo">
-          EntityTypesWidget — каталог типов и апгрейд
-        </Anchor>
-        <Title order={3}>Api-слой (OpenAPI-провайдер без отдельного re-export фасада)</Title>
-        <Anchor component={Link} to="/profiles-api-widget-demo">
-          ProfilesApiWidget
-        </Anchor>
-        <Anchor component={Link} to="/entity-types-api-widget-demo">
-          EntityTypesApiWidget
-        </Anchor>
-        <Title order={3}>WidgetCore + провайдер (кастомный wiring)</Title>
-        <Anchor component={Link} to="/profiles-widget-core-demo">
-          ProfilesWidgetCore + createOpenApiProfilesProvider
-        </Anchor>
-        <Anchor component={Link} to="/entity-types-widget-core-demo">
-          EntityTypesWidgetCore + createOpenApiEntityTypesProvider
-        </Anchor>
-        <Title order={3}>Дизайн-система</Title>
-        <Anchor component={Link} to="/showcase">
-          Showcase (`UIKit`)
-        </Anchor>
-        <Anchor component={Link} to="/">
-          На главную
-        </Anchor>
+    <Container py="xl" size="md">
+      <Stack gap="lg">
+        <Box>
+          <Title order={1}>Демо `@april/profile-ui`</Title>
+          <Text c="dimmed" size="sm" mt="xs">
+            В dev с <Code>VITE_PROFILE_DEMO_MOCK=true</Code> (или по умолчанию) все маршруты ниже ходят в один и тот
+            же MSW к <Code>VITE_PROFILE_API_BASE_URL</Code> (по умолчанию <Code>/admin/profile/api</Code>). У каждого
+            пункта — <strong>свой путь</strong> в колонке справа от названия.
+          </Text>
+        </Box>
+
+        <DemoSection title="Фасады (готовый embed)">
+          <DemoRouteNavLink
+            to="/profiles-widget-demo"
+            title="ProfilesWidget"
+            description="Список сущностей, карточка профиля, версии документа, CRUD."
+          />
+          <DemoRouteNavLink
+            to="/entity-types-widget-demo"
+            title="EntityTypesWidget"
+            description="Каталог семейств типов, черновик схемы, ревизии, вкладка Upgrade."
+          />
+        </DemoSection>
+
+        <DemoSection title="Api-слой (тот же OpenAPI, другой экспорт пакета)">
+          <DemoRouteNavLink
+            to="/profiles-api-widget-demo"
+            title="ProfilesApiWidget"
+            description="Провайдер и контекст как у фасада; для проверки импорта ApiWidget в host."
+          />
+          <DemoRouteNavLink
+            to="/entity-types-api-widget-demo"
+            title="EntityTypesApiWidget"
+            description="Аналогично для каталога типов."
+          />
+        </DemoSection>
+
+        <DemoSection title="WidgetCore + провайдер (ручной wiring)">
+          <DemoRouteNavLink
+            to="/profiles-widget-core-demo"
+            title="ProfilesWidgetCore"
+            description="Явный createOpenApiProfilesProvider + providerContext (см. widgetDemos/openApiEmbedWiring.ts)."
+          />
+          <DemoRouteNavLink
+            to="/entity-types-widget-core-demo"
+            title="EntityTypesWidgetCore"
+            description="Явный createOpenApiEntityTypesProvider + providerContext."
+          />
+        </DemoSection>
+
+        <DemoSection title="Прочее">
+          <DemoRouteNavLink to="/showcase" title="UIKit showcase" description="Примитивы дизайн-системы `@april/ui`." />
+          <NavLink
+            component={Link}
+            to="/"
+            label={
+              <Group justify="space-between" wrap="wrap" gap="xs">
+                <Text fw={600} component="span">
+                  Главная shell
+                </Text>
+                <Code fz="sm">/</Code>
+              </Group>
+            }
+            description="Корень Vite-приложения, ссылки на демо."
+          />
+        </DemoSection>
       </Stack>
     </Container>
   );

@@ -16,7 +16,7 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: /April Profile/i })).toBeInTheDocument();
   });
 
-  it("renders widget demos index", () => {
+  it("renders widget demos index with distinct route hints", () => {
     render(
       <AprilProviders>
         <MemoryRouter initialEntries={["/widget-demos"]}>
@@ -25,5 +25,7 @@ describe("App", () => {
       </AprilProviders>,
     );
     expect(screen.getByRole("heading", { name: /@april\/profile-ui/i })).toBeInTheDocument();
+    expect(screen.getByText("/profiles-widget-demo")).toBeInTheDocument();
+    expect(screen.getByText("/entity-types-api-widget-demo")).toBeInTheDocument();
   });
 });
