@@ -178,7 +178,7 @@
 
 Для `ProfileWidgetTelemetryEvent` допускается `widget: "entity_types"` и события (наряду с базовыми из §3 / Profiles):
 
-- стадии каталога: `list_requested` / `list_succeeded` / `list_failed` (список семейств), `details_requested` / `details_failed` (деталь семейства + ревизии);
+- стадии каталога: `list_requested` / `list_succeeded` / `list_failed` (список семейств), `details_requested` / `details_failed` (детальная карточка семейства + ревизии);
 - черновик / публикация: `draft_save_submitted` | `draft_save_succeeded` | `draft_save_failed`, `publish_submitted` | `publish_succeeded` | `publish_failed`;
 - апгрейд: `upgrade_submitted` | `upgrade_succeeded` | `upgrade_failed`, `batch_upgrade_submitted`, `batch_upgrade_completed`.
 

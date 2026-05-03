@@ -13,7 +13,7 @@
 
 ## Цель
 
-Доставить **целевой** переиспользуемый embed-виджет администрирования каталога типов (**`widgetId`: `entity-types-widget`**, `profileId`: `entity-types-admin`) в пакете `frontend/packages/profile-ui`, архитектурно эквивалентный продакшен-базлайну Profiles: **`EntityTypesWidgetCore` + `EntityTypesApiWidget` + публичный фасад + `EntityTypesDataProvider`**, без demo-first источников данных, с **полным** клиентским потоком: список семейств типов → деталь (draft, история ревизий, upgrade сущностей при наличии API), обработкой ошибок, telemetry и **отменой in-flight запросов** через `AbortController`.
+Доставить **целевой** переиспользуемый embed-виджет администрирования каталога типов (**`widgetId`: `entity-types-widget`**, `profileId`: `entity-types-admin`) в пакете `frontend/packages/profile-ui`, архитектурно эквивалентный продакшен-базлайну Profiles: **`EntityTypesWidgetCore` + `EntityTypesApiWidget` + публичный фасад + `EntityTypesDataProvider`**, без demo-first источников данных, с **полным** клиентским потоком: список семейств типов → детальная карточка (draft, история ревизий, upgrade сущностей при наличии API), обработкой ошибок, telemetry и **отменой in-flight запросов** через `AbortController`.
 
 ## Контекст для агента
 
