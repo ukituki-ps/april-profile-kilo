@@ -3,6 +3,8 @@ import {
   AprilIconClose,
   AprilJsonTreeEditor,
   AprilModal,
+  AprilVaulBottomSheet,
+  APRIL_MOBILE_BOTTOM_SHEET_Z_INDEX,
   DensityProvider,
 } from "@april/ui";
 import {
@@ -10,8 +12,10 @@ import {
   IconEdit,
   IconSparkles,
   IconTrash,
+  IconVersions,
   IconX,
 } from "@tabler/icons-react";
+import { useMediaQuery } from "@mantine/hooks";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -25,6 +29,7 @@ import {
   ActionIcon,
   Alert,
   Box,
+  Button,
   Divider,
   Group,
   Loader,
@@ -123,6 +128,8 @@ const mapSecureMessage = (code: ProfilesProviderErrorCode): string => {
   return "Profile operation failed. Please try again.";
 };
 
+const PROFILE_NARROW_MEDIA_QUERY = "(max-width: 47.99em)";
+
 export const ProfilesWidgetProfileDetailCore = forwardRef<
   ProfilesWidgetProfileDetailHandle,
   ProfilesWidgetProfileDetailCoreProps
@@ -171,6 +178,7 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
   const [createDraftSourceText, setCreateDraftSourceText] = useState("{}");
   const [createApiIssues, setCreateApiIssues] = useState<Array<{ path: string; message: string }> | null>(null);
   const [createModalOpened, setCreateModalOpened] = useState(false);
+  const [versionSheetOpened, setVersionSheetOpened] = useState(false);
   const [busyEntityId, setBusyEntityId] = useState<string | null>(null);
   const [entityTypeOptions, setEntityTypeOptions] = useState<{ value: string; label: string }[]>([]);
   const [profilePublishedSchema, setProfilePublishedSchema] = useState<PublishedSchemaPanelState>({ status: "unsupported" });
@@ -190,6 +198,9 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
   );
 
   const requestId = hostContext.telemetry?.requestId;
+  const matchesNarrowViewport = useMediaQuery(PROFILE_NARROW_MEDIA_QUERY);
+  const compactProfileOverlayChrome = Boolean(matchesNarrowViewport && hostGridProfileModalChrome);
+
   const detailsRequestIdRef = useRef(0);
   const detailsAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -774,6 +785,7 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
         setEditApiIssues(null);
         setEditMode(false);
       }
+      setVersionSheetOpened(false);
     },
     [versionDetailsByNum],
   );
@@ -788,13 +800,26 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
     }));
   }, [versionDetailsByNum, headVersion]);
 
+  useEffect(() => {
+    setVersionSheetOpened(false);
+  }, [entityId]);
+
+  useEffect(() => {
+    if (!compactProfileOverlayChrome) {
+      setVersionSheetOpened(false);
+    }
+  }, [compactProfileOverlayChrome]);
+
   const displayNameForCard =
     selectedItem === null
       ? ""
       : extractProfileNameFromDocument(selectedDocument ?? undefined) ?? listPrimaryLabel(selectedItem);
 
-  const profileDetailToolbar = useMemo(
-    () => (
+  const profileDetailToolbar = useMemo(() => {
+    if (compactProfileOverlayChrome && versionSheetOpened) {
+      return null;
+    }
+    return (
       <Group
         gap="xs"
         justify="flex-end"
@@ -802,17 +827,31 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
         align="center"
         style={{ flexShrink: 0 }}
       >
-        <Select
-          aria-label="Version"
-          size="xs"
-          w={150}
-          disabled={detailsLoading || Object.keys(versionDetailsByNum).length === 0}
-          data={versionSelectData}
-          value={viewedVersion !== null ? String(viewedVersion) : null}
-          onChange={onSelectVersion}
-          rightSection={versionsLoading ? <Loader size="xs" /> : undefined}
-          comboboxProps={{ withinPortal: false }}
-        />
+        {compactProfileOverlayChrome ? (
+          <Tooltip label="Versions" withArrow>
+            <ActionIcon
+              variant="default"
+              aria-label="Versions"
+              disabled={detailsLoading || Object.keys(versionDetailsByNum).length === 0}
+              loading={versionsLoading}
+              onClick={() => setVersionSheetOpened(true)}
+            >
+              <IconVersions size={18} aria-hidden />
+            </ActionIcon>
+          </Tooltip>
+        ) : (
+          <Select
+            aria-label="Version"
+            size="xs"
+            w={150}
+            disabled={detailsLoading || Object.keys(versionDetailsByNum).length === 0}
+            data={versionSelectData}
+            value={viewedVersion !== null ? String(viewedVersion) : null}
+            onChange={onSelectVersion}
+            rightSection={versionsLoading ? <Loader size="xs" /> : undefined}
+            comboboxProps={{ withinPortal: false }}
+          />
+        )}
         {!detailsLoading && editMode && !historicalView ? (
           <DraftJsonEditorToolbar
             mode={editDraftMode}
@@ -932,8 +971,10 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
           ) : null}
         </Group>
       </Group>
-    ),
-    [
+    );
+  }, [
+      compactProfileOverlayChrome,
+      versionSheetOpened,
       hostGridProfileModalChrome,
       detailsLoading,
       versionSelectData,
@@ -1161,7 +1202,7 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
         >
           {selectedItem ? (
             <>
-              {hostGridProfileModalChrome && gridModalDetailHeaderHostEl
+              {hostGridProfileModalChrome && gridModalDetailHeaderHostEl && profileDetailToolbar
                 ? createPortal(profileDetailToolbar, gridModalDetailHeaderHostEl)
                 : null}
               {!hostGridProfileModalChrome ? (
@@ -1271,6 +1312,33 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
       >
         {createProfileEditorStack}
       </AprilModal>
+      <AprilVaulBottomSheet
+        opened={compactProfileOverlayChrome && versionSheetOpened}
+        onClose={() => setVersionSheetOpened(false)}
+        headerTitle="Versions"
+        zIndex={APRIL_MOBILE_BOTTOM_SHEET_Z_INDEX + 25}
+        overlayZIndex={APRIL_MOBILE_BOTTOM_SHEET_Z_INDEX + 24}
+      >
+        <Stack gap="xs">
+          {versionSelectData.length === 0 ? (
+            <Text size="sm" c="dimmed">
+              No versions loaded.
+            </Text>
+          ) : (
+            versionSelectData.map((opt) => (
+              <Button
+                key={opt.value}
+                variant={opt.value === String(viewedVersion) ? "filled" : "light"}
+                fullWidth
+                justify="space-between"
+                onClick={() => onSelectVersion(opt.value)}
+              >
+                {opt.label}
+              </Button>
+            ))
+          )}
+        </Stack>
+      </AprilVaulBottomSheet>
       </Stack>
     </DensityProvider>
   );

@@ -1,4 +1,13 @@
-import { AprilModal, CardListColumn, DensityProvider, type CardListColumnView } from "@april/ui";
+import {
+  AprilModal,
+  AprilVaulBottomSheet,
+  APRIL_MOBILE_BOTTOM_SHEET_Z_INDEX,
+  CardListColumn,
+  DensityProvider,
+  type CardListColumnMobileLayout,
+  type CardListColumnView,
+} from "@april/ui";
+import { useMediaQuery } from "@mantine/hooks";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -31,9 +40,17 @@ export type ProfilesWidgetCoreProps = {
   onError?: (payload: { message: string; requestId?: string; code?: string }) => void;
   onObservability?: ProfileWidgetObservabilityHandler;
   onOpenEntity?: (entityId: string) => void;
+  /**
+   * Проброс в `CardListColumn.mobileLayout`. `auto` — мобильный shell/sheets по `(max-width: 47.99em)`;
+   * `off` — десктопное поведение даже на узком iframe (витрина).
+   */
+  cardListColumnMobileLayout?: CardListColumnMobileLayout;
 };
 
 const DEFAULT_PAGE_SIZE = 20;
+
+/** Согласовано с `CardListColumn` (`useMediaQuery` в `@april/ui`). */
+const PROFILE_NARROW_MEDIA_QUERY = "(max-width: 47.99em)";
 
 /** DS ≥0.1.9: только `list` | `grid`; устаревшее значение (напр. `collapsed` в state после HMR) ломает chrome колонки. */
 function normalizeCardListColumnView(value: unknown): CardListColumnView {
@@ -76,6 +93,7 @@ export function ProfilesWidgetCore({
   onError,
   onObservability,
   onOpenEntity,
+  cardListColumnMobileLayout = "auto",
 }: ProfilesWidgetCoreProps) {
   const [listLoading, setListLoading] = useState(true);
   const [listLoadingMore, setListLoadingMore] = useState(false);
@@ -110,6 +128,9 @@ export function ProfilesWidgetCore({
   const listRequestIdRef = useRef(0);
   const listAbortControllerRef = useRef<AbortController | null>(null);
   const detailRef = useRef<ProfilesWidgetProfileDetailHandle>(null);
+
+  const matchesNarrowViewport = useMediaQuery(PROFILE_NARROW_MEDIA_QUERY);
+  const isNarrowViewport = Boolean(matchesNarrowViewport);
 
   const providerContextBase = useMemo<Omit<ProviderContext, "signal">>(
     () =>
@@ -148,7 +169,12 @@ export function ProfilesWidgetCore({
   );
 
   const isGridLayout = effectiveCardListView === "grid";
-  const gridProfileModalOpened = isGridLayout && (Boolean(selectedEntityId) || gridCreateSession);
+  const gridFlowOverlayOpened = isGridLayout && (Boolean(selectedEntityId) || gridCreateSession);
+  const narrowListDetailOpened = isNarrowViewport && !isGridLayout && Boolean(selectedEntityId);
+  const profileDetailVaulOpened = isNarrowViewport && (gridFlowOverlayOpened || narrowListDetailOpened);
+  const profileDetailModalOpened = !isNarrowViewport && gridFlowOverlayOpened;
+  const showDetailInline = !isGridLayout && !isNarrowViewport;
+  const showSrOnlyDetailMount = isNarrowViewport && !isGridLayout && !narrowListDetailOpened;
 
   const gridModalHeaderTitle = useMemo(() => {
     if (selectedRow) {
@@ -204,7 +230,7 @@ export function ProfilesWidgetCore({
     if (!pendingGridOpenCreate) {
       return;
     }
-    if (!gridProfileModalOpened) {
+    if (!gridFlowOverlayOpened) {
       return;
     }
     const frame = window.requestAnimationFrame(() => {
@@ -212,7 +238,7 @@ export function ProfilesWidgetCore({
       setPendingGridOpenCreate(false);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [pendingGridOpenCreate, gridProfileModalOpened]);
+  }, [pendingGridOpenCreate, gridFlowOverlayOpened]);
 
   const listItems = useMemo(
     () =>
@@ -398,8 +424,10 @@ export function ProfilesWidgetCore({
         preferredSelectionRef.current = id;
       }}
       embedCreateFlowInline={isGridLayout && gridCreateSession && !selectedEntityId}
-      hostGridProfileModalChrome={isGridLayout && Boolean(selectedEntityId)}
-      gridModalDetailHeaderHostEl={isGridLayout && gridProfileModalOpened ? gridDetailHeaderHostEl : null}
+      hostGridProfileModalChrome={Boolean(selectedEntityId) && (profileDetailModalOpened || profileDetailVaulOpened)}
+      gridModalDetailHeaderHostEl={
+        profileDetailModalOpened || profileDetailVaulOpened ? gridDetailHeaderHostEl : null
+      }
       onHostGridModalDetailTitleChange={setGridModalDetailTitleOverride}
     />
   );
@@ -415,9 +443,9 @@ export function ProfilesWidgetCore({
             minHeight: 0,
             minWidth: 0,
             display: "flex",
-            flexDirection: isGridLayout ? "column" : "row",
+            flexDirection: isGridLayout || isNarrowViewport ? "column" : "row",
             alignItems: "stretch",
-            gap: isGridLayout ? 0 : "1rem",
+            gap: isGridLayout || isNarrowViewport ? 0 : "1rem",
             width: "100%",
           }}
         >
@@ -425,7 +453,7 @@ export function ProfilesWidgetCore({
             data-testid="profiles-widget-list-column"
             gap="xs"
             style={
-              isGridLayout
+              isGridLayout || isNarrowViewport
                 ? {
                     flex: "1 1 auto",
                     width: "100%",
@@ -452,6 +480,7 @@ export function ProfilesWidgetCore({
                 items={listItems}
                 mode="inline"
                 heightMode="fill"
+                mobileLayout={cardListColumnMobileLayout}
                 view={effectiveCardListView}
                 onViewChange={handleCardListViewChange}
                 selectedItemId={selectedEntityId}
@@ -533,7 +562,7 @@ export function ProfilesWidgetCore({
             ) : null}
           </Stack>
 
-          {!isGridLayout ? (
+          {showDetailInline ? (
             <Box
               style={{
                 flex: 1,
@@ -549,27 +578,44 @@ export function ProfilesWidgetCore({
           ) : null}
         </Box>
 
-        {isGridLayout ? (
+        {showSrOnlyDetailMount ? (
+          <Box
+            data-testid="profiles-widget-detail-sr-mount"
+            style={{
+              position: "fixed",
+              left: -9999,
+              top: 0,
+              width: 1,
+              height: 1,
+              overflow: "hidden",
+              pointerEvents: "none",
+              opacity: 0,
+            }}
+            aria-hidden
+          >
+            {renderProfileDetail()}
+          </Box>
+        ) : null}
+
+        {profileDetailModalOpened ? (
           <AprilModal
-            opened={gridProfileModalOpened}
+            opened
             onClose={handleGridProfileModalClose}
             headerTitle={gridModalHeaderTitle}
             headerActions={
-              gridProfileModalOpened ? (
-                <span
-                  ref={bindGridDetailHeaderHost}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "flex-end",
-                    gap: "var(--mantine-spacing-xs)",
-                    flexShrink: 1,
-                    minWidth: 0,
-                    maxWidth: "min(56vw, 720px)",
-                    flexWrap: "wrap",
-                  }}
-                />
-              ) : undefined
+              <span
+                ref={bindGridDetailHeaderHost}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: "var(--mantine-spacing-xs)",
+                  flexShrink: 1,
+                  minWidth: 0,
+                  maxWidth: "min(56vw, 720px)",
+                  flexWrap: "wrap",
+                }}
+              />
             }
             size="xl"
             centered
@@ -591,6 +637,42 @@ export function ProfilesWidgetCore({
               {renderProfileDetail()}
             </Box>
           </AprilModal>
+        ) : null}
+
+        {profileDetailVaulOpened ? (
+          <AprilVaulBottomSheet
+            opened
+            onClose={handleGridProfileModalClose}
+            headerTitle={gridModalHeaderTitle}
+            zIndex={APRIL_MOBILE_BOTTOM_SHEET_Z_INDEX + 10}
+            overlayZIndex={APRIL_MOBILE_BOTTOM_SHEET_Z_INDEX + 9}
+            headerActions={
+              <span
+                ref={bindGridDetailHeaderHost}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: "var(--mantine-spacing-xs)",
+                  flexShrink: 1,
+                  minWidth: 0,
+                  maxWidth: "min(72vw, 560px)",
+                  flexWrap: "wrap",
+                }}
+              />
+            }
+          >
+            <Box
+              style={{
+                width: "100%",
+                minHeight: "min(40dvh, 360px)",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              {renderProfileDetail()}
+            </Box>
+          </AprilVaulBottomSheet>
         ) : null}
       </Stack>
     </DensityProvider>

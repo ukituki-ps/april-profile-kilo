@@ -9,7 +9,11 @@
 
 > Сборка со списком слева: [`./profiles-widget.md`](./profiles-widget.md) (раздел про левую колонку и `GET /v1/entities`).
 
-В составном **`profiles-widget`** при виде сетки у `CardListColumn` детальная карточка может монтироваться в **`AprilModal`**; публичный контракт **`ProfilesWidgetProfileDetail`** / **`ProfilesWidgetProfileDetailCore`** от этого не меняется.
+В составном **`profiles-widget`** детальная карточка может монтироваться в **`AprilModal`** (широкий экран, сетка) или **`AprilVaulBottomSheet`** (узкий экран / сетка / список с выбором — см. [`profiles-widget.md`](./profiles-widget.md)); публичный контракт **`ProfilesWidgetProfileDetail`** / **`ProfilesWidgetProfileDetailCore`** от этого не меняется.
+
+### Мобильный тулбар и версии
+
+На узком viewport (`(max-width: 47.99em)`) при монтировании в «хром» родителя (**`hostGridProfileModalChrome`**, шапка модалки или bottom sheet) выбор версии переносится: кнопка с иконкой **Versions** открывает **`AprilVaulBottomSheet`** со списком версий; пока лист открыт, **остальные элементы тулбара в шапке не показываются** (норма «один активный контекст»). На широком экране по-прежнему **`Select`** версий в строке.
 
 ## Назначение (две части)
 

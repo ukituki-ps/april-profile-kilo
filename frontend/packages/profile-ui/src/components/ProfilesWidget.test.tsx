@@ -36,6 +36,24 @@ vi.mock("@april/ui", async () => {
   const { SegmentedControl } = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
   return {
     AprilModal,
+    AprilVaulBottomSheet: ({
+      opened,
+      children,
+      onClose,
+    }: {
+      opened: boolean;
+      children?: ReactNode;
+      onClose?: () => void;
+    }) =>
+      opened ? (
+        <div data-testid="profiles-widget-mock-vaul" role="dialog">
+          <button type="button" aria-label="Close vaul mock" onClick={onClose}>
+            close
+          </button>
+          {children}
+        </div>
+      ) : null,
+    APRIL_MOBILE_BOTTOM_SHEET_Z_INDEX: 350,
     AprilIconClose,
     AprilIconCheck,
     AprilGradientSegmentedControl: SegmentedControl,
