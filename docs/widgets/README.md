@@ -1,6 +1,7 @@
 # Каталог профилей и виджетов
 
-> Модель и правила ведения каталога: [`../WIDGET_DOCS_OPERATING_MODEL.md`](../WIDGET_DOCS_OPERATING_MODEL.md).
+> Модель и правила ведения каталога: [`../WIDGET_DOCS_OPERATING_MODEL.md`](../WIDGET_DOCS_OPERATING_MODEL.md).  
+> Паттерн архитектуры «список + детальная карточка» (для новых виджетов с той же топологией): [`MASTER_DETAIL_WIDGET_PATTERN.md`](./MASTER_DETAIL_WIDGET_PATTERN.md).
 
 ## Формат каталога
 
