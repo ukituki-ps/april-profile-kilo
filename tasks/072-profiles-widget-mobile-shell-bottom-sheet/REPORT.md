@@ -62,3 +62,7 @@ cd /home/ukituki/april-profile-1/frontend && npm run lint -w @april/profile-ui &
 
 - [ ] Ручной смок в браузере: сужение окна, grid/list, фильтр, деталь, версии, create.
 - [ ] PR и merge по политике репозитория.
+
+## 9) Дополнение (после первого merge / по отзыву)
+
+- **Create на узком экране:** ранее при `list`+narrow кнопка «Добавить» вызывала `openCreate()` без открытия profile sheet → **`AprilModal`**. Исправление: `e40ca2e` — сессия `gridCreateSession`+`pendingGridOpenCreate` и на narrow в list, `embedCreateFlowInline={gridCreateSession && !selectedEntityId}`, overlay `narrowListCreateOverlay`, `hostGridProfileModalChrome` при create-only в sheet.
