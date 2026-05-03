@@ -169,12 +169,17 @@ export function ProfilesWidgetCore({
   );
 
   const isGridLayout = effectiveCardListView === "grid";
-  const gridFlowOverlayOpened = isGridLayout && (Boolean(selectedEntityId) || gridCreateSession);
+  /** Широкий/сетка: модалка; узкий+list: sheet при выборе или при «Добавить» (сессия create). */
+  const gridViewStackOverlay = isGridLayout && (Boolean(selectedEntityId) || gridCreateSession);
+  const narrowListCreateOverlay =
+    isNarrowViewport && !isGridLayout && gridCreateSession && !selectedEntityId;
   const narrowListDetailOpened = isNarrowViewport && !isGridLayout && Boolean(selectedEntityId);
+  const gridFlowOverlayOpened = gridViewStackOverlay || narrowListCreateOverlay;
   const profileDetailVaulOpened = isNarrowViewport && (gridFlowOverlayOpened || narrowListDetailOpened);
-  const profileDetailModalOpened = !isNarrowViewport && gridFlowOverlayOpened;
+  const profileDetailModalOpened = !isNarrowViewport && gridViewStackOverlay;
   const showDetailInline = !isGridLayout && !isNarrowViewport;
-  const showSrOnlyDetailMount = isNarrowViewport && !isGridLayout && !narrowListDetailOpened;
+  const showSrOnlyDetailMount =
+    isNarrowViewport && !isGridLayout && !narrowListDetailOpened && !narrowListCreateOverlay;
 
   const gridModalHeaderTitle = useMemo(() => {
     if (selectedRow) {
@@ -423,8 +428,11 @@ export function ProfilesWidgetCore({
       onCreatedSelectEntity={(id) => {
         preferredSelectionRef.current = id;
       }}
-      embedCreateFlowInline={isGridLayout && gridCreateSession && !selectedEntityId}
-      hostGridProfileModalChrome={Boolean(selectedEntityId) && (profileDetailModalOpened || profileDetailVaulOpened)}
+      embedCreateFlowInline={gridCreateSession && !selectedEntityId}
+      hostGridProfileModalChrome={
+        (profileDetailModalOpened || profileDetailVaulOpened) &&
+        (Boolean(selectedEntityId) || gridCreateSession)
+      }
       gridModalDetailHeaderHostEl={
         profileDetailModalOpened || profileDetailVaulOpened ? gridDetailHeaderHostEl : null
       }
@@ -496,7 +504,7 @@ export function ProfilesWidgetCore({
                 filterOptions={[{ value: "all", label: "All types" }, ...typeOptions.filter((option) => option.value !== "all")]}
                 onFilterChange={(value) => setFilterTypeId(value.type ?? "all")}
                 onAddItem={() => {
-                  if (isGridLayout) {
+                  if (isGridLayout || isNarrowViewport) {
                     setGridCreateSession(true);
                     setPendingGridOpenCreate(true);
                   } else {
