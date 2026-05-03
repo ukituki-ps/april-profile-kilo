@@ -776,6 +776,14 @@ export function ProfilesWidgetCore({
               onAddItem={handleOpenCreateModal}
               totalItems={totalCount}
               loadedItemsCount={items.length}
+              selectedItemId={selectedEntityId}
+              onSelectItem={(id) => {
+                setSelectedEntityId(id);
+                setEditMode(false);
+                if (id) {
+                  onOpenEntity?.(id);
+                }
+              }}
               onReachListEnd={() => {
                 if (!nextCursor || listLoadingMore) {
                   return;
@@ -791,15 +799,14 @@ export function ProfilesWidgetCore({
                 return (
                   <Card
                     withBorder
-                    shadow={selected ? "sm" : undefined}
                     radius="md"
                     p="sm"
                     aria-label={`Profile row ${source?.entityId ?? item.id}`}
-                    style={{ borderColor: selected ? "var(--mantine-color-blue-6)" : undefined, cursor: "pointer" }}
-                    onClick={() => {
-                      setSelectedEntityId(item.id);
-                      setEditMode(false);
-                      onOpenEntity?.(item.id);
+                    style={{
+                      cursor: "pointer",
+                      ...(selected
+                        ? { borderColor: "var(--mantine-color-teal-filled)", borderWidth: 2 }
+                        : { borderWidth: 1 }),
                     }}
                   >
                     <Text fw={600} lineClamp={1}>

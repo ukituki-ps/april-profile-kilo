@@ -25,11 +25,13 @@ vi.mock("@april/ui", () => ({
     items,
     heightMode,
     onAddItem,
+    onSelectItem,
     renderCard,
   }: {
     items: Array<{ id: string; title: string }>;
     heightMode?: string;
     onAddItem?: () => void;
+    onSelectItem?: (id: string | null) => void;
     renderCard?: (item: { id: string; title: string }) => ReactNode;
   }) => (
     <div aria-label="CardListColumn mock" data-height-mode={heightMode}>
@@ -37,7 +39,9 @@ vi.mock("@april/ui", () => ({
         Add
       </button>
       {items.map((item) => (
-        <div key={item.id}>{renderCard ? renderCard(item) : item.id}</div>
+        <div key={item.id} onClick={() => onSelectItem?.(item.id)}>
+          {renderCard ? renderCard(item) : item.id}
+        </div>
       ))}
     </div>
   ),

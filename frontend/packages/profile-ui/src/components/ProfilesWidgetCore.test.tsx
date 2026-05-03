@@ -22,6 +22,7 @@ vi.mock("@april/ui", () => ({
     onReachListEnd,
     onAddItem,
     onFilterChange,
+    onSelectItem,
     renderCard,
   }: {
     items: Array<{ id: string; title: string }>;
@@ -30,6 +31,7 @@ vi.mock("@april/ui", () => ({
     onReachListEnd?: () => void;
     onAddItem?: () => void;
     onFilterChange?: (value: Record<string, string | undefined>) => void;
+    onSelectItem?: (id: string | null) => void;
     renderCard?: (item: { id: string; title: string }) => ReactNode;
   }) => (
     <div aria-label="CardListColumn mock" data-height-mode={heightMode}>
@@ -44,7 +46,9 @@ vi.mock("@april/ui", () => ({
         Add
       </button>
       {items.map((item) => (
-        <div key={item.id}>{renderCard ? renderCard(item) : item.id}</div>
+        <div key={item.id} onClick={() => onSelectItem?.(item.id)}>
+          {renderCard ? renderCard(item) : item.id}
+        </div>
       ))}
     </div>
   ),

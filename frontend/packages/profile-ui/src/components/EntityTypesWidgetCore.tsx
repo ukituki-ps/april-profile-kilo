@@ -818,20 +818,27 @@ export function EntityTypesWidgetCore({
             }}
             totalItems={families.length}
             loadedItemsCount={families.length}
+            selectedItemId={selectedFamilyId}
+            onSelectItem={(id) => {
+              setSelectedFamilyId(id);
+              if (id) {
+                setActiveTab("draft");
+              }
+            }}
             renderCard={(item) => {
               const f = families.find((row) => row.id === item.id);
               const selected = selectedFamilyId === item.id;
               return (
                 <Card
                   withBorder
-                  shadow={selected ? "sm" : undefined}
                   radius="md"
                   p="sm"
                   aria-label={`Entity type family ${item.id}`}
-                  style={{ borderColor: selected ? "var(--mantine-color-blue-6)" : undefined, cursor: "pointer" }}
-                  onClick={() => {
-                    setSelectedFamilyId(item.id);
-                    setActiveTab("draft");
+                  style={{
+                    cursor: "pointer",
+                    ...(selected
+                      ? { borderColor: "var(--mantine-color-teal-filled)", borderWidth: 2 }
+                      : { borderWidth: 1 }),
                   }}
                 >
                   <Text fw={600} lineClamp={1}>
