@@ -9,6 +9,8 @@
 
 > Сборка со списком слева: [`./profiles-widget.md`](./profiles-widget.md) (раздел про левую колонку и `GET /v1/entities`).
 
+В составном **`profiles-widget`** при виде сетки у `CardListColumn` деталь может монтироваться в **`AprilModal`**; публичный контракт **`ProfilesWidgetProfileDetail`** / **`ProfilesWidgetProfileDetailCore`** от этого не меняется.
+
 ## Назначение (две части)
 
 1. **Часть 1 — просмотр и опционально редактирование** выбранного профиля: карточка сущности, версии, сегменты Form / Tree / Source / Schema по текущей спеке. Host может отключить мутации документа и удаление: проп **`documentEditingEnabled`** (по умолчанию `true`) и **`allowProfileDelete`** (по умолчанию `true`).
@@ -27,7 +29,7 @@
 
 ## Зависимости и JSON-документ (DS)
 
-- `@april/profile-ui`, `@april/ui` (≥ **0.1.7**).
+- `@april/profile-ui`, `@april/ui` (≥ **0.1.9**).
 - **`DensityProvider`** в корне виджета детали.
 - Поле **`document`**: один ряд сегментов **`EntityTypesDraftJsonEditor`**: **Form** (RJSF при валидной published-схеме) → **Tree** → **Source** → при наличии у провайдера **`getEntityTypePublishedSchema`** — **Schema** (read-only `published_schema` с `GET /v1/entity-types/{id}`). Режим просмотра без редактирования — те же сегменты в read-only.
 - **`AprilJsonValidationSummary`** для **`schemaIssues`**. Стек согласован с задачами **057–059**; минимальная клиентская валидация корня документа: `{ "type": "object" }`.
