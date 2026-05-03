@@ -1,4 +1,4 @@
-import type { EntityTypeListResponse, ProfileListItem, ProfileListResponse, ProfileSnapshot } from "../generated";
+import type { EntityType, EntityTypeListResponse, ProfileListItem, ProfileListResponse, ProfileSnapshot } from "../generated";
 import type { OpenAPIConfig } from "../generated/core/OpenAPI";
 import { request as openApiRequest } from "../generated/core/request";
 import type {
@@ -160,8 +160,40 @@ export const createOpenApiProfilesProvider = (config: OpenApiProviderConfig): Pr
         const items: EntityTypeOption[] = response.items.map((row) => ({
           id: row.id,
           label: `${row.namespace}/${row.code}`,
+          publishedSchema:
+            row.published_schema != null &&
+            typeof row.published_schema === "object" &&
+            !Array.isArray(row.published_schema)
+              ? (row.published_schema as Record<string, unknown>)
+              : null,
         }));
         return items;
+      } catch (error) {
+        throw mapApiErrorToProfilesProviderError(error);
+      }
+    },
+    async getEntityTypePublishedSchema(entityTypeId: string, ctx: ProviderContext) {
+      try {
+        const openApiConfig = buildConfig(config, ctx);
+        const promise = openApiRequest<EntityType>(openApiConfig, {
+          method: "GET",
+          url: "/v1/entity-types/{entityTypeID}",
+          path: { entityTypeID: entityTypeId },
+          errors: {
+            401: "Unauthorized",
+            403: "Forbidden",
+            404: "Not found",
+          },
+        });
+        const row = await withSignal(ctx, () => ({ promise, cancel: () => promise.cancel() }));
+        const raw = row.published_schema;
+        if (raw == null) {
+          return null;
+        }
+        if (typeof raw !== "object" || Array.isArray(raw)) {
+          return null;
+        }
+        return raw as Record<string, unknown>;
       } catch (error) {
         throw mapApiErrorToProfilesProviderError(error);
       }

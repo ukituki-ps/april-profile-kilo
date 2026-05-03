@@ -59,6 +59,8 @@ sidebar_position: 20
 - [053 — Ревизии типов: API и OpenAPI](./task-story-053-phase-7-entity-type-revisions-api)
 - [054 — Виджет `entity-types-widget` в `@april/profile-ui`](./task-story-054-phase-7-entity-types-widget)
 - [057 — DS JSON-редакторы в `entity-types-widget`](./task-story-057-phase-7-profile-ui-ds-json-entity-types)
+- [058 — DS JSON-редакторы в `profiles-widget`](./task-story-058-phase-7-profile-ui-ds-json-profiles-widget)
+- [059 — RJSF-форма документа в `profiles-widget`](./task-story-059-phase-7-profiles-widget-rjsf-document-form)
 
 ## Быстрый статус
 
@@ -110,3 +112,5 @@ sidebar_position: 20
 | 054 `entity-types-widget` UI | ✅ | [054](./task-story-054-phase-7-entity-types-widget) | Production-first виджет Core+Api+facade, DS, telemetry, handoff подготовлен в репозитории |
 | 055 Contracts + docs-site + Hub handoff docs | ✅ | [контракты](/docs/widget-contracts) §9, [handoff](https://github.com/ukituki-ps/april-profile/blob/develop/docs/integration/entity-types-widget-hub-handoff.md), отчёт `tasks/055-phase-7-entity-types-contract-docs-hub-handoff/REPORT.md` | Синхронизация `WIDGET_CONTRACTS` / чеклистов / каталога; три story-страницы 052–054; финальный handoff Hub/BFF |
 | 057 DS JSON в `entity-types-widget` | ✅ | [057](./task-story-057-phase-7-profile-ui-ds-json-entity-types) | `AprilJsonTreeEditor` / Source на DS, read-only ревизии, `schemaIssues` из 422, `peerDependencies` на `@april/ui` |
+| 058 DS JSON в `profiles-widget` | ✅ | [058](./task-story-058-phase-7-profile-ui-ds-json-profiles-widget) | Тот же стек Tree/Source + summary; read-only дерево просмотра; `DensityProvider`; Form по схеме отложен |
+| 059 RJSF Form в `profiles-widget` | ✅ | [059](./task-story-059-phase-7-profiles-widget-rjsf-document-form) | `AprilJsonSchemaForm` при наличии `published_schema`; Tree \| Source \| Form; один `document` на Save/Create |

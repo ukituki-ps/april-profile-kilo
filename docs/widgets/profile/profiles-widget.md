@@ -1,4 +1,4 @@
-# Карточка виджета: `profiles-widget`
+# Карточка виджета: `profiles-widget` (сборка)
 
 ## 1) Мета
 
@@ -11,25 +11,67 @@
 | `lifecycleStatus` | `beta` |
 | Владелец | команда AprilProfile (`april-profile`) + интеграция в AprilHub (`april-worker`) |
 
-## 2) Назначение
+## 2) Назначение (master–detail)
 
-Виджет `Profiles` предоставляет основной master-detail UX для управления профилями сущностей: слева список профилей с поиском/фильтрацией/дозагрузкой (отображаемое имя из `document.name` и версия), справа карточка выбранного профиля с выбором версии (исторические версии read-only + «Save snapshot as new version (+1)»), просмотром и редактированием JSON, действиями через иконки, плюс создание профиля через модалку (тип сущности из каталога `GET /v1/entity-types`, имя профиля и документ). Контейнер заполняет доступную высоту хоста (`flex`); повторная подгрузка списка без полноэкранного лоадера, если список уже отображался.
+Виджет **`ProfilesWidget`** — **составная сборка**: **список** профилей сущностей слева и **карточка** выбранного профиля с версиями и JSON-документом справа. Правая колонка и модалка создания реализованы отдельным публичным виджетом **`ProfilesWidgetProfileDetail`** (см. [`profiles-widget-profile-detail.md`](./profiles-widget-profile-detail.md)); `ProfilesWidget` монтирует его внутри и прокидывает выбранную строку и колбэки.
 
-## 3) Контракт интеграции
+Контейнер заполняет доступную высоту хоста (`flex`); layout DS-first: `CardListColumn` + колонка карточки на `flex`, `minWidth: 0`.
 
-- HostContext/props/events: [`../../WIDGET_CONTRACTS.md`](../../WIDGET_CONTRACTS.md).
+## 3) Левая колонка: список профилей
+
+> Нормативное содержание бывшего файла `profiles-widget-list.md` (файл исключён; ссылки ведут на этот раздел).
+
+### Назначение
+
+Левая колонка даёт **server-driven** список профилей сущностей: поиск, фильтр по типу сущности, курсорная пагинация, детерминированная сортировка. Строка показывает отображаемое имя (из `document.name` через `preview` / согласованное поле API), версию и идентификаторы, необходимые для выбора. Контейнер списка участвует в общем `flex`-layout виджета (`CardListColumn`); при повторной подгрузке списка не требуется полноэкранный лоадер, если список уже отображался (поведение согласовано с `ProfilesWidgetCore`).
+
+### Контракт данных списка
+
+- Источник списка **только** через provider/API: `GET /v1/entities` с query-параметрами. Входной проп **`entityIds`** как source of truth **не поддерживается** (см. ограничения ниже).
+- Параметры списка со стороны host (через фасад виджета): `pageSize`, `initialSearch`, `initialTypeId`, `initialSort`, `autoSelectFirst` — см. тип `ProfilesWidgetProps` в пакете.
+
+#### `GET /v1/entities` (task 043)
+
+- Query:
+  - `search` — поиск по `entity_id` и текстовому содержимому текущего `document`;
+  - `entity_type_id` — фильтр по типу;
+  - `limit` — размер страницы (`1..100`);
+  - `cursor` — непрозрачный курсор следующей страницы;
+  - `sort` — `updated_desc` / `updated_asc` (детерминированный порядок).
+- Ответ:
+  - `items[]` (`entity_id`, `entity_type_id`, `version`, `created_at`, `preview`);
+  - `next_cursor` (`null` на конце списка);
+  - `total_count`.
+- Ошибки: `401/403/422/429/500` в envelope `code`, `message`, `request_id`.
+
+### UI и дизайн-система
+
+- Список строится на **`CardListColumn`** из `@april/ui` (≥ **0.1.7**); корень сборки оборачивается в **`DensityProvider`** (общий с виджетом детали).
+- Уникальность **`document.name`**: клиентская проверка возможна **только** по уже загруженной странице списка; финальная уникальность — на сервере, когда контракт это отразит.
+
+### Observability (список)
+
+- Корреляция: [`../../WIDGET_OBSERVABILITY_GUIDE.md`](../../WIDGET_OBSERVABILITY_GUIDE.md).
+- События, относящиеся к списку: `list_requested`, `list_succeeded`, `list_failed` (и общий `view_loaded` при первом показе); поле `widget` = `profiles_list` — см. [`../../WIDGET_CONTRACTS.md`](../../WIDGET_CONTRACTS.md).
+
+### Ограничения и anti-patterns (список)
+
+- Нельзя использовать **`entityIds`** как источник истины для списка.
+- Нельзя подменять server-side пагинацию **полной** client-side выборкой или имитацией «всех» строк.
+
+## 4) Контракт интеграции (обзор)
+
+- HostContext / props / events: [`../../WIDGET_CONTRACTS.md`](../../WIDGET_CONTRACTS.md).
 - Версионирование: [`../../VERSIONING_AND_COMPATIBILITY.md`](../../VERSIONING_AND_COMPATIBILITY.md).
-- Интеграционный чеклист host: [`../../WIDGET_INTEGRATION_CHECKLIST.md`](../../WIDGET_INTEGRATION_CHECKLIST.md).
+- Чеклист host: [`../../WIDGET_INTEGRATION_CHECKLIST.md`](../../WIDGET_INTEGRATION_CHECKLIST.md).
 
-Ключевые контрактные элементы (Phase 6 baseline):
+Ключевые элементы (без дублирования длинных таблиц — см. типы **`ProfilesWidgetProps`**, **`ProfilesListAction`** в `@april/profile-ui`):
 
-- Вход: `hostContext`, `apiBaseUrl` (или API adapter), опционально `accessToken`, `initialCreateEntityTypeId` (предвыбор типа в модалке создания), `pageSize`, `initialSearch`, `initialTypeId`, `initialSort`, `autoSelectFirst`.
-- Источник данных: server-side list/search/filter/pagination через provider/API, без входного `entityIds` как source of truth.
-- Выход: `onAction` (`created`/`updated`/`deleted`), `onError` с безопасным сообщением + `requestId` + `code`, `onOpenEntity` для host-навигации.
-- Поведение: DS-first layout (`CardListColumn` + колонка карточки на `flex`, `minWidth: 0` для корректного схлопывания/расширения), провайдер может реализовать `getByVersion` и `listEntityTypes` (OpenAPI-провайдер реализует оба).
-- Уникальность `document.name` в UI: клиентская проверка по уже загруженной странице списка; серверный unique — при появлении контракта.
+- Вход: `hostContext`, `apiBaseUrl` (или adapter), опционально `accessToken`, `initialCreateEntityTypeId`, `pageSize`, `initialSearch`, `initialTypeId`, `initialSort`, `autoSelectFirst`.
+- Выход: `onAction`, `onError`, `onObservability`, `onOpenEntity`.
+- Источник списка: только server-side API (раздел «Левая колонка» выше).
 
-### Архитектурная схема ответственности (task 042)
+### Архитектура кода (task 042, расширение task 065)
 
 ```mermaid
 flowchart LR
@@ -37,69 +79,42 @@ flowchart LR
     Facade --> Api[ProfilesApiWidget]
     Api --> Provider[ProfilesDataProvider]
     Api --> Core[ProfilesWidgetCore]
-    Core -->|list/get/create/update/delete| Provider
+    Core -->|list| Provider
+    Core --> Detail[ProfilesWidgetProfileDetailCore]
+    Detail -->|get/create/update/delete| Provider
     Provider -->|OpenAPI SDK| BFF[/admin/profile/api]
 ```
 
-- `ProfilesWidgetCore`: UI/state machine, без знания транспортного слоя.
-- `ProfilesApiWidget`: wiring host + OpenAPI provider.
-- `ProfilesWidget`: публичный фасад для embed.
-- `update` поток: `Core` передает `expectedVersion` в provider-контракт (optimistic concurrency hint).
-- `ProfilesApiWidget` формирует `ProviderContext` (`tenantId`, auth, telemetry) и передает его в `Core`.
-- `ProfilesWidgetCore` использует `AbortController` для реальной отмены list/details запросов при смене состояния.
+- `ProfilesWidgetCore`: список слева + композиция **`ProfilesWidgetProfileDetailCore`** справа; без транспорта в Core.
+- `ProfilesApiWidget`: wiring host + OpenAPI provider, `ProviderContext`, **`AbortController`** для отмены list/details при смене состояния.
+- `ProfilesWidget`: публичный фасад embed для **сборки** master–detail.
+- **`ProfilesWidgetProfileDetail`** / **`ProfilesApiWidgetProfileDetail`**: публичные фасады **только** правой колонки + создание (императивный `ref.openCreate()` и др.) — см. [`profiles-widget-profile-detail.md`](./profiles-widget-profile-detail.md).
+- `update`: `Core` / деталь передают `expectedVersion` в провайдер.
 
-## 4) Права доступа и безопасность
+### Расширяемость (перспектива, без обязательств текущего API)
 
-- Источник прав: Keycloak (роли и claims в доверенном контуре host/BFF).
-- ABAC/tenant-политики применяются backend-ом; виджет не дублирует IAM-логику.
-- API-ошибки (`401/403/409`) отображаются через безопасные сообщения без утечки внутренних деталей.
+Host или будущий **registry** смогут подставить альтернативный UI редактирования **документа** при том же списке и том же идентификаторе сущности, если явно зафиксирован контракт: выбор строки, `entityId`, мутации с `expectedVersion` и теми же колбэками безопасности.
 
-## 5) Зависимости
+## 5) Права доступа и безопасность
 
-- `@april/profile-ui` (workspace/npm пакет, semver).
-- `@april/ui` (`CardListColumn`) как основной DS-компонент списка.
-- OpenAPI методы list/get/create/update/delete профиля; для версий — `GET /v1/entities/{id}/versions/{version}`; для типов — `GET /v1/entity-types`.
-- `@tabler/icons-react` для иконок действий в карточке (peer-подобное включение через зависимость пакета).
+- Keycloak / BFF; ABAC на backend; виджет не дублирует IAM. Ошибки API — безопасные сообщения для UI.
 
-### Контракт list endpoint (task 043)
+## 6) Observability и качество
 
-- `GET /v1/entities` с query:
-  - `search` — поиск по `entity_id` и текстовому содержимому текущего `document`;
-  - `entity_type_id` — фильтр по типу;
-  - `limit` — размер страницы (`1..100`);
-  - `cursor` — непрозрачный курсор следующей страницы;
-  - `sort` — `updated_desc`/`updated_asc` (детерминированный порядок).
-- Ответ:
-  - `items[]` (`entity_id`, `entity_type_id`, `version`, `created_at`, `preview`);
-  - `next_cursor` (`null` на конце списка);
-  - `total_count`.
-- Ошибки: `401/403/422/429/500` в envelope `code`, `message`, `request_id`.
+- Корреляция: [`../../WIDGET_OBSERVABILITY_GUIDE.md`](../../WIDGET_OBSERVABILITY_GUIDE.md). События списка — в разделе «Левая колонка»; события карточки/сохранения — в [`profiles-widget-profile-detail.md`](./profiles-widget-profile-detail.md).
 
-## 6) Observability
+### Release gate (task 047)
 
-- Корреляция по `requestId`/`X-Request-Id`: [`../../WIDGET_OBSERVABILITY_GUIDE.md`](../../WIDGET_OBSERVABILITY_GUIDE.md).
-- События: `view_loaded`, `list_requested`, `list_succeeded`, `list_failed`, `details_requested`, `details_failed`, `save_submitted`, `save_succeeded`, `save_failed` для `widget = profiles_list` (backward-compatible telemetry key).
-- Минимальный smoke: загрузка списка, create/update/delete, обработка API-ошибок.
-
-### Release gate variant C (task 047)
-
-- Обязательный набор проверок:
-  - `cd frontend && npm run lint -w @april/profile-ui`
-  - `cd frontend && npm run test -w @april/profile-ui`
-  - `cd frontend && npm run build -w @april/profile-ui`
-  - `go test ./...`
-- Релиз блокируется, если отсутствуют тесты:
-  - `ProfilesWidgetCore` на race/abort/error payload/observability;
-  - `openapiProfilesProvider` на mapping/error/requestId/context/signal;
-  - smoke сценарии `ProfilesWidget` для CRUD + `401/403/409`.
+- `cd frontend && npm run lint -w @april/profile-ui`
+- `cd frontend && npm run test -w @april/profile-ui`
+- `cd frontend && npm run build -w @april/profile-ui`
+- `go test ./...`
+- Тесты: `ProfilesWidgetCore`, `ProfilesWidgetProfileDetailCore`, `openapiProfilesProvider`, smoke `ProfilesWidget` (CRUD, `401/403/409`).
 
 ## 7) Ограничения и known issues
 
-- Публичный контракт `ProfilesWidget` не поддерживает `entityIds`; источник списка только server-side list API.
-- Anti-patterns для новых изменений:
-  - нельзя возвращаться к `entityIds` как source of truth;
-  - нельзя переносить transport/env-логику в `Core`;
-  - нельзя подменять server-side пагинацию client-side имитацией полной выборкой.
+- Публичный контракт не поддерживает `entityIds` как source of truth для списка.
+- Anti-patterns: не переносить transport в `Core`; не подменять server-side пагинацию полной client-side выборкой (см. раздел про список).
 
 ## 8) Артефакты (TASK/PLAN/REPORT + smoke/e2e)
 
@@ -110,4 +125,7 @@ flowchart LR
 - Базовый CRUD-виджет (историческая база): [`../../../tasks/025-phase-4a-profile-profiles-list-crud-widget/TASK.md`](../../../tasks/025-phase-4a-profile-profiles-list-crud-widget/TASK.md).
 - UX-модернизация `widget-card`: [`../../../tasks/040-phase-5-widget-card-layout-modernization/TASK.md`](../../../tasks/040-phase-5-widget-card-layout-modernization/TASK.md).
 - Рефакторинг embed UI + версии + имя (task 051): [`../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/TASK.md`](../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/TASK.md), [`../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/PLAN.md`](../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/PLAN.md), [`../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/REPORT.md`](../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/REPORT.md).
-- JSON-документ профиля на компонентах `@april/ui` (0.1.5+): [`../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md) (зависит от [`057`](../../../tasks/057-phase-7-profile-ui-ds-json-entity-types-integration/TASK.md)).
+- JSON-документ профиля на компонентах `@april/ui` (0.1.8+): [`../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md), [`../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/PLAN.md`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/PLAN.md), [`../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/REPORT.md`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/REPORT.md) (зависит от [`057`](../../../tasks/057-phase-7-profile-ui-ds-json-entity-types-integration/TASK.md)).
+- RJSF (059): [`../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/TASK.md`](../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/TASK.md), [`../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/PLAN.md`](../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/PLAN.md), [`../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/REPORT.md`](../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/REPORT.md) (зависит от [`058`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md)).
+- Разнесение спецификации list/detail (062): [`../../../tasks/062-docs-profiles-widget-spec-list-content-assembly/TASK.md`](../../../tasks/062-docs-profiles-widget-spec-list-content-assembly/TASK.md), [`../../../tasks/062-docs-profiles-widget-spec-list-content-assembly/REPORT.md`](../../../tasks/062-docs-profiles-widget-spec-list-content-assembly/REPORT.md).
+- Split npm detail + композиция (065): [`../../../tasks/065-profiles-widget-split-detail-composition/TASK.md`](../../../tasks/065-profiles-widget-split-detail-composition/TASK.md), [`../../../tasks/065-profiles-widget-split-detail-composition/REPORT.md`](../../../tasks/065-profiles-widget-split-detail-composition/REPORT.md).

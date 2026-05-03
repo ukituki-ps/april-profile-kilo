@@ -34,8 +34,7 @@
 
 ### 2. Опциональный режим «Form» (целевое расширение, не MVP-заглушка)
 
-- Если данные схемы для выбранного типа доступны из существующего провайдера без нового бэкенда: таб или `SegmentedControl` **JSON / Form**, где Form — **`AprilJsonSchemaForm`** с `hideDefaultSubmit`, кнопки сохранения остаются снаружи как сейчас.
-- Зафиксировать в `PLAN.md`: что происходит при переключении JSON↔Form (ре-синхронизация, валидация, кто побеждает при расхождении).
+- **Фактически в этой итерации не сделано:** в `listEntityTypes` / `EntityTypeOption` нет JSON Schema документа без расширения API — см. [`PLAN.md`](./PLAN.md). При появлении схемы: таб или `SegmentedControl` **JSON / Form**, **`AprilJsonSchemaForm`** с `hideDefaultSubmit`, правила переключения JSON↔Form — в `PLAN.md` / follow-up.
 
 ### 3. Тесты
 
@@ -56,11 +55,11 @@
 
 ## Критерии готовности (acceptance)
 
-- [ ] Нет основного пути редактирования document через `Textarea` для JSON.
-- [ ] Режимы Tree и (при необходимости) Source на компонентах DS; поведение create/update/versioned save сохранено.
-- [ ] `npm run lint|test|build -w @april/profile-ui` зелёные; при принятом gate — `go test ./...`.
-- [ ] Обновлён [`profiles-widget.md`](../../docs/widgets/profile/profiles-widget.md).
-- [ ] Страница **docs-site** (новая или дополнение к истории профилей) + при необходимости [`task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md).
+- [x] Нет основного пути редактирования document через `Textarea` для JSON.
+- [x] Режимы Tree и (при необходимости) Source на компонентах DS; поведение create/update/versioned save сохранено.
+- [x] `npm run lint|test|build -w @april/profile-ui` зелёные; при принятом gate — `go test ./...`.
+- [x] Обновлён [`profiles-widget.md`](../../docs/widgets/profile/profiles-widget.md).
+- [x] Страница **docs-site** (новая или дополнение к истории профилей) + при необходимости [`task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md).
 
 ## Проверка (команды)
 

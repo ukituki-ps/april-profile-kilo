@@ -17,7 +17,7 @@ export default defineConfig({
   },
   server: {
     host: "0.0.0.0",
-    port: 5174,
+    port: 5173,
   },
   test: {
     environment: "jsdom",
@@ -26,5 +26,10 @@ export default defineConfig({
     // Пакет `@april/profile-ui` имеет свой `vitest run` в workspace; здесь только shell-приложение.
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     exclude: ["**/node_modules/**", "**/dist/**", "packages/**"],
+    server: {
+      deps: {
+        inline: [/@april\/ui/, "mantine-vaul"],
+      },
+    },
   },
 });
