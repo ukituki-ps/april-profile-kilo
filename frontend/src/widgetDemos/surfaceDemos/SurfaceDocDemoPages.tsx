@@ -146,7 +146,7 @@ function ProfilesSurfaceDetailStandaloneBody() {
           onClick={() => setReadOnlyDetail((v) => !v)}
           aria-pressed={readOnlyDetail}
         >
-          {readOnlyDetail ? "Включить редактирование" : "Read-only деталь"}
+          {readOnlyDetail ? "Включить редактирование" : "Read-only детальная карточка"}
         </Button>
       </Group>
       <Box style={{ flex: 1, minHeight: 0 }}>
@@ -200,7 +200,7 @@ export function ProfilesWidgetAssemblySurfaceDemoPage() {
     <SurfaceDocDemoChrome
       demoPath="/demo/surfaces/profiles-widget"
       docFile="profiles-widget.md"
-      surfaceTitle="profiles-widget — сборка (список + деталь)"
+      surfaceTitle="profiles-widget — сборка (список + детальная карточка)"
       whereInUi="Слева список (`CardListColumn`), справа карточка и документ; кнопка «добавить» в списке открывает создание профиля (модалка виджета детали)."
     >
       <ProfilesSurfaceBody />

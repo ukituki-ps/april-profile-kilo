@@ -13,6 +13,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   DraftJsonEditorToolbar,
   EntityTypesDraftJsonEditor,
@@ -24,6 +25,7 @@ import {
   ActionIcon,
   Alert,
   Box,
+  Divider,
   Group,
   Loader,
   Select,
@@ -67,6 +69,13 @@ export type ProfilesWidgetProfileDetailCoreProps = {
   onListRevalidate?: () => void | Promise<void>;
   onEntityDeleted?: (entityId: string) => void;
   onCreatedSelectEntity?: (entityId: string) => void;
+  /** Когда родитель уже показывает модалку (grid «Создать»), не открывать второй AprilModal поверх. */
+  embedCreateFlowInline?: boolean;
+  /** Родительский `AprilModal` (grid + выбранный профиль): тулбар — в `headerActions` уровня с close. */
+  hostGridProfileModalChrome?: boolean;
+  /** Узел из `AprilModal.headerActions` родителя (grid-модалка): детальная карточка или Create — через `createPortal`. */
+  gridModalDetailHeaderHostEl?: HTMLElement | null;
+  onHostGridModalDetailTitleChange?: (title: string | null) => void;
 };
 
 export type ProfilesWidgetProfileDetailHandle = {
@@ -135,6 +144,10 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
   onListRevalidate,
   onEntityDeleted,
   onCreatedSelectEntity,
+  embedCreateFlowInline = false,
+  hostGridProfileModalChrome = false,
+  gridModalDetailHeaderHostEl = null,
+  onHostGridModalDetailTitleChange,
 }: ProfilesWidgetProfileDetailCoreProps,
   ref,
 ) {
@@ -742,25 +755,28 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
     }
   };
 
-  const onSelectVersion = (value: string | null) => {
-    if (!value) {
-      return;
-    }
-    const version = Number(value);
-    if (Number.isNaN(version)) {
-      return;
-    }
-    setViewedVersion(version);
-    const detail = versionDetailsByNum[version];
-    if (detail) {
-      setSelectedDocument(detail.document);
-      setEditDraftValue(structuredClone(detail.document));
-      setEditDraftSourceText(JSON.stringify(detail.document, null, 2));
-      setEditDraftMode("form");
-      setEditApiIssues(null);
-      setEditMode(false);
-    }
-  };
+  const onSelectVersion = useCallback(
+    (value: string | null) => {
+      if (!value) {
+        return;
+      }
+      const version = Number(value);
+      if (Number.isNaN(version)) {
+        return;
+      }
+      setViewedVersion(version);
+      const detail = versionDetailsByNum[version];
+      if (detail) {
+        setSelectedDocument(detail.document);
+        setEditDraftValue(structuredClone(detail.document));
+        setEditDraftSourceText(JSON.stringify(detail.document, null, 2));
+        setEditDraftMode("form");
+        setEditApiIssues(null);
+        setEditMode(false);
+      }
+    },
+    [versionDetailsByNum],
+  );
 
   const versionSelectData = useMemo(() => {
     const nums = Object.keys(versionDetailsByNum)
@@ -776,6 +792,185 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
     selectedItem === null
       ? ""
       : extractProfileNameFromDocument(selectedDocument ?? undefined) ?? listPrimaryLabel(selectedItem);
+
+  const profileDetailToolbar = useMemo(
+    () => (
+      <Group
+        gap="xs"
+        justify="flex-end"
+        wrap={hostGridProfileModalChrome ? "nowrap" : "wrap"}
+        align="center"
+        style={{ flexShrink: 0 }}
+      >
+        <Select
+          aria-label="Version"
+          size="xs"
+          w={150}
+          disabled={detailsLoading || Object.keys(versionDetailsByNum).length === 0}
+          data={versionSelectData}
+          value={viewedVersion !== null ? String(viewedVersion) : null}
+          onChange={onSelectVersion}
+          rightSection={versionsLoading ? <Loader size="xs" /> : undefined}
+          comboboxProps={{ withinPortal: false }}
+        />
+        {!detailsLoading && editMode && !historicalView ? (
+          <DraftJsonEditorToolbar
+            mode={editDraftMode}
+            onModeChange={setEditDraftMode}
+            value={editDraftValue}
+            onChange={setEditDraftValue}
+            sourceText={editDraftSourceText}
+            onSourceTextChange={setEditDraftSourceText}
+            readOnly={false}
+            compact={false}
+            withFormMode={profileEditorWithForm}
+            withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+          />
+        ) : null}
+        {!detailsLoading && (!editMode || historicalView) ? (
+          <DraftJsonEditorToolbar
+            mode={viewDocumentMode}
+            onModeChange={setViewDocumentMode}
+            value={selectedDocument ?? {}}
+            onChange={() => {}}
+            sourceText={viewDocumentSourceText}
+            onSourceTextChange={setViewDocumentSourceText}
+            readOnly
+            compact={false}
+            withFormMode={profileEditorWithForm}
+            withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+          />
+        ) : null}
+        <Group gap={4} justify="flex-end" wrap="wrap">
+          {documentEditingEnabled && historicalView ? (
+            <Tooltip label="Save snapshot as new version (+1)">
+              <ActionIcon
+                color="teal"
+                variant="filled"
+                aria-label="Save snapshot as new version (+1)"
+                onClick={() => {
+                  void handleSaveHistoricalAsNew();
+                }}
+                loading={busyEntityId === entityId}
+              >
+                <IconSparkles size={18} />
+              </ActionIcon>
+            </Tooltip>
+          ) : null}
+          {documentEditingEnabled && !historicalView && (
+            <>
+              {editMode ? (
+                <>
+                  <Tooltip label="Save changes">
+                    <ActionIcon
+                      variant="filled"
+                      aria-label="Save changes"
+                      disabled={!editDraftSaveOk}
+                      onClick={() => {
+                        void handleUpdate();
+                      }}
+                      loading={busyEntityId === entityId}
+                    >
+                      <IconDeviceFloppy size={18} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="Cancel editing">
+                    <ActionIcon
+                      variant="default"
+                      aria-label="Cancel editing"
+                      onClick={() => {
+                        setEditMode(false);
+                        if (selectedDocument) {
+                          setEditDraftValue(structuredClone(selectedDocument));
+                          setEditDraftSourceText(JSON.stringify(selectedDocument, null, 2));
+                          setEditDraftMode("form");
+                        }
+                        setEditApiIssues(null);
+                      }}
+                    >
+                      <IconX size={18} />
+                    </ActionIcon>
+                  </Tooltip>
+                </>
+              ) : (
+                <Tooltip label="Edit profile">
+                  <ActionIcon
+                    variant="light"
+                    aria-label="Edit profile"
+                    onClick={() => {
+                      setEditMode(true);
+                      if (selectedDocument) {
+                        setEditDraftValue(structuredClone(selectedDocument));
+                        setEditDraftSourceText(JSON.stringify(selectedDocument, null, 2));
+                        setEditDraftMode("form");
+                      }
+                      setEditApiIssues(null);
+                    }}
+                  >
+                    <IconEdit size={18} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
+            </>
+          )}
+          {allowProfileDelete ? (
+            <Tooltip label="Delete profile">
+              <ActionIcon
+                color="red"
+                variant="light"
+                aria-label="Delete profile"
+                loading={busyEntityId === entityId}
+                onClick={() => {
+                  if (entityId) {
+                    void handleDelete(entityId);
+                  }
+                }}
+              >
+                <IconTrash size={18} />
+              </ActionIcon>
+            </Tooltip>
+          ) : null}
+        </Group>
+      </Group>
+    ),
+    [
+      hostGridProfileModalChrome,
+      detailsLoading,
+      versionSelectData,
+      versionDetailsByNum,
+      viewedVersion,
+      versionsLoading,
+      onSelectVersion,
+      editMode,
+      historicalView,
+      editDraftMode,
+      editDraftValue,
+      editDraftSourceText,
+      profileEditorWithForm,
+      provider,
+      viewDocumentMode,
+      viewDocumentSourceText,
+      selectedDocument,
+      entityId,
+      busyEntityId,
+      documentEditingEnabled,
+      allowProfileDelete,
+      editDraftSaveOk,
+      handleSaveHistoricalAsNew,
+      handleUpdate,
+      handleDelete,
+    ],
+  );
+
+  useEffect(() => {
+    if (!hostGridProfileModalChrome || !selectedItem) {
+      onHostGridModalDetailTitleChange?.(null);
+      return;
+    }
+    const t = displayNameForCard.trim() || null;
+    onHostGridModalDetailTitleChange?.(t);
+    return () => onHostGridModalDetailTitleChange?.(null);
+  }, [hostGridProfileModalChrome, selectedItem, displayNameForCard, onHostGridModalDetailTitleChange]);
 
   useImperativeHandle(ref, () => ({
     openCreate: () => {
@@ -829,6 +1024,120 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
     );
   };
 
+  /** Размер кнопок в шапке Create profile (DS / макет). */
+  const createProfileHeaderActionPx = 26.4;
+  const createProfileHeaderIconPx = Math.round(18 * (createProfileHeaderActionPx / 32.17));
+
+  const createProfileHeaderIconButtons = (
+    <>
+      <ActionIcon
+        variant="default"
+        styles={{
+          root: {
+            width: createProfileHeaderActionPx,
+            height: createProfileHeaderActionPx,
+            minWidth: createProfileHeaderActionPx,
+          },
+        }}
+        onClick={() => setCreateModalOpened(false)}
+        aria-label="Cancel"
+        title="Cancel"
+      >
+        <AprilIconClose size={createProfileHeaderIconPx} aria-hidden />
+      </ActionIcon>
+      <ActionIcon
+        variant="filled"
+        color="teal"
+        styles={{
+          root: {
+            width: createProfileHeaderActionPx,
+            height: createProfileHeaderActionPx,
+            minWidth: createProfileHeaderActionPx,
+          },
+        }}
+        disabled={!createDraftSaveOk}
+        loading={busyEntityId === "create"}
+        onClick={() => void handleCreate()}
+        aria-label="Create profile"
+        title="Create profile"
+      >
+        <AprilIconCheck size={createProfileHeaderIconPx} aria-hidden />
+      </ActionIcon>
+    </>
+  );
+
+  /** В grid-модалке переключатель режимов JSON — в шапке справа, как у детали профиля. */
+  const createProfileHeaderActions =
+    embedCreateFlowInline && createModalOpened ? (
+      <Group gap="xs" wrap="nowrap" align="center" justify="flex-end">
+        <DraftJsonEditorToolbar
+          mode={createDraftMode}
+          onModeChange={setCreateDraftMode}
+          value={createDraftValue}
+          onChange={setCreateDraftValue}
+          sourceText={createDraftSourceText}
+          onSourceTextChange={setCreateDraftSourceText}
+          readOnly={false}
+          compact={false}
+          withFormMode={createEditorWithForm}
+          withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+        />
+        {createProfileHeaderIconButtons}
+      </Group>
+    ) : (
+      createProfileHeaderIconButtons
+    );
+
+  const createProfileEditorStack = (
+    <Stack gap="xs">
+      {provider.listEntityTypes ? (
+        <Select
+          label="Entity type"
+          placeholder="Select type"
+          data={entityTypeOptions}
+          value={createTypeId}
+          onChange={setCreateTypeId}
+          searchable
+          nothingFoundMessage="No types"
+          comboboxProps={{ withinPortal: false }}
+        />
+      ) : (
+        <TextInput
+          label="Entity type ID"
+          placeholder="Published entity type UUID"
+          value={createTypeId ?? ""}
+          onChange={(e) => setCreateTypeId(e.currentTarget.value || null)}
+        />
+      )}
+      <TextInput label="Profile name" value={createProfileName} onChange={(e) => setCreateProfileName(e.currentTarget.value)} />
+      <Divider />
+      <Box data-testid="profiles-widget-create-document" style={{ minHeight: 220, display: "flex", flexDirection: "column" }}>
+        <EntityTypesDraftJsonEditor
+          key={`create-doc-${createTypeId ?? "none"}`}
+          mode={createDraftMode}
+          onModeChange={setCreateDraftMode}
+          value={createDraftValue}
+          onChange={setCreateDraftValue}
+          sourceText={createDraftSourceText}
+          onSourceTextChange={setCreateDraftSourceText}
+          compact
+          showSearch={false}
+          rootName="profile_document"
+          serverValidationItems={createApiIssues ?? undefined}
+          withFormMode={createEditorWithForm}
+          rjsfSchema={publishedSchemaOkForForm(createPublishedSchema) ? createPublishedSchema.data : undefined}
+          withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+          schemaPanel={
+            <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+              {renderPublishedSchemaPanel(createPublishedSchema)}
+            </Box>
+          }
+          hideModeToolbar={embedCreateFlowInline && createModalOpened}
+        />
+      </Box>
+    </Stack>
+  );
+
   return (
     <DensityProvider>
       <Stack
@@ -852,146 +1161,21 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
         >
           {selectedItem ? (
             <>
-              <Box style={{ flexShrink: 0 }}>
-                <Group justify="space-between" align="flex-start" wrap="wrap" gap="sm">
-                  <Stack gap={4} style={{ flex: "1 1 200px", minWidth: 0 }}>
-                    <Title order={5} lineClamp={1}>
-                      {displayNameForCard}
-                    </Title>
-                  </Stack>
-                  <Group gap="xs" justify="flex-end" wrap="wrap" align="center" style={{ flexShrink: 0 }}>
-                    <Select
-                      aria-label="Version"
-                      size="xs"
-                      w={150}
-                      disabled={detailsLoading || Object.keys(versionDetailsByNum).length === 0}
-                      data={versionSelectData}
-                      value={viewedVersion !== null ? String(viewedVersion) : null}
-                      onChange={onSelectVersion}
-                      rightSection={versionsLoading ? <Loader size="xs" /> : undefined}
-                      comboboxProps={{ withinPortal: false }}
-                    />
-                    {!detailsLoading && editMode && !historicalView ? (
-                      <DraftJsonEditorToolbar
-                        mode={editDraftMode}
-                        onModeChange={setEditDraftMode}
-                        value={editDraftValue}
-                        onChange={setEditDraftValue}
-                        sourceText={editDraftSourceText}
-                        onSourceTextChange={setEditDraftSourceText}
-                        readOnly={false}
-                        compact={false}
-                        withFormMode={profileEditorWithForm}
-                        withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
-                      />
-                    ) : null}
-                    {!detailsLoading && (!editMode || historicalView) ? (
-                      <DraftJsonEditorToolbar
-                        mode={viewDocumentMode}
-                        onModeChange={setViewDocumentMode}
-                        value={selectedDocument ?? {}}
-                        onChange={() => {}}
-                        sourceText={viewDocumentSourceText}
-                        onSourceTextChange={setViewDocumentSourceText}
-                        readOnly
-                        compact={false}
-                        withFormMode={profileEditorWithForm}
-                        withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
-                      />
-                    ) : null}
-                    <Group gap={4} justify="flex-end" wrap="wrap">
-                    {documentEditingEnabled && historicalView ? (
-                      <Tooltip label="Save snapshot as new version (+1)">
-                        <ActionIcon
-                          color="teal"
-                          variant="filled"
-                          aria-label="Save snapshot as new version (+1)"
-                          onClick={() => {
-                            void handleSaveHistoricalAsNew();
-                          }}
-                          loading={busyEntityId === entityId}
-                        >
-                          <IconSparkles size={18} />
-                        </ActionIcon>
-                      </Tooltip>
-                    ) : null}
-                    {documentEditingEnabled && !historicalView && (
-                      <>
-                        {editMode ? (
-                          <>
-                            <Tooltip label="Save changes">
-                              <ActionIcon
-                                variant="filled"
-                                aria-label="Save changes"
-                                disabled={!editDraftSaveOk}
-                                onClick={() => {
-                                  void handleUpdate();
-                                }}
-                                loading={busyEntityId === entityId}
-                              >
-                                <IconDeviceFloppy size={18} />
-                              </ActionIcon>
-                            </Tooltip>
-                            <Tooltip label="Cancel editing">
-                              <ActionIcon
-                                variant="default"
-                                aria-label="Cancel editing"
-                                onClick={() => {
-                                  setEditMode(false);
-                                  if (selectedDocument) {
-                                    setEditDraftValue(structuredClone(selectedDocument));
-                                    setEditDraftSourceText(JSON.stringify(selectedDocument, null, 2));
-                                    setEditDraftMode("form");
-                                  }
-                                  setEditApiIssues(null);
-                                }}
-                              >
-                                <IconX size={18} />
-                              </ActionIcon>
-                            </Tooltip>
-                          </>
-                        ) : (
-                          <Tooltip label="Edit profile">
-                            <ActionIcon
-                              variant="light"
-                              aria-label="Edit profile"
-                              onClick={() => {
-                                setEditMode(true);
-                                if (selectedDocument) {
-                                  setEditDraftValue(structuredClone(selectedDocument));
-                                  setEditDraftSourceText(JSON.stringify(selectedDocument, null, 2));
-                                  setEditDraftMode("form");
-                                }
-                                setEditApiIssues(null);
-                              }}
-                            >
-                              <IconEdit size={18} />
-                            </ActionIcon>
-                          </Tooltip>
-                        )}
-                      </>
-                    )}
-                    {allowProfileDelete ? (
-                      <Tooltip label="Delete profile">
-                        <ActionIcon
-                          color="red"
-                          variant="light"
-                          aria-label="Delete profile"
-                          loading={busyEntityId === entityId}
-                          onClick={() => {
-                            if (entityId) {
-                              void handleDelete(entityId);
-                            }
-                          }}
-                        >
-                          <IconTrash size={18} />
-                        </ActionIcon>
-                      </Tooltip>
-                    ) : null}
-                    </Group>
+              {hostGridProfileModalChrome && gridModalDetailHeaderHostEl
+                ? createPortal(profileDetailToolbar, gridModalDetailHeaderHostEl)
+                : null}
+              {!hostGridProfileModalChrome ? (
+                <Box style={{ flexShrink: 0 }}>
+                  <Group justify="space-between" align="flex-start" wrap="wrap" gap="sm">
+                    <Stack gap={4} style={{ flex: "1 1 200px", minWidth: 0 }}>
+                      <Title order={5} lineClamp={1}>
+                        {displayNameForCard}
+                      </Title>
+                    </Stack>
+                    {profileDetailToolbar}
                   </Group>
-                </Group>
-              </Box>
+                </Box>
+              ) : null}
               {historicalView ? (
                 <Alert color="gray" title="Historical version">
                   You are viewing an older version (read-only JSON). Use “Save snapshot as new version (+1)” to append a new
@@ -1066,94 +1250,26 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
                 </Box>
               )}
             </>
+          ) : embedCreateFlowInline && createModalOpened ? (
+            <Box style={{ flex: 1, minHeight: 0, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+              {gridModalDetailHeaderHostEl
+                ? createPortal(createProfileHeaderActions, gridModalDetailHeaderHostEl)
+                : null}
+              <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>{createProfileEditorStack}</Box>
+            </Box>
           ) : (
             <Alert color="gray">No profile selected (entityId is null).</Alert>
           )}
         </Stack>
       <AprilModal
-        opened={createModalOpened}
+        opened={createModalOpened && !embedCreateFlowInline}
         onClose={() => setCreateModalOpened(false)}
         centered
         size="md"
         headerTitle="Create profile"
-        headerActions={
-          <>
-            <ActionIcon
-              variant="default"
-              size="lg"
-              onClick={() => setCreateModalOpened(false)}
-              aria-label="Cancel"
-              title="Cancel"
-            >
-              <AprilIconClose size={18} aria-hidden />
-            </ActionIcon>
-            <ActionIcon
-              variant="filled"
-              color="teal"
-              size="lg"
-              disabled={!createDraftSaveOk}
-              loading={busyEntityId === "create"}
-              onClick={() => void handleCreate()}
-              aria-label="Create profile"
-              title="Create profile"
-            >
-              <AprilIconCheck size={18} aria-hidden />
-            </ActionIcon>
-          </>
-        }
+        headerActions={createProfileHeaderActions}
       >
-        <Stack gap="xs">
-          {provider.listEntityTypes ? (
-            <Select
-              label="Entity type"
-              placeholder="Select type"
-              data={entityTypeOptions}
-              value={createTypeId}
-              onChange={setCreateTypeId}
-              searchable
-              nothingFoundMessage="No types"
-              comboboxProps={{ withinPortal: false }}
-            />
-          ) : (
-            <TextInput
-              label="Entity type ID"
-              placeholder="Published entity type UUID"
-              value={createTypeId ?? ""}
-              onChange={(e) => setCreateTypeId(e.currentTarget.value || null)}
-            />
-          )}
-          <TextInput label="Profile name" value={createProfileName} onChange={(e) => setCreateProfileName(e.currentTarget.value)} />
-          <Stack gap="xs">
-            <Text size="sm" fw={500}>
-              Document (JSON object)
-            </Text>
-            <Box data-testid="profiles-widget-create-document" style={{ minHeight: 220, display: "flex", flexDirection: "column" }}>
-              <EntityTypesDraftJsonEditor
-                key={`create-doc-${createTypeId ?? "none"}`}
-                mode={createDraftMode}
-                onModeChange={setCreateDraftMode}
-                value={createDraftValue}
-                onChange={setCreateDraftValue}
-                sourceText={createDraftSourceText}
-                onSourceTextChange={setCreateDraftSourceText}
-                compact
-                showSearch={false}
-                rootName="profile_document"
-                serverValidationItems={createApiIssues ?? undefined}
-                withFormMode={createEditorWithForm}
-                rjsfSchema={
-                  publishedSchemaOkForForm(createPublishedSchema) ? createPublishedSchema.data : undefined
-                }
-                withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
-                schemaPanel={
-                  <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-                    {renderPublishedSchemaPanel(createPublishedSchema)}
-                  </Box>
-                }
-              />
-            </Box>
-          </Stack>
-        </Stack>
+        {createProfileEditorStack}
       </AprilModal>
       </Stack>
     </DensityProvider>

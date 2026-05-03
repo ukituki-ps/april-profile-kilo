@@ -98,6 +98,12 @@ export function ProfilesWidgetCore({
   /** В режиме сетки: держим модалку открытой для потока «Создать» без выбранной строки. */
   const [gridCreateSession, setGridCreateSession] = useState(false);
   const [pendingGridOpenCreate, setPendingGridOpenCreate] = useState(false);
+  const [gridDetailHeaderHostEl, setGridDetailHeaderHostEl] = useState<HTMLElement | null>(null);
+  const [gridModalDetailTitleOverride, setGridModalDetailTitleOverride] = useState<string | null>(null);
+
+  const bindGridDetailHeaderHost = useCallback((node: HTMLElement | null) => {
+    setGridDetailHeaderHostEl(node);
+  }, []);
 
   const requestId = hostContext.telemetry?.requestId;
   const preferredSelectionRef = useRef<string | null>(null);
@@ -146,10 +152,20 @@ export function ProfilesWidgetCore({
 
   const gridModalHeaderTitle = useMemo(() => {
     if (selectedRow) {
+      const fromDetail = gridModalDetailTitleOverride?.trim();
+      if (fromDetail) {
+        return fromDetail;
+      }
       return listPrimaryLabel(selectedRow);
     }
     return "Create profile";
-  }, [selectedRow]);
+  }, [selectedRow, gridModalDetailTitleOverride]);
+
+  useEffect(() => {
+    if (!isGridLayout || !selectedEntityId) {
+      setGridModalDetailTitleOverride(null);
+    }
+  }, [isGridLayout, selectedEntityId]);
 
   const handleCardListViewChange = useCallback((next: CardListColumnView) => {
     const v = normalizeCardListColumnView(next);
@@ -381,6 +397,10 @@ export function ProfilesWidgetCore({
       onCreatedSelectEntity={(id) => {
         preferredSelectionRef.current = id;
       }}
+      embedCreateFlowInline={isGridLayout && gridCreateSession && !selectedEntityId}
+      hostGridProfileModalChrome={isGridLayout && Boolean(selectedEntityId)}
+      gridModalDetailHeaderHostEl={isGridLayout && gridProfileModalOpened ? gridDetailHeaderHostEl : null}
+      onHostGridModalDetailTitleChange={setGridModalDetailTitleOverride}
     />
   );
 
@@ -473,9 +493,11 @@ export function ProfilesWidgetCore({
                       withBorder
                       radius="md"
                       p="sm"
+                      h="100%"
                       aria-label={`Profile row ${source?.entityId ?? item.id}`}
                       style={{
                         cursor: "pointer",
+                        boxSizing: "border-box",
                         ...(selected
                           ? { borderColor: "var(--mantine-color-teal-filled)", borderWidth: 2 }
                           : { borderWidth: 1 }),
@@ -532,6 +554,23 @@ export function ProfilesWidgetCore({
             opened={gridProfileModalOpened}
             onClose={handleGridProfileModalClose}
             headerTitle={gridModalHeaderTitle}
+            headerActions={
+              gridProfileModalOpened ? (
+                <span
+                  ref={bindGridDetailHeaderHost}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: "var(--mantine-spacing-xs)",
+                    flexShrink: 1,
+                    minWidth: 0,
+                    maxWidth: "min(56vw, 720px)",
+                    flexWrap: "wrap",
+                  }}
+                />
+              ) : undefined
+            }
             size="xl"
             centered
             styles={{

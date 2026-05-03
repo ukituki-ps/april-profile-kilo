@@ -5,7 +5,7 @@
 1. **`ProfilesWidgetCore`**
    - Состояние `cardListView: CardListColumnView` + `view` / `onViewChange` у `CardListColumn`.
    - При `view === 'grid'`: `setListCollapsed(false)`; левая колонка на всю ширину (`width/maxWidth 100%`, без `clamp`); корневой ряд без правой колонки.
-   - Условный рендер детали: в колонке (`list`, включая узкий rail через `listCollapsed`) vs в **`AprilModal`** (`grid`), `opened = grid && (selectedEntityId || gridCreateSession)`.
+   - Условный рендер детальной карточки: в колонке (`list`, включая узкий rail через `listCollapsed`) vs в **`AprilModal`** (`grid`), `opened = grid && (selectedEntityId || gridCreateSession)`.
    - Закрытие модалки: `closeCreate`, сброс `gridCreateSession`, `selectedEntityId = null`.
    - Add в сетке: `gridCreateSession = true` + `pendingOpenCreate` → `requestAnimationFrame` → `openCreate()`.
 2. **Тесты** — расширить мок `CardListColumn`; сценарии grid/modal/list.

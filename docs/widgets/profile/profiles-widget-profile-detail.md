@@ -9,7 +9,7 @@
 
 > Сборка со списком слева: [`./profiles-widget.md`](./profiles-widget.md) (раздел про левую колонку и `GET /v1/entities`).
 
-В составном **`profiles-widget`** при виде сетки у `CardListColumn` деталь может монтироваться в **`AprilModal`**; публичный контракт **`ProfilesWidgetProfileDetail`** / **`ProfilesWidgetProfileDetailCore`** от этого не меняется.
+В составном **`profiles-widget`** при виде сетки у `CardListColumn` детальная карточка может монтироваться в **`AprilModal`**; публичный контракт **`ProfilesWidgetProfileDetail`** / **`ProfilesWidgetProfileDetailCore`** от этого не меняется.
 
 ## Назначение (две части)
 
@@ -30,7 +30,7 @@
 ## Зависимости и JSON-документ (DS)
 
 - `@april/profile-ui`, `@april/ui` (≥ **0.1.9**).
-- **`DensityProvider`** в корне виджета детали.
+- **`DensityProvider`** в корне виджета детальной карточки.
 - Поле **`document`**: один ряд сегментов **`EntityTypesDraftJsonEditor`**: **Form** (RJSF при валидной published-схеме) → **Tree** → **Source** → при наличии у провайдера **`getEntityTypePublishedSchema`** — **Schema** (read-only `published_schema` с `GET /v1/entity-types/{id}`). Режим просмотра без редактирования — те же сегменты в read-only.
 - **`AprilJsonValidationSummary`** для **`schemaIssues`**. Стек согласован с задачами **057–059**; минимальная клиентская валидация корня документа: `{ "type": "object" }`.
 - Поле **`name`** профиля — отдельный **`TextInput`**; при create значение объединяется с объектом документа.
@@ -39,7 +39,7 @@
 ## Observability
 
 - События карточки и сохранения: `details_requested`, `details_failed`, `save_submitted`, `save_succeeded`, `save_failed`.
-- Поле **`widget`** в payload по-прежнему **`profiles_list`** (совместимость с существующими дашбордами; отдельный `widgetId` для детального виджета не введён в типах пакета в рамках task 065) — см. [`../../WIDGET_OBSERVABILITY_GUIDE.md`](../../WIDGET_OBSERVABILITY_GUIDE.md).
+- Поле **`widget`** в payload по-прежнему **`profiles_list`** (совместимость с существующими дашбордами; отдельный `widgetId` для виджета детальной карточки не введён в типах пакета в рамках task 065) — см. [`../../WIDGET_OBSERVABILITY_GUIDE.md`](../../WIDGET_OBSERVABILITY_GUIDE.md).
 
 ## Демо в репозитории (`frontend`)
 
@@ -47,7 +47,7 @@
 
 ## Будущее (вне объёма 065)
 
-Другие доменные виджеты могут иметь **свой аналог** «детали профиля» с тем же UX-разбиением; в этой задаче зафиксирован только **паттерн композиции** и публичный API для **профильного** контура.
+Другие доменные виджеты могут иметь **свой аналог** «детальной карточки профиля» с тем же UX-разбиением; в этой задаче зафиксирован только **паттерн композиции** и публичный API для **профильного** контура.
 
 ## Связанные задачи
 
