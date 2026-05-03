@@ -161,6 +161,18 @@ export function ProfilesWidgetCore({
     setSelectedEntityId(null);
   }, []);
 
+  /** Не даём `CardListColumn` снять выбор по повторному клику (toggle → `null`) — для master–detail это ломает первый клик при `autoSelectFirst`. */
+  const handleSelectProfileFromList = useCallback(
+    (id: string | null) => {
+      if (id === null) {
+        return;
+      }
+      setSelectedEntityId(id);
+      onOpenEntity?.(id);
+    },
+    [onOpenEntity],
+  );
+
   useEffect(() => {
     if (!pendingGridOpenCreate) {
       return;
@@ -423,12 +435,7 @@ export function ProfilesWidgetCore({
                 view={cardListView}
                 onViewChange={handleCardListViewChange}
                 selectedItemId={selectedEntityId}
-                onSelectItem={(id) => {
-                  setSelectedEntityId(id);
-                  if (id) {
-                    onOpenEntity?.(id);
-                  }
-                }}
+                onSelectItem={handleSelectProfileFromList}
                 withSort={false}
                 withFilter
                 withAdd
@@ -472,6 +479,10 @@ export function ProfilesWidgetCore({
                         ...(selected
                           ? { borderColor: "var(--mantine-color-teal-filled)", borderWidth: 2 }
                           : { borderWidth: 1 }),
+                      }}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleSelectProfileFromList(item.id);
                       }}
                     >
                       <Text fw={600} lineClamp={1}>
