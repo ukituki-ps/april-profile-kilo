@@ -1,4 +1,10 @@
-import { AprilJsonTreeEditor, DensityProvider } from "@april/ui";
+import {
+  AprilIconCheck,
+  AprilIconClose,
+  AprilJsonTreeEditor,
+  AprilModal,
+  DensityProvider,
+} from "@april/ui";
 import {
   IconDeviceFloppy,
   IconEdit,
@@ -18,10 +24,8 @@ import {
   ActionIcon,
   Alert,
   Box,
-  Button,
   Group,
   Loader,
-  Modal,
   Select,
   Stack,
   Text,
@@ -827,7 +831,18 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
 
   return (
     <DensityProvider>
-      <Stack gap="md" style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <Stack
+        gap="md"
+        style={{
+          flex: 1,
+          minWidth: 0,
+          minHeight: 0,
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
       {mutationErrorMessage ? <Alert color="red">{mutationErrorMessage}</Alert> : null}
 
         <Stack
@@ -1055,7 +1070,38 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
             <Alert color="gray">No profile selected (entityId is null).</Alert>
           )}
         </Stack>
-      <Modal opened={createModalOpened} onClose={() => setCreateModalOpened(false)} title="Create profile">
+      <AprilModal
+        opened={createModalOpened}
+        onClose={() => setCreateModalOpened(false)}
+        centered
+        size="md"
+        headerTitle="Create profile"
+        headerActions={
+          <>
+            <ActionIcon
+              variant="default"
+              size="lg"
+              onClick={() => setCreateModalOpened(false)}
+              aria-label="Cancel"
+              title="Cancel"
+            >
+              <AprilIconClose size={18} aria-hidden />
+            </ActionIcon>
+            <ActionIcon
+              variant="filled"
+              color="teal"
+              size="lg"
+              disabled={!createDraftSaveOk}
+              loading={busyEntityId === "create"}
+              onClick={() => void handleCreate()}
+              aria-label="Create profile"
+              title="Create profile"
+            >
+              <AprilIconCheck size={18} aria-hidden />
+            </ActionIcon>
+          </>
+        }
+      >
         <Stack gap="xs">
           {provider.listEntityTypes ? (
             <Select
@@ -1107,15 +1153,8 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
               />
             </Box>
           </Stack>
-          <Button
-            onClick={() => void handleCreate()}
-            loading={busyEntityId === "create"}
-            disabled={!createDraftSaveOk}
-          >
-            Create profile
-          </Button>
         </Stack>
-      </Modal>
+      </AprilModal>
       </Stack>
     </DensityProvider>
   );

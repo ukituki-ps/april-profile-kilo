@@ -393,39 +393,51 @@ export function ProfilesWidgetCore({
             ) : null}
           </Stack>
 
-          <ProfilesWidgetProfileDetailCore
-            ref={detailRef}
-            hostContext={hostContext}
-            provider={provider}
-            providerContext={providerContext}
-            entityId={selectedEntityId}
-            listItem={selectedRow}
-            listItemsForDuplicateCheck={items}
-            initialCreateEntityTypeId={initialCreateEntityTypeId}
-            documentEditingEnabled
-            allowProfileDelete
-            onAction={(action) => {
-              onAction?.(action);
-              if (action.type === "created") {
-                preferredSelectionRef.current = action.item.entityId;
-              }
-              void loadList({ append: false });
+          {/* Detail root defaults to flex-grow:0; slot must flex:1 to fill the row after the list column. */}
+          <Box
+            style={{
+              flex: 1,
+              minWidth: 0,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
             }}
-            onError={onError}
-            onObservability={onObservability}
-            onProfileUpdatedInList={() => {
-              void loadList({ append: false });
-            }}
-            onListRevalidate={() => loadList({ append: false })}
-            onEntityDeleted={() => {
-              preferredSelectionRef.current = null;
-              setSelectedEntityId(null);
-              void loadList({ append: false });
-            }}
-            onCreatedSelectEntity={(id) => {
-              preferredSelectionRef.current = id;
-            }}
-          />
+          >
+            <ProfilesWidgetProfileDetailCore
+              ref={detailRef}
+              hostContext={hostContext}
+              provider={provider}
+              providerContext={providerContext}
+              entityId={selectedEntityId}
+              listItem={selectedRow}
+              listItemsForDuplicateCheck={items}
+              initialCreateEntityTypeId={initialCreateEntityTypeId}
+              documentEditingEnabled
+              allowProfileDelete
+              onAction={(action) => {
+                onAction?.(action);
+                if (action.type === "created") {
+                  preferredSelectionRef.current = action.item.entityId;
+                }
+                void loadList({ append: false });
+              }}
+              onError={onError}
+              onObservability={onObservability}
+              onProfileUpdatedInList={() => {
+                void loadList({ append: false });
+              }}
+              onListRevalidate={() => loadList({ append: false })}
+              onEntityDeleted={() => {
+                preferredSelectionRef.current = null;
+                setSelectedEntityId(null);
+                void loadList({ append: false });
+              }}
+              onCreatedSelectEntity={(id) => {
+                preferredSelectionRef.current = id;
+              }}
+            />
+          </Box>
         </Box>
       </Stack>
     </DensityProvider>

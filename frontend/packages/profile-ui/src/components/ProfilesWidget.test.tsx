@@ -13,18 +13,31 @@ vi.mock("@mantine/core", async () => {
   const actual = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
   return {
     ...actual,
-    Modal: ({ opened, children }: { opened: boolean; children: ReactNode }) =>
+    Modal: ({
+      opened,
+      children,
+      title,
+    }: {
+      opened: boolean;
+      children?: ReactNode;
+      title?: ReactNode;
+    }) =>
       opened ? (
         <div role="dialog" aria-modal="true">
-          {children}
+          {title != null && title !== false ? <div data-testid="mantine-modal-title">{title}</div> : null}
+          <div>{children}</div>
         </div>
       ) : null,
   };
 });
 
 vi.mock("@april/ui", async () => {
+  const { AprilIconCheck, AprilIconClose, AprilModal } = await vi.importActual<typeof import("@april/ui")>("@april/ui");
   const { SegmentedControl } = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
   return {
+    AprilModal,
+    AprilIconClose,
+    AprilIconCheck,
     AprilGradientSegmentedControl: SegmentedControl,
     DensityProvider: ({ children }: { children: ReactNode }) => <div data-testid="density-provider">{children}</div>,
     AprilJsonTreeEditor: ({
@@ -245,9 +258,23 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-async function pickTreeDocumentView(container: HTMLElement) {
-  const scope = within(container).queryByTestId("draft-json-editor-mode") ? within(container) : within(document.body);
-  fireEvent.click(scope.getByRole("radio", { name: "Tree" }));
+function pickTreeDocumentView(container: HTMLElement) {
+  const detail = container.closest('[data-testid="profiles-widget-detail-column"]');
+  const searchRoot = detail ?? container;
+  const inSearch = within(searchRoot as HTMLElement).queryAllByRole("radio", { name: "Tree" });
+  if (inSearch.length > 0) {
+    fireEvent.click(inSearch[0]);
+    return;
+  }
+  const dialog = document.querySelector('[role="dialog"]');
+  if (dialog) {
+    const inDialog = within(dialog as HTMLElement).queryAllByRole("radio", { name: "Tree" });
+    if (inDialog.length > 0) {
+      fireEvent.click(inDialog[0]);
+      return;
+    }
+  }
+  fireEvent.click(within(document.body).getAllByRole("radio", { name: "Tree" })[0]);
 }
 
 const renderWidget = (props?: Partial<ProfilesWidgetProps>) =>

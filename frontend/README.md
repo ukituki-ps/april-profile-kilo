@@ -49,7 +49,7 @@ npm run dev
 | Команда | Назначение |
 | -------- | ---------- |
 | `npm run ds:prepare` | Ассеты DS (SVG), при необходимости сборка submodule |
-| `npm run dev` | Vite dev server (порт 5174) |
+| `npm run dev` | Vite dev server (порт 5173) |
 | `npm run build` | Build shell + build `@april/profile-ui` (with OpenAPI generation) |
 | `npm run lint` | Typecheck shell + typecheck `@april/profile-ui` |
 | `npm test` | Vitest for shell + `@april/profile-ui` |

@@ -6,7 +6,7 @@ Embeddable React widgets for AprilProfile in AprilHub/host apps. Публичн�
 
 ### Зависимости host
 
-Пакет объявляет **`peerDependencies`**: `@april/ui` (≥ **0.1.6**, JSON-редакторы и `CardListColumn`), `@mantine/core`, `@emotion/react`, `react`, `react-dom`. Хост должен монтировать виджеты под **`AprilProviders`** из `@april/ui` (или эквивалент: `MantineProvider` + `DensityProvider`), иначе JSON-редакторы дизайн-системы не инициализируются.
+Пакет объявляет **`peerDependencies`**: `@april/ui` (≥ **0.1.7**, JSON-редакторы и `CardListColumn`), `@mantine/core`, `@emotion/react`, `react`, `react-dom`. Хост должен монтировать виджеты под **`AprilProviders`** из `@april/ui` (или эквивалент: `MantineProvider` + `DensityProvider`), иначе JSON-редакторы дизайн-системы не инициализируются.
 
 ## Observability
 

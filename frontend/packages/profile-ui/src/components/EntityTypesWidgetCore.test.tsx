@@ -15,13 +15,33 @@ vi.mock("@mantine/core", async () => {
   const actual = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
   return {
     ...actual,
-    Modal: ({ opened, children }: { opened: boolean; children: ReactNode }) => (opened ? <div>{children}</div> : null),
+    Modal: ({
+      opened,
+      children,
+      title,
+    }: {
+      opened: boolean;
+      children?: ReactNode;
+      title?: ReactNode;
+    }) =>
+      opened ? (
+        <div role="dialog" aria-modal="true">
+          {title != null && title !== false ? <div data-testid="mantine-modal-title">{title}</div> : null}
+          <div>{children}</div>
+        </div>
+      ) : null,
   };
 });
 
 vi.mock("@april/ui", async () => {
+  const { AprilIconCheck, AprilIconClose, AprilIconTrash, AprilModal } =
+    await vi.importActual<typeof import("@april/ui")>("@april/ui");
   const { SegmentedControl } = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
   return {
+    AprilModal,
+    AprilIconClose,
+    AprilIconCheck,
+    AprilIconTrash,
     AprilGradientSegmentedControl: SegmentedControl,
     DensityProvider: ({ children }: { children: ReactNode }) => <div data-testid="density-provider">{children}</div>,
     CardListColumn: ({

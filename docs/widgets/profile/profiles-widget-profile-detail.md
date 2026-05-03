@@ -27,7 +27,7 @@
 
 ## Зависимости и JSON-документ (DS)
 
-- `@april/profile-ui`, `@april/ui` (≥ **0.1.6**).
+- `@april/profile-ui`, `@april/ui` (≥ **0.1.7**).
 - **`DensityProvider`** в корне виджета детали.
 - Поле **`document`**: один ряд сегментов **`EntityTypesDraftJsonEditor`**: **Form** (RJSF при валидной published-схеме) → **Tree** → **Source** → при наличии у провайдера **`getEntityTypePublishedSchema`** — **Schema** (read-only `published_schema` с `GET /v1/entity-types/{id}`). Режим просмотра без редактирования — те же сегменты в read-only.
 - **`AprilJsonValidationSummary`** для **`schemaIssues`**. Стек согласован с задачами **057–059**; минимальная клиентская валидация корня документа: `{ "type": "object" }`.
