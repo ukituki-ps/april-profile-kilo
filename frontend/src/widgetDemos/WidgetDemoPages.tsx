@@ -173,7 +173,7 @@ export function WidgetDemosIndexPage() {
           <DemoRouteNavLink
             to="/demo/surfaces/profiles-widget-profile-detail"
             title="profiles-widget-profile-detail"
-            description="Карточка и документ (правая колонка)."
+            description='Только карточка и документ (layout="detail-only"), без списка слева; MSW.'
           />
           <DemoRouteNavLink
             to="/demo/surfaces/entity-types-widget-catalog-list"

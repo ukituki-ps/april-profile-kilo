@@ -43,4 +43,20 @@ describe("App", () => {
     );
     expect(screen.getByRole("heading", { name: /profiles-widget — поверхность списка/i })).toBeInTheDocument();
   });
+
+  it("renders doc surface demo for profiles-widget-profile-detail without list column", () => {
+    render(
+      <AprilProviders>
+        <MemoryRouter initialEntries={["/demo/surfaces/profiles-widget-profile-detail"]}>
+          <App />
+        </MemoryRouter>
+      </AprilProviders>,
+    );
+    expect(screen.getByRole("link", { name: "profiles-widget-profile-detail.md" })).toHaveAttribute(
+      "href",
+      "https://github.com/ukituki-ps/april-profile/blob/develop/docs/widgets/profile/profiles-widget-profile-detail.md",
+    );
+    expect(screen.getByRole("heading", { name: /profiles-widget — карточка и документ/i })).toBeInTheDocument();
+    expect(screen.queryByTestId("profiles-widget-list-column")).not.toBeInTheDocument();
+  });
 });

@@ -29,6 +29,10 @@
 
 - События карточки и сохранения: `details_requested`, `details_failed`, `save_submitted`, `save_succeeded`, `save_failed`; `widget` = `profiles_list` (backward-compatible telemetry key) — см. [`../../WIDGET_OBSERVABILITY_GUIDE.md`](../../WIDGET_OBSERVABILITY_GUIDE.md).
 
+## Демо в репозитории (`frontend`)
+
+Маршрут **`/demo/surfaces/profiles-widget-profile-detail`**: `ProfilesWidget` с **`layout="detail-only"`** и **`autoSelectFirst`** (колонка списка скрыта; первый профиль из ответа API выбирается автоматически). Данные — MSW при **`VITE_PROFILE_DEMO_MOCK=true`** (см. [`../../../frontend/README.md`](../../../frontend/README.md)).
+
 ## Связанные задачи
 
 - JSON-документ на DS: [`../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md).

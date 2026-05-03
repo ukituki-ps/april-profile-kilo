@@ -48,10 +48,17 @@ import type {
 } from "../providers/profilesDataProvider";
 import { isProfilesProviderError } from "../providers/profilesDataProvider";
 
+export type ProfilesWidgetLayout = "master-detail" | "detail-only";
+
 export type ProfilesWidgetCoreProps = {
   hostContext: ProfileWidgetHostContext;
   provider: ProfilesDataProvider;
   providerContext?: Omit<ProviderContext, "signal">;
+  /**
+   * `master-detail` — список слева и карточка справа (по умолчанию).
+   * `detail-only` — только карточка и документ; список не рендерится (данные списка по-прежнему загружаются для выбора и мутаций).
+   */
+  layout?: ProfilesWidgetLayout;
   /** После загрузки каталога типов подставить это значение в модалку создания (удобно для тестов/host). */
   initialCreateEntityTypeId?: string | null;
   pageSize?: number;
@@ -115,6 +122,7 @@ export function ProfilesWidgetCore({
   hostContext,
   provider,
   providerContext,
+  layout = "master-detail",
   initialCreateEntityTypeId = null,
   pageSize = DEFAULT_PAGE_SIZE,
   initialSearch = "",
@@ -964,6 +972,8 @@ export function ProfilesWidgetCore({
     );
   }
 
+  const showMasterList = layout === "master-detail";
+
   return (
     <DensityProvider>
       <Stack gap="md" style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -978,11 +988,13 @@ export function ProfilesWidgetCore({
           display: "flex",
           flexDirection: "row",
           alignItems: "stretch",
-          gap: "1rem",
+          gap: showMasterList ? "1rem" : 0,
           width: "100%",
         }}
       >
+        {showMasterList ? (
         <Stack
+          data-testid="profiles-widget-list-column"
           gap="xs"
           onClickCapture={(event) => {
             const btn = (event.target as HTMLElement | null)?.closest("button[aria-label]");
@@ -1075,11 +1087,20 @@ export function ProfilesWidgetCore({
             </Box>
           ) : null}
         </Stack>
+        ) : null}
 
         <Stack
+          data-testid="profiles-widget-detail-column"
           gap="sm"
           style={{ flex: "1 1 0%", minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}
         >
+          {!showMasterList ? (
+            <Group justify="flex-end">
+              <Button size="xs" variant="light" onClick={handleOpenCreateModal}>
+                Create profile
+              </Button>
+            </Group>
+          ) : null}
           {items.length === 0 ? <Alert color="gray">No profiles found for current query.</Alert> : null}
           {selectedItem ? (
             <>
@@ -1296,7 +1317,11 @@ export function ProfilesWidgetCore({
               )}
             </>
           ) : (
-            <Alert color="gray">Select a profile from the left column.</Alert>
+            <Alert color="gray">
+              {showMasterList
+                ? "Select a profile from the left column."
+                : "No profile is loaded. The list must return at least one entity, or enable auto-selection of the first row."}
+            </Alert>
           )}
         </Stack>
       </Box>

@@ -22,10 +22,11 @@ Props (см. также `ProfilesWidgetProps` в исходниках):
 
 - `hostContext` — контекст host (`tenant`, опционально `auth`, telemetry).
 - `apiBaseUrl`, `accessToken?` — база API и Bearer для OpenAPI-клиента.
+- `layout?` — `"master-detail"` (по умолчанию) или `"detail-only"` (только карточка и документ; список не рендерится, запрос списка сохраняется для выбора/мутаций).
 - `pageSize?`, `initialSearch?`, `initialTypeId?`, `initialSort?`, `initialCreateEntityTypeId?`, `autoSelectFirst?`
 - `onAction?`, `onError?`, `onOpenEntity?`, `onObservability?`
 
-Поведение: master-detail (список профилей + карточка), server-side list/search/filter, CRUD, версии через провайдер. Спецификация по поверхностям: `docs/widgets/profile/profiles-widget.md` (сборка), `docs/widgets/profile/profiles-widget-list.md`, `docs/widgets/profile/profiles-widget-profile-detail.md`.
+Поведение: по умолчанию master-detail (список профилей + карточка), server-side list/search/filter, CRUD, версии через провайдер. Режим **`detail-only`** — демо/встраивание только правой колонки (см. демо в `frontend/README.md`). Спецификация по поверхностям: `docs/widgets/profile/profiles-widget.md` (сборка), `docs/widgets/profile/profiles-widget-list.md`, `docs/widgets/profile/profiles-widget-profile-detail.md`.
 
 Экспорты для кастомного wiring: **`ProfilesWidgetCore`**, **`ProfilesApiWidget`**, **`ProfilesDataProvider`**, **`createOpenApiProfilesProvider`**.
 

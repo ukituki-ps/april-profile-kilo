@@ -221,6 +221,27 @@ describe("ProfilesWidgetCore", () => {
     expect(screen.getByLabelText("CardListColumn mock")).toHaveAttribute("data-height-mode", "fill");
   });
 
+  it("detail-only layout omits list column and selects first profile when autoSelectFirst", async () => {
+    const provider = buildProvider();
+    render(
+      <MantineProvider>
+        <ProfilesWidgetCore
+          hostContext={hostContext}
+          provider={provider}
+          layout="detail-only"
+          autoSelectFirst
+        />
+      </MantineProvider>,
+    );
+
+    expect(screen.queryByTestId("profiles-widget-list-column")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("CardListColumn mock")).not.toBeInTheDocument();
+    await screen.findByTestId("profiles-widget-detail-column");
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: new RegExp(p1, "i") })).toBeInTheDocument();
+    });
+  });
+
   it("loads list through provider and supports search/filter/pagination", async () => {
     const provider = buildProvider();
     render(

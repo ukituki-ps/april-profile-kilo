@@ -26,7 +26,10 @@ function SurfaceDocDemoChrome(props: {
   demoPath: string;
   docFile: string;
   surfaceTitle: string;
-  whereInUi: string;
+  /** Подсказка для составных демо (полный виджет + куда смотреть). Не используется, если задан `howToReadDemo`. */
+  whereInUi?: string;
+  /** Полная замена текста серого alert «Как читать это демо» (изолированная поверхность). */
+  howToReadDemo?: ReactNode;
   children: ReactNode;
 }) {
   const { apiBaseUrl, demoMock } = useDemoApiEnv();
@@ -65,8 +68,12 @@ function SurfaceDocDemoChrome(props: {
           (ветка <Code>develop</Code>).
         </Text>
         <Alert color="gray" title="Как читать это демо">
-          В пакете <Code>@april/profile-ui</Code> пока нет отдельных npm-компонентов на каждую поверхность — ниже тот же
-          полный виджет, что и на основных демо, с тем же MSW. <strong>{props.whereInUi}</strong>
+          {props.howToReadDemo ?? (
+            <>
+              В пакете <Code>@april/profile-ui</Code> пока нет отдельных npm-компонентов на каждую поверхность — ниже тот же
+              полный виджет, что и на основных демо, с тем же MSW. <strong>{props.whereInUi}</strong>
+            </>
+          )}
         </Alert>
         {demoMock ? (
           <Alert color="blue" title="MSW">
@@ -95,6 +102,36 @@ function ProfilesSurfaceBody() {
           hostContext={DEMO_PROFILES_HOST}
           apiBaseUrl={apiBaseUrl}
           accessToken={accessToken}
+          autoSelectFirst
+          onAction={(action) => {
+            if (action.type === "deleted") {
+              setMsg(`deleted ${action.entityId}`);
+              return;
+            }
+            setMsg(`${action.type} ${action.item.entityId}`);
+          }}
+        />
+      </Box>
+    </Stack>
+  );
+}
+
+function ProfilesSurfaceDetailOnlyBody() {
+  const { apiBaseUrl, accessToken } = useDemoApiEnv();
+  const [msg, setMsg] = useState<string | null>(null);
+  return (
+    <Stack gap="sm" style={{ height: "100%", minHeight: 0 }}>
+      {msg ? (
+        <Alert color="green" onClose={() => setMsg(null)} withCloseButton>
+          {msg}
+        </Alert>
+      ) : null}
+      <Box style={{ flex: 1, minHeight: 0 }}>
+        <ProfilesWidget
+          hostContext={DEMO_PROFILES_HOST}
+          apiBaseUrl={apiBaseUrl}
+          accessToken={accessToken}
+          layout="detail-only"
           autoSelectFirst
           onAction={(action) => {
             if (action.type === "deleted") {
@@ -150,9 +187,15 @@ export function ProfilesWidgetProfileDetailSurfaceDemoPage() {
       demoPath="/demo/surfaces/profiles-widget-profile-detail"
       docFile="profiles-widget-profile-detail.md"
       surfaceTitle="profiles-widget — карточка и документ"
-      whereInUi="Смотрите правую колонку: версии, имя, сегменты Form/Tree/Source/Schema, сохранение."
+      howToReadDemo={
+        <Text size="sm">
+          Ниже только <strong>правая колонка</strong> виджета: <Code>ProfilesWidget</Code> с <Code>layout="detail-only"</Code>{" "}
+          (колонка списка скрыта; первый профиль из ответа API выбирается через <Code>autoSelectFirst</Code>). Те же MSW и
+          базовый URL, что на остальных демо при <Code>VITE_PROFILE_DEMO_MOCK=true</Code>.
+        </Text>
+      }
     >
-      <ProfilesSurfaceBody />
+      <ProfilesSurfaceDetailOnlyBody />
     </SurfaceDocDemoChrome>
   );
 }

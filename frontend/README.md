@@ -34,7 +34,7 @@ npm run dev
 | `/profiles-widget-core-demo` | `ProfilesWidgetCore` + `createOpenApiProfilesProvider` |
 | `/entity-types-widget-core-demo` | `EntityTypesWidgetCore` + `createOpenApiEntityTypesProvider` |
 | `/demo/surfaces/profiles-widget-list` | Спека `profiles-widget-list.md` + тот же `ProfilesWidget` (MSW) |
-| `/demo/surfaces/profiles-widget-profile-detail` | `profiles-widget-profile-detail.md` + `ProfilesWidget` |
+| `/demo/surfaces/profiles-widget-profile-detail` | `profiles-widget-profile-detail.md` + `ProfilesWidget` с `layout="detail-only"` (только карточка; MSW) |
 | `/demo/surfaces/entity-types-widget-catalog-list` | `entity-types-widget-catalog-list.md` + `EntityTypesWidget` |
 | `/demo/surfaces/entity-types-widget-schema-admin` | `entity-types-widget-schema-admin.md` + `EntityTypesWidget` |
 | `/demo/surfaces/entity-types-widget-entities-upgrade` | `entity-types-widget-entities-upgrade.md` + `EntityTypesWidget` |
