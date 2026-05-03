@@ -1,4 +1,12 @@
-import { AprilJsonTreeEditor, CardListColumn, DensityProvider } from "@april/ui";
+import {
+  AprilIconCheck,
+  AprilIconClose,
+  AprilIconTrash,
+  AprilJsonTreeEditor,
+  AprilModal,
+  CardListColumn,
+  DensityProvider,
+} from "@april/ui";
 import {
   IconDeviceFloppy,
   IconRocket,
@@ -16,7 +24,6 @@ import {
   Checkbox,
   Group,
   Loader,
-  Modal,
   ScrollArea,
   Select,
   Stack,
@@ -1112,7 +1119,38 @@ export function EntityTypesWidgetCore({
         </Stack>
       </Box>
 
-      <Modal opened={createOpened} onClose={() => setCreateOpened(false)} title="New entity type family">
+      <AprilModal
+        opened={createOpened}
+        onClose={() => setCreateOpened(false)}
+        centered
+        size="md"
+        headerTitle="New entity type family"
+        headerActions={
+          <>
+            <ActionIcon
+              variant="default"
+              size="lg"
+              onClick={() => setCreateOpened(false)}
+              aria-label="Cancel"
+              title="Cancel"
+            >
+              <AprilIconClose size={18} aria-hidden />
+            </ActionIcon>
+            <ActionIcon
+              variant="filled"
+              color="teal"
+              size="lg"
+              disabled={!createNamespace.trim() || !createCode.trim() || !createDraftSaveOk}
+              loading={busy === "create"}
+              onClick={() => void handleCreateFamily()}
+              aria-label="Create entity type family"
+              title="Create"
+            >
+              <AprilIconCheck size={18} aria-hidden />
+            </ActionIcon>
+          </>
+        }
+      >
         <Stack gap="sm">
           <TextInput label="Namespace" value={createNamespace} onChange={(e) => setCreateNamespace(e.currentTarget.value)} required />
           <TextInput label="Code" value={createCode} onChange={(e) => setCreateCode(e.currentTarget.value)} required />
@@ -1131,49 +1169,80 @@ export function EntityTypesWidgetCore({
             rootName="initial_draft"
             serverValidationItems={createApiIssues ?? undefined}
           />
-          <Group justify="flex-end">
-            <Button variant="default" onClick={() => setCreateOpened(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => void handleCreateFamily()}
-              loading={busy === "create"}
-              disabled={!createNamespace.trim() || !createCode.trim() || !createDraftSaveOk}
-            >
-              Create
-            </Button>
-          </Group>
         </Stack>
-      </Modal>
+      </AprilModal>
 
-      <Modal opened={patchOpened} onClose={() => setPatchOpened(false)} title="Edit namespace / code">
+      <AprilModal
+        opened={patchOpened}
+        onClose={() => setPatchOpened(false)}
+        centered
+        size="md"
+        headerTitle="Edit namespace / code"
+        headerActions={
+          <>
+            <ActionIcon
+              variant="default"
+              size="lg"
+              onClick={() => setPatchOpened(false)}
+              aria-label="Cancel"
+              title="Cancel"
+            >
+              <AprilIconClose size={18} aria-hidden />
+            </ActionIcon>
+            <ActionIcon
+              variant="filled"
+              color="teal"
+              size="lg"
+              loading={busy === "patch"}
+              onClick={() => void handlePatchFamily()}
+              aria-label="Save namespace and code"
+              title="Save"
+            >
+              <AprilIconCheck size={18} aria-hidden />
+            </ActionIcon>
+          </>
+        }
+      >
         <Stack gap="sm">
           <TextInput label="Namespace" value={patchNamespace} onChange={(e) => setPatchNamespace(e.currentTarget.value)} />
           <TextInput label="Code" value={patchCode} onChange={(e) => setPatchCode(e.currentTarget.value)} />
-          <Group justify="flex-end">
-            <Button variant="default" onClick={() => setPatchOpened(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => void handlePatchFamily()} loading={busy === "patch"}>
-              Save
-            </Button>
-          </Group>
         </Stack>
-      </Modal>
+      </AprilModal>
 
-      <Modal opened={deleteOpened} onClose={() => setDeleteOpened(false)} title="Delete family?">
+      <AprilModal
+        opened={deleteOpened}
+        onClose={() => setDeleteOpened(false)}
+        centered
+        size="md"
+        headerTitle="Delete family?"
+        headerActions={
+          <>
+            <ActionIcon
+              variant="default"
+              size="lg"
+              onClick={() => setDeleteOpened(false)}
+              aria-label="Cancel"
+              title="Cancel"
+            >
+              <AprilIconClose size={18} aria-hidden />
+            </ActionIcon>
+            <ActionIcon
+              color="red"
+              size="lg"
+              loading={busy === "delete"}
+              onClick={() => void handleDeleteFamily()}
+              aria-label="Delete entity type family"
+              title="Delete"
+            >
+              <AprilIconTrash size={18} aria-hidden />
+            </ActionIcon>
+          </>
+        }
+      >
         <Text size="sm" mb="md">
           Allowed only when there are no published revisions and no entities. Server returns 409 otherwise.
         </Text>
-        <Group justify="flex-end">
-          <Button variant="default" onClick={() => setDeleteOpened(false)}>
-            Cancel
-          </Button>
-          <Button color="red" onClick={() => void handleDeleteFamily()} loading={busy === "delete"}>
-            Delete
-          </Button>
-        </Group>
-      </Modal>
+      </AprilModal>
     </Stack>
     </DensityProvider>
   );

@@ -15,59 +15,83 @@ vi.mock("@mantine/core", async () => {
   const actual = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
   return {
     ...actual,
-    Modal: ({ opened, children }: { opened: boolean; children: ReactNode }) => (opened ? <div>{children}</div> : null),
+    Modal: ({
+      opened,
+      children,
+      title,
+    }: {
+      opened: boolean;
+      children?: ReactNode;
+      title?: ReactNode;
+    }) =>
+      opened ? (
+        <div role="dialog" aria-modal="true">
+          {title != null && title !== false ? <div data-testid="mantine-modal-title">{title}</div> : null}
+          <div>{children}</div>
+        </div>
+      ) : null,
   };
 });
 
-vi.mock("@april/ui", () => ({
-  DensityProvider: ({ children }: { children: ReactNode }) => <div data-testid="density-provider">{children}</div>,
-  CardListColumn: ({
-    items,
-    heightMode,
-    onAddItem,
-    onSelectItem,
-    renderCard,
-  }: {
-    items: Array<{ id: string; title: string }>;
-    heightMode?: string;
-    onAddItem?: () => void;
-    onSelectItem?: (id: string | null) => void;
-    renderCard?: (item: { id: string; title: string }) => ReactNode;
-  }) => (
-    <div aria-label="CardListColumn mock" data-height-mode={heightMode}>
-      <button type="button" aria-label="Add new item" onClick={onAddItem}>
-        Add
-      </button>
-      {items.map((item) => (
-        <div key={item.id} onClick={() => onSelectItem?.(item.id)}>
-          {renderCard ? renderCard(item) : item.id}
-        </div>
-      ))}
-    </div>
-  ),
-  AprilJsonTreeEditor: ({ data, readOnly }: { data: unknown; readOnly?: boolean }) => (
-    <div data-testid="april-json-tree" data-readonly={readOnly ? "true" : "false"}>
-      {JSON.stringify(data)}
-    </div>
-  ),
-  AprilJsonCollectionTextEditor: ({
-    value,
-    onChange,
-    onKeyDown,
-  }: {
-    value: string;
-    onChange: (v: string) => void;
-    onKeyDown?: (e: KeyboardEvent) => void;
-  }) => (
-    <textarea
-      aria-label="JSON source editor"
-      value={value}
-      onChange={(e) => onChange(e.currentTarget.value)}
-      onKeyDown={onKeyDown}
-    />
-  ),
-  AprilJsonValidationSummary: () => null,
-}));
+vi.mock("@april/ui", async () => {
+  const { AprilIconCheck, AprilIconClose, AprilIconTrash, AprilModal } =
+    await vi.importActual<typeof import("@april/ui")>("@april/ui");
+  const { SegmentedControl } = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
+  return {
+    AprilModal,
+    AprilIconClose,
+    AprilIconCheck,
+    AprilIconTrash,
+    AprilGradientSegmentedControl: SegmentedControl,
+    DensityProvider: ({ children }: { children: ReactNode }) => <div data-testid="density-provider">{children}</div>,
+    CardListColumn: ({
+      items,
+      heightMode,
+      onAddItem,
+      onSelectItem,
+      renderCard,
+    }: {
+      items: Array<{ id: string; title: string }>;
+      heightMode?: string;
+      onAddItem?: () => void;
+      onSelectItem?: (id: string | null) => void;
+      renderCard?: (item: { id: string; title: string }) => ReactNode;
+    }) => (
+      <div aria-label="CardListColumn mock" data-height-mode={heightMode}>
+        <button type="button" aria-label="Add new item" onClick={onAddItem}>
+          Add
+        </button>
+        {items.map((item) => (
+          <div key={item.id} onClick={() => onSelectItem?.(item.id)}>
+            {renderCard ? renderCard(item) : item.id}
+          </div>
+        ))}
+      </div>
+    ),
+    AprilJsonTreeEditor: ({ data, readOnly }: { data: unknown; readOnly?: boolean }) => (
+      <div data-testid="april-json-tree" data-readonly={readOnly ? "true" : "false"}>
+        {JSON.stringify(data)}
+      </div>
+    ),
+    AprilJsonCollectionTextEditor: ({
+      value,
+      onChange,
+      onKeyDown,
+    }: {
+      value: string;
+      onChange: (v: string) => void;
+      onKeyDown?: (e: KeyboardEvent) => void;
+    }) => (
+      <textarea
+        aria-label="JSON source editor"
+        value={value}
+        onChange={(e) => onChange(e.currentTarget.value)}
+        onKeyDown={onKeyDown}
+      />
+    ),
+    AprilJsonValidationSummary: () => null,
+  };
+});
 
 const famId = "11111111-1111-1111-1111-111111111111";
 const hostContext = { tenant: { id: "tenant-a" }, telemetry: { requestId: "req-1", correlationId: "corr-1" } } as const;

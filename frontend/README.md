@@ -18,7 +18,29 @@ npm run dev
 
 ## Демо виджетов без бэкенда
 
-На маршрутах `/profiles-widget-demo` и `/entity-types-widget-demo` в режиме **`npm run dev`** поднимается **MSW**: перехватываются запросы к тому же базовому URL, что и у виджета (`VITE_PROFILE_API_BASE_URL` или по умолчанию `/admin/profile/api` на хосте Vite). Примеры данных — в [`src/mocks/handlers.ts`](./src/mocks/handlers.ts).
+В режиме **`npm run dev`** поднимается **MSW**: перехватываются запросы к тому же базовому URL, что и у виджета (`VITE_PROFILE_API_BASE_URL` или по умолчанию `/admin/profile/api` на хосте Vite). Примеры данных — в [`src/mocks/handlers.ts`](./src/mocks/handlers.ts).
+
+Индекс всех демо: **`/widget-demos`** (фасады, Api-слой, `WidgetCore` + OpenAPI, **демо по markdown-спекам поверхностей**, showcase DS).
+
+Прямые ссылки:
+
+| Маршрут | Что смотреть |
+|---------|----------------|
+| `/widget-demos` | Оглавление |
+| `/profiles-widget-demo` | `ProfilesWidget` |
+| `/entity-types-widget-demo` | `EntityTypesWidget` |
+| `/profiles-api-widget-demo` | `ProfilesApiWidget` |
+| `/entity-types-api-widget-demo` | `EntityTypesApiWidget` |
+| `/profiles-widget-core-demo` | `ProfilesWidgetCore` + `createOpenApiProfilesProvider` |
+| `/entity-types-widget-core-demo` | `EntityTypesWidgetCore` + `createOpenApiEntityTypesProvider` |
+| `/demo/surfaces/profiles-widget` | Спека `profiles-widget.md` + полный `ProfilesWidget` (MSW) |
+| `/demo/surfaces/profiles-widget-list` | Редирект на `/demo/surfaces/profiles-widget` (старый URL без отдельной md-спеки списка) |
+| `/demo/surfaces/profiles-widget-profile-detail` | `profiles-widget-profile-detail.md` + самостоятельный `ProfilesWidgetProfileDetail` (MSW) |
+| `/demo/surfaces/entity-types-widget-catalog-list` | `entity-types-widget-catalog-list.md` + `EntityTypesWidget` |
+| `/demo/surfaces/entity-types-widget-schema-admin` | `entity-types-widget-schema-admin.md` + `EntityTypesWidget` |
+| `/demo/surfaces/entity-types-widget-entities-upgrade` | `entity-types-widget-entities-upgrade.md` + `EntityTypesWidget` |
+| `/demo/surfaces/entity-types-widget-integration` | `entity-types-widget-integration.md` + вкладки (таблица props, виджеты) |
+| `/showcase` | `UIKit` (дизайн-система) |
 
 - Чтобы ходить в **настоящий** API по этому URL: `VITE_PROFILE_DEMO_MOCK=false`.
 
@@ -27,7 +49,7 @@ npm run dev
 | Команда | Назначение |
 | -------- | ---------- |
 | `npm run ds:prepare` | Ассеты DS (SVG), при необходимости сборка submodule |
-| `npm run dev` | Vite dev server (порт 5174) |
+| `npm run dev` | Vite dev server (порт 5173) |
 | `npm run build` | Build shell + build `@april/profile-ui` (with OpenAPI generation) |
 | `npm run lint` | Typecheck shell + typecheck `@april/profile-ui` |
 | `npm test` | Vitest for shell + `@april/profile-ui` |

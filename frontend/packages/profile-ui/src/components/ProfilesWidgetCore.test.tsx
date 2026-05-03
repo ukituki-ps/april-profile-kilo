@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import type { ReactNode } from "react";
@@ -10,11 +10,110 @@ vi.mock("@mantine/core", async () => {
   const actual = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
   return {
     ...actual,
-    Modal: ({ opened, children }: { opened: boolean; children: ReactNode }) => (opened ? <div>{children}</div> : null),
+    Modal: ({
+      opened,
+      children,
+      title,
+    }: {
+      opened: boolean;
+      children?: ReactNode;
+      title?: ReactNode;
+    }) =>
+      opened ? (
+        <div role="dialog" aria-modal="true">
+          {title != null && title !== false ? <div data-testid="mantine-modal-title">{title}</div> : null}
+          <div>{children}</div>
+        </div>
+      ) : null,
   };
 });
 
-vi.mock("@april/ui", () => ({
+function pickTreeDocumentView(container: HTMLElement) {
+  const detail = container.closest('[data-testid="profiles-widget-detail-column"]');
+  const searchRoot = detail ?? container;
+  const inSearch = within(searchRoot as HTMLElement).queryAllByRole("radio", { name: "Tree" });
+  if (inSearch.length > 0) {
+    fireEvent.click(inSearch[0]);
+    return;
+  }
+  const dialog = document.querySelector('[role="dialog"]');
+  if (dialog) {
+    const inDialog = within(dialog as HTMLElement).queryAllByRole("radio", { name: "Tree" });
+    if (inDialog.length > 0) {
+      fireEvent.click(inDialog[0]);
+      return;
+    }
+  }
+  fireEvent.click(within(document.body).getAllByRole("radio", { name: "Tree" })[0]);
+}
+
+vi.mock("@april/ui", async () => {
+  const { AprilIconCheck, AprilIconClose, AprilModal } = await vi.importActual<typeof import("@april/ui")>("@april/ui");
+  const { SegmentedControl } = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
+  return {
+    AprilModal,
+    AprilIconClose,
+    AprilIconCheck,
+    AprilGradientSegmentedControl: SegmentedControl,
+    DensityProvider: ({ children }: { children: ReactNode }) => <div data-testid="density-provider">{children}</div>,
+    AprilJsonTreeEditor: ({
+      data,
+      setData,
+      readOnly,
+    }: {
+      data: Record<string, unknown>;
+      setData?: (next: Record<string, unknown> | unknown[]) => void;
+      readOnly?: boolean;
+    }) => (
+      <textarea
+        data-testid={readOnly ? "mock-json-tree-readonly" : "mock-json-tree-edit"}
+        readOnly={readOnly}
+        value={JSON.stringify(data, null, 2)}
+        onChange={(event) => {
+          if (readOnly) {
+            return;
+          }
+          try {
+            const parsed = JSON.parse(event.target.value) as unknown;
+            if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+              setData?.(parsed as Record<string, unknown>);
+            }
+          } catch {
+            /* ignore invalid JSON in tests */
+          }
+        }}
+      />
+    ),
+    AprilJsonCollectionTextEditor: ({
+    value,
+    onChange,
+  }: {
+    value: string;
+    onChange: (next: string) => void;
+  }) => <textarea data-testid="mock-json-source" value={value} onChange={(event) => onChange(event.target.value)} />,
+  AprilJsonValidationSummary: () => null,
+  AprilJsonSchemaForm: ({
+    formData,
+    onChange,
+  }: {
+    formData: Record<string, unknown>;
+    onChange: (next: Record<string, unknown>) => void;
+  }) => (
+    <textarea
+      data-testid="mock-rjsf-form"
+      value={JSON.stringify(formData)}
+      onChange={(event) => {
+        try {
+          const parsed = JSON.parse(event.target.value) as unknown;
+          if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+            onChange(parsed as Record<string, unknown>);
+          }
+        } catch {
+          /* ignore */
+        }
+      }}
+    />
+  ),
   CardListColumn: ({
     items,
     heightMode,
@@ -52,7 +151,8 @@ vi.mock("@april/ui", () => ({
       ))}
     </div>
   ),
-}));
+  };
+});
 
 const p1 = "Alpha profile";
 const p2 = "Beta profile";
@@ -118,6 +218,18 @@ const buildProvider = (): ProfilesDataProvider => ({
     document: { name: "Updated" },
   })),
   remove: vi.fn(async () => undefined),
+  getEntityTypePublishedSchema: vi.fn(async (typeId: string) => {
+    if (typeId === "type-uuid-a") {
+      return { type: "object", properties: { name: { type: "string" } } };
+    }
+    if (typeId === "type-uuid-b") {
+      return { type: "object", properties: { code: { type: "string" } } };
+    }
+    if (typeId === "type-a" || typeId === "type-b") {
+      return { type: "object", properties: { name: { type: "string" }, slot: { type: "string" } } };
+    }
+    return { type: "object" };
+  }),
 });
 
 describe("ProfilesWidgetCore", () => {
@@ -194,11 +306,15 @@ describe("ProfilesWidgetCore", () => {
     );
 
     expect(await screen.findByLabelText(`Profile row ${e1}`)).toBeInTheDocument();
-    expect(screen.getByText(/Select a profile from the left column/i)).toBeInTheDocument();
+    expect(screen.getByText(/No profile selected/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Add new item/i }));
     expect(await screen.findByLabelText("Profile name")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Profile name"), { target: { value: "Unique created" } });
-    fireEvent.change(screen.getByLabelText("Document (JSON object)"), { target: { value: "{}" } });
+    const createDoc = await screen.findByTestId("profiles-widget-create-document");
+    await pickTreeDocumentView(createDoc);
+    fireEvent.change(within(createDoc).getByTestId("mock-json-tree-edit"), {
+      target: { value: "{}" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /Create profile/i }));
 
     await waitFor(() => {
@@ -208,7 +324,11 @@ describe("ProfilesWidgetCore", () => {
     fireEvent.click(screen.getByLabelText(`Profile row ${e1}`));
     expect(onOpenEntity).toHaveBeenCalledWith(e1);
     fireEvent.click(await screen.findByRole("button", { name: /Edit profile/i }));
-    fireEvent.change(screen.getByLabelText("Updated document (JSON object)"), { target: { value: '{"name":"Updated via test"}' } });
+    const editDoc = await screen.findByTestId("profiles-widget-edit-document");
+    await pickTreeDocumentView(editDoc);
+    fireEvent.change(within(editDoc).getByTestId("mock-json-tree-edit"), {
+      target: { value: '{"name":"Updated via test"}' },
+    });
     fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
     await waitFor(() => {
       expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ type: "updated" }));
@@ -293,5 +413,53 @@ describe("ProfilesWidgetCore", () => {
 
     expect(onObservability).toHaveBeenCalledWith(expect.objectContaining({ event: "list_requested" }));
     expect(onObservability).toHaveBeenCalledWith(expect.objectContaining({ event: "list_succeeded" }));
+  });
+
+  it("offers Form mode when published schema is available and saves document from Form", async () => {
+    const provider = buildProvider();
+    render(
+      <MantineProvider>
+        <ProfilesWidgetCore hostContext={hostContext} provider={provider} autoSelectFirst />
+      </MantineProvider>,
+    );
+
+    await screen.findByLabelText(`Profile row ${e1}`);
+    fireEvent.click(screen.getByRole("button", { name: /Edit profile/i }));
+
+    const editPanel = await screen.findByTestId("profiles-widget-edit-document");
+    expect(screen.getByRole("radio", { name: "Form" })).toBeInTheDocument();
+
+    const formField = within(editPanel).getByTestId("mock-rjsf-form");
+    fireEvent.change(formField, {
+      target: { value: JSON.stringify({ name: "From form", slot: "current" }) },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+
+    await waitFor(() => {
+      expect(provider.update).toHaveBeenCalledWith(
+        e1,
+        expect.objectContaining({
+          document: expect.objectContaining({ name: "From form" }),
+        }),
+        expect.anything(),
+      );
+    });
+  });
+
+  it("does not show Form segment when getEntityTypePublishedSchema is missing", async () => {
+    const provider = buildProvider();
+    delete provider.getEntityTypePublishedSchema;
+
+    render(
+      <MantineProvider>
+        <ProfilesWidgetCore hostContext={hostContext} provider={provider} autoSelectFirst />
+      </MantineProvider>,
+    );
+
+    await screen.findByLabelText(`Profile row ${e1}`);
+    fireEvent.click(screen.getByRole("button", { name: /Edit profile/i }));
+
+    await screen.findByTestId("profiles-widget-edit-document");
+    expect(screen.queryByRole("radio", { name: "Form" })).not.toBeInTheDocument();
   });
 });

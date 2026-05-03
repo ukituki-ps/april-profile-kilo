@@ -1,6 +1,8 @@
 # `@april/profile-ui`
 
-Embeddable React widgets for AprilProfile in AprilHub/host apps. Публичная поверхность пакета: **`ProfilesWidget`** (`profiles-widget`) и **`EntityTypesWidget`** (`entity-types-widget`), плюс провайдеры/OpenAPI-клиент для кастомного wiring.
+Embeddable React widgets for AprilProfile in AprilHub/host apps. Публичная поверхность пакета: **`ProfilesWidget`** (сборка `profiles-widget`), **`ProfilesWidgetProfileDetail`** (карточка + создание), **`EntityTypesWidget`** (`entity-types-widget`), плюс провайдеры/OpenAPI-клиент для кастомного wiring.
+
+Локальные демо с MSW (в репозитории `april-profile`, Vite shell): см. **`frontend/README.md`** — маршрут **`/widget-demos`** и вложенные страницы для фасадов, `*ApiWidget`, `*WidgetCore` + OpenAPI.
 
 ### Зависимости host
 
@@ -23,15 +25,25 @@ Props (см. также `ProfilesWidgetProps` в исходниках):
 - `pageSize?`, `initialSearch?`, `initialTypeId?`, `initialSort?`, `initialCreateEntityTypeId?`, `autoSelectFirst?`
 - `onAction?`, `onError?`, `onOpenEntity?`, `onObservability?`
 
-Поведение: master-detail (список профилей + карточка), server-side list/search/filter, CRUD, версии через провайдер.
+Поведение: master-detail (список профилей + карточка), server-side list/search/filter, CRUD, версии через провайдер. Только правая колонка и создание — отдельный виджет **`ProfilesWidgetProfileDetail`** (см. демо в `frontend/README.md`). Спецификация: `docs/widgets/profile/profiles-widget.md` (сборка), `docs/widgets/profile/profiles-widget-profile-detail.md`.
 
-Экспорты для кастомного wiring: **`ProfilesWidgetCore`**, **`ProfilesApiWidget`**, **`ProfilesDataProvider`**, **`createOpenApiProfilesProvider`**.
+Экспорты для кастомного wiring: **`ProfilesWidgetCore`**, **`ProfilesApiWidget`**, **`ProfilesWidgetProfileDetailCore`**, **`ProfilesApiWidgetProfileDetail`**, **`ProfilesDataProvider`**, **`createOpenApiProfilesProvider`**.
+
+## `ProfilesWidgetProfileDetail`
+
+Фасад над **`ProfilesApiWidgetProfileDetail`** → **`ProfilesWidgetProfileDetailCore`** + тот же OpenAPI-провайдер, что у списка.
+
+Дополнительно к полям `ProfilesWidget`: обязательные **`entityId`**, **`listItem`**, **`listItemsForDuplicateCheck`**; опционально **`documentEditingEnabled`**, **`allowProfileDelete`**; **`ref`**: **`openCreate()`** / **`closeCreate()`** для части 2 (создание) снаружи карточки.
+
+Миграция с **`layout="detail-only"`** (task 064): используйте **`ProfilesWidgetProfileDetail`** и передайте выбранную сущность явно; проп **`layout`** у **`ProfilesWidget`** удалён (**semver**: см. [`tasks/065-profiles-widget-split-detail-composition/REPORT.md`](../../../tasks/065-profiles-widget-split-detail-composition/REPORT.md)).
 
 ## `EntityTypesWidget`
 
 Фасад каталога семейств типов (`widgetId`: `entity-types-widget`): **`EntityTypesWidgetCore`** + **`EntityTypesApiWidget`** + **`createOpenApiEntityTypesProvider`**.
 
 Props: как у профилей по `hostContext` / `apiBaseUrl` / `accessToken`, плюс `pageSize?`, `providerContext?`, `onAction?`, `onError?`, `onObservability?`, `onOpenEntity?`.
+
+Спецификация по поверхностям: `docs/widgets/profile/entity-types-widget.md` (сборка), `docs/widgets/profile/entity-types-widget-catalog-list.md`, `docs/widgets/profile/entity-types-widget-schema-admin.md`, `docs/widgets/profile/entity-types-widget-entities-upgrade.md`, `docs/widgets/profile/entity-types-widget-integration.md`.
 
 Экспорты: **`EntityTypesWidgetCore`**, **`EntityTypesApiWidget`**, **`EntityTypesDataProvider`**, **`createOpenApiEntityTypesProvider`**.
 
