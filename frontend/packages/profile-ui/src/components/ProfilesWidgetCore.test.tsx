@@ -136,7 +136,7 @@ vi.mock("@april/ui", async () => {
     onAddItem?: () => void;
     onFilterChange?: (value: Record<string, string | undefined>) => void;
     onSelectItem?: (id: string | null) => void;
-    onViewChange?: (next: "list" | "grid" | "collapsed") => void;
+    onViewChange?: (next: "list" | "grid") => void;
     renderCard?: (item: { id: string; title: string }) => ReactNode;
   }) => (
     <div

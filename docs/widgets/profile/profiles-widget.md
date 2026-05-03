@@ -19,12 +19,12 @@
 
 ### Режим сетки (`CardListColumn`, вид `grid`)
 
-Переключатель вида в шапке `CardListColumn` (список → сетка → свёрнутая полоса) поддерживается в сборке **`ProfilesWidgetCore`**. В виде **`grid`**:
+Переключатель вида в шапке `CardListColumn` (список ↔ сетка; в DS **0.1.9+** публичный вид **`collapsed`** снят — узкий rail списка в продукте по-прежнему через локальное «свернуть список», см. `ProfilesWidgetCore`) поддерживается в сборке **`ProfilesWidgetCore`**. В виде **`grid`**:
 
 - левая колонка занимает **100% ширины** области виджета (правая колонка master–detail скрыта);
 - **`ProfilesWidgetProfileDetailCore`** показывается в **`AprilModal`** (`@april/ui`): модалка открывается при **выборе строки** или при нажатии **«Добавить»** (поток создания без предварительного выбора);
 - закрытие модалки (крестик, Escape, клик по оверлею — по поведению Mantine) **снимает выбор** (`entityId` для детали становится `null`) и закрывает вложенную модалку создания, если она была открыта;
-- при переключении обратно на **`list`** или **`collapsed`** правая колонка снова отображается; выбранный `entityId` **сохраняется**, если пользователь его не сбросил закрытием модалки в сетке;
+- при переключении обратно на **`list`** правая колонка снова отображается; выбранный `entityId` **сохраняется**, если пользователь его не сбросил закрытием модалки в сетке;
 - при **входе в `grid`** сбрасываются выделение строки (`entityId`), сессия «создать из сетки» и вложенная модалка создания — чтобы модалка детали **не открывалась сразу** после переключения вида; также сбрасывается локальное «свёрнуть список» (узкий rail).
 
 ## 3) Левая колонка: список профилей
@@ -56,7 +56,7 @@
 
 ### UI и дизайн-система
 
-- Список строится на **`CardListColumn`** из `@april/ui` (≥ **0.1.7**); корень сборки оборачивается в **`DensityProvider`** (общий с виджетом детали).
+- Список строится на **`CardListColumn`** из `@april/ui` (≥ **0.1.9**); корень сборки оборачивается в **`DensityProvider`** (общий с виджетом детали).
 - Уникальность **`document.name`**: клиентская проверка возможна **только** по уже загруженной странице списка; финальная уникальность — на сервере, когда контракт это отразит.
 
 ### Observability (список)
@@ -135,7 +135,7 @@ Host или будущий **registry** смогут подставить аль
 - Базовый CRUD-виджет (историческая база): [`../../../tasks/025-phase-4a-profile-profiles-list-crud-widget/TASK.md`](../../../tasks/025-phase-4a-profile-profiles-list-crud-widget/TASK.md).
 - UX-модернизация `widget-card`: [`../../../tasks/040-phase-5-widget-card-layout-modernization/TASK.md`](../../../tasks/040-phase-5-widget-card-layout-modernization/TASK.md).
 - Рефакторинг embed UI + версии + имя (task 051): [`../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/TASK.md`](../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/TASK.md), [`../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/PLAN.md`](../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/PLAN.md), [`../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/REPORT.md`](../../../tasks/051-phase-6-profiles-widget-ui-refactor-embed-and-versions/REPORT.md).
-- JSON-документ профиля на компонентах `@april/ui` (0.1.8+): [`../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md), [`../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/PLAN.md`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/PLAN.md), [`../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/REPORT.md`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/REPORT.md) (зависит от [`057`](../../../tasks/057-phase-7-profile-ui-ds-json-entity-types-integration/TASK.md)).
+- JSON-документ профиля на компонентах `@april/ui` (0.1.9+): [`../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md), [`../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/PLAN.md`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/PLAN.md), [`../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/REPORT.md`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/REPORT.md) (зависит от [`057`](../../../tasks/057-phase-7-profile-ui-ds-json-entity-types-integration/TASK.md)).
 - RJSF (059): [`../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/TASK.md`](../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/TASK.md), [`../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/PLAN.md`](../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/PLAN.md), [`../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/REPORT.md`](../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/REPORT.md) (зависит от [`058`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md)).
 - Разнесение спецификации list/detail (062): [`../../../tasks/062-docs-profiles-widget-spec-list-content-assembly/TASK.md`](../../../tasks/062-docs-profiles-widget-spec-list-content-assembly/TASK.md), [`../../../tasks/062-docs-profiles-widget-spec-list-content-assembly/REPORT.md`](../../../tasks/062-docs-profiles-widget-spec-list-content-assembly/REPORT.md).
 - Split npm detail + композиция (065): [`../../../tasks/065-profiles-widget-split-detail-composition/TASK.md`](../../../tasks/065-profiles-widget-split-detail-composition/TASK.md), [`../../../tasks/065-profiles-widget-split-detail-composition/REPORT.md`](../../../tasks/065-profiles-widget-split-detail-composition/REPORT.md).

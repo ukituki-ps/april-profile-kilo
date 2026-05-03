@@ -53,7 +53,7 @@ flowchart LR
 - **DS-first** на всех поверхностях; запреты и перечень JSON-примитивов — в [`entity-types-widget-schema-admin.md`](./entity-types-widget-schema-admin.md) и [`entity-types-widget-catalog-list.md`](./entity-types-widget-catalog-list.md).
 - Эволюция схемы: редактировать черновик; опубликовать → **новая ревизия N+1**; предыдущие ревизии read-only (детали — [`entity-types-widget-schema-admin.md`](./entity-types-widget-schema-admin.md)).
 - Привязка и апгрейд сущностей: single- и batch-upgrade, фильтры — [`entity-types-widget-entities-upgrade.md`](./entity-types-widget-entities-upgrade.md).
-- Публичные примитивы JSON в **`@april/ui` ≥ 0.1.8** (`AprilJsonTreeEditor`, `AprilJsonCollectionTextEditor`, `AprilJsonValidationSummary`, `DensityProvider`).
+- Публичные примитивы JSON в **`@april/ui` ≥ 0.1.9** (`AprilJsonTreeEditor`, `AprilJsonCollectionTextEditor`, `AprilJsonValidationSummary`, `DensityProvider`).
 
 ## 6) Зависимости по API и SDK
 
@@ -78,5 +78,5 @@ Handoff для AprilHub/BFF: [`../../integration/entity-types-widget-hub-handoff
 | [`tasks/053-phase-7-entity-type-revisions-backend-api-profile-integration`](../../../tasks/053-phase-7-entity-type-revisions-backend-api-profile-integration/TASK.md) | OpenAPI, HTTP handlers, связка с `profiles`, интеграционные тесты |
 | [`tasks/054-phase-7-entity-types-widget-production-ui`](../../../tasks/054-phase-7-entity-types-widget-production-ui/TASK.md) | Виджет UI (Core/Api/Facade/Provider), DS-first |
 | [`tasks/055-phase-7-entity-types-contract-docs-hub-handoff`](../../../tasks/055-phase-7-entity-types-contract-docs-hub-handoff/TASK.md) | WIDGET_CONTRACTS, docs-site stories, индекс, финализация handoff Hub |
-| [`tasks/057-phase-7-profile-ui-ds-json-entity-types-integration`](../../../tasks/057-phase-7-profile-ui-ds-json-entity-types-integration/TASK.md) | Замена textarea на публичные JSON-компоненты `@april/ui` (0.1.8+) в виджете |
+| [`tasks/057-phase-7-profile-ui-ds-json-entity-types-integration`](../../../tasks/057-phase-7-profile-ui-ds-json-entity-types-integration/TASK.md) | Замена textarea на публичные JSON-компоненты `@april/ui` (0.1.9+) в виджете |
 | [`tasks/063-docs-entity-types-widget-spec-surfaces-assembly`](../../../tasks/063-docs-entity-types-widget-spec-surfaces-assembly/TASK.md) | Разнесение этой карточки на поверхности + индекс |

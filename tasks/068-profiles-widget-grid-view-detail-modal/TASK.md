@@ -7,7 +7,7 @@
 - **Связанные документы и код:**
   - [`docs/widgets/profile/profiles-widget.md`](../../docs/widgets/profile/profiles-widget.md)
   - [`docs/widgets/profile/profiles-widget-profile-detail.md`](../../docs/widgets/profile/profiles-widget-profile-detail.md)
-  - [`design-system/DisignApril/DESIGN_SYSTEM.md`](../../design-system/DisignApril/DESIGN_SYSTEM.md) — §13 Card List Column (виды `list` / `grid` / `collapsed`; полноэкранная сетка как отдельное действие продукта)
+  - [`design-system/DisignApril/DESIGN_SYSTEM.md`](../../design-system/DisignApril/DESIGN_SYSTEM.md) — §13 Card List Column (после **DS 0.1.9** публичные виды колонки: **`list` | `grid`**; узкий rail — продуктовый `listCollapsed` в `ProfilesWidgetCore`, не вид `collapsed` у ДС)
   - Реализация: [`frontend/packages/profile-ui/src/components/ProfilesWidgetCore.tsx`](../../frontend/packages/profile-ui/src/components/ProfilesWidgetCore.tsx), [`ProfilesWidgetProfileDetailCore.tsx`](../../frontend/packages/profile-ui/src/components/ProfilesWidgetProfileDetailCore.tsx)
   - Предшественники: [`tasks/040-phase-5-widget-card-layout-modernization/TASK.md`](../040-phase-5-widget-card-layout-modernization/TASK.md), [`tasks/065-profiles-widget-split-detail-composition/TASK.md`](../065-profiles-widget-split-detail-composition/TASK.md), [`tasks/066-micro-ds-0-1-7-bump/TASK.md`](../066-micro-ds-0-1-7-bump/TASK.md) (DS с видами колонки)
 
@@ -19,12 +19,12 @@
 2. **Правая колонка** с **`ProfilesWidgetProfileDetailCore`** в этом режиме **не отображается** в master-detail строке.
 3. **Деталь профиля** (тот же `ProfilesWidgetProfileDetailCore`: просмотр, версии, документ, создание через ref) показывается в **модальном окне** (оверлей поверх сетки), а не справа от списка.
 
-При видах **`list`** и **`collapsed`** (и при любой политике для **`collapsed`**, согласованной в PR) поведение остаётся **как сейчас**: двухколоночный master–detail, текущие пропсы детали и `detailRef` для `openCreate()`.
+При виде **`list`** (включая локально «свёрнутый» rail списка через `listCollapsed`, без отдельного вида ДС) поведение остаётся **как сейчас**: двухколоночный master–detail, текущие пропсы детали и `detailRef` для `openCreate()`.
 
 ## Контекст для агента
 
 - Сейчас `ProfilesWidgetCore` **не** передаёт в `CardListColumn` управляемые `view` / `onViewChange`; вид переключается только внутри ДС по умолчанию. Внешняя обёртка списка задаёт **фиксированную ширину** левой колонки, из‑за чего даже при внутреннем `grid` у `CardListColumn` (`paperWidth: 100%`) список визуально остаётся узким.
-- `CardListColumn` из `@april/ui` экспортирует тип вида `CardListColumnView` (`'list' | 'grid' | 'collapsed'`). Для синхронизации с layout виджета нужен **controlled** `view` + `onViewChange` (или эквивалентная подписка, если в версии DS появится иной API — зафиксировать в `REPORT.md`).
+- `CardListColumn` из `@april/ui` (≥ **0.1.9**) экспортирует тип вида `CardListColumnView` (`'list' | 'grid'`). Для синхронизации с layout виджета нужен **controlled** `view` + `onViewChange` (или эквивалентная подписка, если в версии DS появится иной API — зафиксировать в `REPORT.md`).
 - Документация ДС: в режиме `grid` колонка уже **100% родителя**; «полноэкранный viewport» в витрине DS — отдельная обёртка (`CardListColumnSection`); в рамках **этой** задачи fullscreen viewport **не** обязателен, только **100% ширины виджета** под список.
 
 ## Входит в объём
@@ -51,7 +51,7 @@
 
 ### Переходы между видами
 
-- При **`onViewChange` → `list`** (или `collapsed`): закрыть модалку (если открыта), снова показать правую колонку; **`selectedEntityId`** не обнулять без отдельного решения продукта (удобно: выбор сохраняется, деталь снова в колонке).
+- При **`onViewChange` → `list`**: закрыть модалку (если открыта), снова показать правую колонку; **`selectedEntityId`** не обнулять без отдельного решения продукта (удобно: выбор сохраняется, деталь снова в колонке).
 - При **входе в `grid`**: выделение сбрасывается, модалка детали не открывается до явного выбора строки или «Добавить» (зафиксировано в `profiles-widget.md` и `REPORT.md`).
 
 ### Тесты
@@ -90,7 +90,7 @@
 
 - [ ] При **`view === 'grid'`** у колонки списка: список на **100%** ширины области виджета; правая колонка детали **скрыта**.
 - [ ] В этом режиме деталь доступна в **модалке** (выбор строки и/или создание — по выбранной в PR политике).
-- [ ] При **`list`** / **`collapsed`**: прежний двухколоночный layout и поведение детали без регрессий по ключевым сценариям тестов.
+- [ ] При **`list`**: прежний двухколоночный layout и поведение детали без регрессий по ключевым сценариям тестов.
 - [ ] `npm run lint -w @april/profile-ui` и `npm run test -w @april/profile-ui -- --run` проходят.
 - [ ] Обновлены **`profiles-widget.md`** (и при необходимости профиль детали).
 

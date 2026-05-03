@@ -1,6 +1,6 @@
 # Vendored tarball’ы `@april/ui` и `@april/tokens`
 
-**Сейчас (версия 0.1.8):** в `frontend/package.json` зависимости заданы как **`file:vendor/ds-packs/april-tokens-0.1.8.tgz`** и **`file:vendor/ds-packs/april-ui-0.1.8.tgz`** — `npm ci` не требует **`NODE_AUTH_TOKEN`**.
+**Сейчас (версия 0.1.9):** в `frontend/package.json` зависимости заданы как **`file:vendor/ds-packs/april-tokens-0.1.9.tgz`** и **`file:vendor/ds-packs/april-ui-0.1.9.tgz`** — `npm ci` не требует **`NODE_AUTH_TOKEN`**.
 
 Архивы получают из submodule **`design-system/DisignApril`**:
 
@@ -11,8 +11,8 @@ cd frontend && npm install   # обновит package-lock.json при смен�
 
 ## Переход обратно на GitHub Packages (один источник — npm)
 
-1. Опубликовать **`@ukituki-ps/april-tokens`** и **`@ukituki-ps/april-ui`** **0.1.8** (или ту же сборку, что в tarball’ах).
-2. В `frontend/package.json` заменить `file:…` на **`npm:@ukituki-ps/april-tokens@^0.1.8`** и **`npm:@ukituki-ps/april-ui@^0.1.8`**.
+1. Опубликовать **`@ukituki-ps/april-tokens`** и **`@ukituki-ps/april-ui`** **0.1.9** (или ту же сборку, что в tarball’ах).
+2. В `frontend/package.json` заменить `file:…` на **`npm:@ukituki-ps/april-tokens@^0.1.9`** и **`npm:@ukituki-ps/april-ui@^0.1.9`**.
 3. С **`NODE_AUTH_TOKEN`** (`read:packages`): `cd frontend && rm -rf node_modules && npm install`.
 4. Закоммитить обновлённый **`package-lock.json`**, при желании удалить `.tgz` из репозитория.
 
