@@ -19,6 +19,8 @@ export { EntityTypesApiWidget } from "./components/EntityTypesApiWidget";
 export type { EntityTypesApiWidgetProps } from "./components/EntityTypesApiWidget";
 export { EntityTypesWidgetCore } from "./components/EntityTypesWidgetCore";
 export type { EntityTypesWidgetCoreProps } from "./components/EntityTypesWidgetCore";
+export { EntityTypesWidgetDetailCore } from "./components/EntityTypesWidgetDetailCore";
+export type { EntityTypesWidgetDetailCoreProps } from "./components/EntityTypesWidgetDetailCore";
 export type {
   EntityTypesWidgetAction,
   ProfileWidgetHostContext,

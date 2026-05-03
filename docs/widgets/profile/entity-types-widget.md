@@ -17,7 +17,7 @@
 
 Виджет обеспечивает **полный административный контур** над **каталогом типов сущностей**: семейство (`namespace` + `code`), **immutable** ревизии схемы, **черновик**, привязка `entity` к ревизии и **явный апгрейд** привязки с валидацией документа профиля (семантика бэкенда — задача **053**; инвариант — append-only версии профиля).
 
-Виджет **не** демо-обёртка: паттерн **`Core` + `ApiWidget` + фасад embed + data provider`**, как у [`profiles-widget`](./profiles-widget.md) (задачи **042–047**).
+Виджет **не** демо-обёртка: паттерн **`Core` + `ApiWidget` + фасад embed + data provider`**, как у [`profiles-widget`](./profiles-widget.md) (задачи **042–047**). Сборка списка и **детальной карточки** разнесена по компонентам **`EntityTypesWidgetCore`** (каталог + layout + создание семейства) и **`EntityTypesWidgetDetailCore`** (черновик, ревизии, upgrade, patch/delete) — см. [`MASTER_DETAIL_WIDGET_PATTERN.md`](../MASTER_DETAIL_WIDGET_PATTERN.md).
 
 ### Документация по поверхностям
 
@@ -36,11 +36,14 @@ flowchart LR
     Facade --> Api[EntityTypesApiWidget]
     Api --> Provider[EntityTypesDataProvider]
     Api --> Core[EntityTypesWidgetCore]
-    Core -->|catalog/draft/publish/upgrade| Provider
+    Core --> Detail[EntityTypesWidgetDetailCore]
+    Core -->|listFamilies| Provider
+    Detail -->|get/save/publish/revisions/upgrade| Provider
     Provider -->|OpenAPI SDK| BFF[/admin/profile/api]
 ```
 
-- `EntityTypesWidgetCore`: UI/state machine, без транспорта в Core.
+- `EntityTypesWidgetCore`: **каталог** (`CardListColumn`), выбор `familyId`, модалка создания семейства, `AbortSignal` на список; без HTTP.
+- `EntityTypesWidgetDetailCore`: **детальная карточка** выбранного семейства (вкладки Draft / Revisions / Upgrade, patch/delete), отмена запросов детали; публичный экспорт для кастомного embed при необходимости.
 - `EntityTypesApiWidget`: wiring host + OpenAPI provider, отмена запросов через **`AbortSignal`**.
 - `EntityTypesWidget`: публичный фасад для embed.
 
