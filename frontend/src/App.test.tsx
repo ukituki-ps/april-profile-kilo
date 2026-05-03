@@ -29,7 +29,7 @@ describe("App", () => {
     expect(screen.getByText("/entity-types-api-widget-demo")).toBeInTheDocument();
   });
 
-  it("renders doc surface demo for profiles-widget-list", () => {
+  it("redirects legacy profiles-widget-list surface route to assembly spec", () => {
     render(
       <AprilProviders>
         <MemoryRouter initialEntries={["/demo/surfaces/profiles-widget-list"]}>
@@ -37,11 +37,11 @@ describe("App", () => {
         </MemoryRouter>
       </AprilProviders>,
     );
-    expect(screen.getByRole("link", { name: "profiles-widget-list.md" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "profiles-widget.md" })).toHaveAttribute(
       "href",
-      "https://github.com/ukituki-ps/april-profile/blob/develop/docs/widgets/profile/profiles-widget-list.md",
+      "https://github.com/ukituki-ps/april-profile/blob/develop/docs/widgets/profile/profiles-widget.md",
     );
-    expect(screen.getByRole("heading", { name: /profiles-widget — поверхность списка/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /profiles-widget — сборка/i })).toBeInTheDocument();
   });
 
   it("renders doc surface demo for profiles-widget-profile-detail without list column", () => {
@@ -56,7 +56,7 @@ describe("App", () => {
       "href",
       "https://github.com/ukituki-ps/april-profile/blob/develop/docs/widgets/profile/profiles-widget-profile-detail.md",
     );
-    expect(screen.getByRole("heading", { name: /profiles-widget — карточка и документ/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /profiles-widget-profile-detail/i })).toBeInTheDocument();
     expect(screen.queryByTestId("profiles-widget-list-column")).not.toBeInTheDocument();
   });
 });

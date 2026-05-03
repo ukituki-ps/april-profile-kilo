@@ -33,8 +33,9 @@ npm run dev
 | `/entity-types-api-widget-demo` | `EntityTypesApiWidget` |
 | `/profiles-widget-core-demo` | `ProfilesWidgetCore` + `createOpenApiProfilesProvider` |
 | `/entity-types-widget-core-demo` | `EntityTypesWidgetCore` + `createOpenApiEntityTypesProvider` |
-| `/demo/surfaces/profiles-widget-list` | Спека `profiles-widget-list.md` + тот же `ProfilesWidget` (MSW) |
-| `/demo/surfaces/profiles-widget-profile-detail` | `profiles-widget-profile-detail.md` + `ProfilesWidget` с `layout="detail-only"` (только карточка; MSW) |
+| `/demo/surfaces/profiles-widget` | Спека `profiles-widget.md` + полный `ProfilesWidget` (MSW) |
+| `/demo/surfaces/profiles-widget-list` | Редирект на `/demo/surfaces/profiles-widget` (старый URL без отдельной md-спеки списка) |
+| `/demo/surfaces/profiles-widget-profile-detail` | `profiles-widget-profile-detail.md` + самостоятельный `ProfilesWidgetProfileDetail` (MSW) |
 | `/demo/surfaces/entity-types-widget-catalog-list` | `entity-types-widget-catalog-list.md` + `EntityTypesWidget` |
 | `/demo/surfaces/entity-types-widget-schema-admin` | `entity-types-widget-schema-admin.md` + `EntityTypesWidget` |
 | `/demo/surfaces/entity-types-widget-entities-upgrade` | `entity-types-widget-entities-upgrade.md` + `EntityTypesWidget` |

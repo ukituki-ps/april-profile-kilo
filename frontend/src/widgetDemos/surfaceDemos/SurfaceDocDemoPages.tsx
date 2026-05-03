@@ -1,8 +1,14 @@
-import { EntityTypesWidget, ProfilesWidget } from "@april/profile-ui";
+import {
+  EntityTypesWidget,
+  ProfilesWidget,
+  ProfilesWidgetProfileDetail,
+  type ProfilesWidgetProfileDetailHandle,
+} from "@april/profile-ui";
 import {
   Alert,
   Anchor,
   Box,
+  Button,
   Code,
   Container,
   Group,
@@ -13,11 +19,13 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { useRef, useState, type ReactNode } from "react";
+import { Link, Navigate } from "react-router-dom";
 import {
   DEMO_ENTITY_TYPES_HOST,
   DEMO_PROFILES_HOST,
+  DEMO_PROFILES_SEED_LIST_ITEMS,
+  DEMO_PROFILE_SEED_E1,
   profileWidgetDocUrl,
   useDemoApiEnv,
 } from "../demoShared";
@@ -70,8 +78,8 @@ function SurfaceDocDemoChrome(props: {
         <Alert color="gray" title="Как читать это демо">
           {props.howToReadDemo ?? (
             <>
-              В пакете <Code>@april/profile-ui</Code> пока нет отдельных npm-компонентов на каждую поверхность — ниже тот же
-              полный виджет, что и на основных демо, с тем же MSW. <strong>{props.whereInUi}</strong>
+              Ниже тот же MSW и базовый URL, что на остальных демо при <Code>VITE_PROFILE_DEMO_MOCK=true</Code>.{" "}
+              <strong>{props.whereInUi}</strong>
             </>
           )}
         </Alert>
@@ -116,8 +124,10 @@ function ProfilesSurfaceBody() {
   );
 }
 
-function ProfilesSurfaceDetailOnlyBody() {
+function ProfilesSurfaceDetailStandaloneBody() {
   const { apiBaseUrl, accessToken } = useDemoApiEnv();
+  const detailRef = useRef<ProfilesWidgetProfileDetailHandle>(null);
+  const [readOnlyDetail, setReadOnlyDetail] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   return (
     <Stack gap="sm" style={{ height: "100%", minHeight: 0 }}>
@@ -126,13 +136,30 @@ function ProfilesSurfaceDetailOnlyBody() {
           {msg}
         </Alert>
       ) : null}
+      <Group gap="md" wrap="wrap">
+        <Button variant="light" onClick={() => detailRef.current?.openCreate()} data-testid="demo-profile-detail-open-create">
+          Открыть создание (внешний вызов)
+        </Button>
+        <Button
+          variant="default"
+          size="compact-sm"
+          onClick={() => setReadOnlyDetail((v) => !v)}
+          aria-pressed={readOnlyDetail}
+        >
+          {readOnlyDetail ? "Включить редактирование" : "Read-only деталь"}
+        </Button>
+      </Group>
       <Box style={{ flex: 1, minHeight: 0 }}>
-        <ProfilesWidget
+        <ProfilesWidgetProfileDetail
+          ref={detailRef}
           hostContext={DEMO_PROFILES_HOST}
           apiBaseUrl={apiBaseUrl}
           accessToken={accessToken}
-          layout="detail-only"
-          autoSelectFirst
+          entityId={DEMO_PROFILE_SEED_E1}
+          listItem={DEMO_PROFILES_SEED_LIST_ITEMS[0]}
+          listItemsForDuplicateCheck={DEMO_PROFILES_SEED_LIST_ITEMS}
+          documentEditingEnabled={!readOnlyDetail}
+          allowProfileDelete={!readOnlyDetail}
           onAction={(action) => {
             if (action.type === "deleted") {
               setMsg(`deleted ${action.entityId}`);
@@ -168,17 +195,22 @@ function EntityTypesSurfaceBody() {
   );
 }
 
-export function ProfilesWidgetListSurfaceDemoPage() {
+export function ProfilesWidgetAssemblySurfaceDemoPage() {
   return (
     <SurfaceDocDemoChrome
-      demoPath="/demo/surfaces/profiles-widget-list"
-      docFile="profiles-widget-list.md"
-      surfaceTitle="profiles-widget — поверхность списка"
-      whereInUi="Смотрите левую колонку: список профилей, поиск, фильтр по типу, пагинация (`CardListColumn`)."
+      demoPath="/demo/surfaces/profiles-widget"
+      docFile="profiles-widget.md"
+      surfaceTitle="profiles-widget — сборка (список + деталь)"
+      whereInUi="Слева список (`CardListColumn`), справа карточка и документ; кнопка «добавить» в списке открывает создание профиля (модалка виджета детали)."
     >
       <ProfilesSurfaceBody />
     </SurfaceDocDemoChrome>
   );
+}
+
+/** Редирект со старого маршрута спеки-only списка на сборку `profiles-widget.md`. */
+export function ProfilesWidgetListSurfaceRedirectPage() {
+  return <Navigate to="/demo/surfaces/profiles-widget" replace />;
 }
 
 export function ProfilesWidgetProfileDetailSurfaceDemoPage() {
@@ -186,16 +218,17 @@ export function ProfilesWidgetProfileDetailSurfaceDemoPage() {
     <SurfaceDocDemoChrome
       demoPath="/demo/surfaces/profiles-widget-profile-detail"
       docFile="profiles-widget-profile-detail.md"
-      surfaceTitle="profiles-widget — карточка и документ"
+      surfaceTitle="profiles-widget-profile-detail (npm)"
       howToReadDemo={
         <Text size="sm">
-          Ниже только <strong>правая колонка</strong> виджета: <Code>ProfilesWidget</Code> с <Code>layout="detail-only"</Code>{" "}
-          (колонка списка скрыта; первый профиль из ответа API выбирается через <Code>autoSelectFirst</Code>). Те же MSW и
-          базовый URL, что на остальных демо при <Code>VITE_PROFILE_DEMO_MOCK=true</Code>.
+          Ниже самостоятельный виджет <Code>ProfilesWidgetProfileDetail</Code>: карточка выбранной сущности и модалка создания.
+          Кнопка «Открыть создание» демонстрирует <strong>внешний</strong> вызов <Code>ref.openCreate()</Code> (часть 2 не
+          привязана только к UI карточки). Переключатель read-only отключает редактирование/удаление части 1. Сид списка
+          совпадает с MSW в <Code>handlers.ts</Code>.
         </Text>
       }
     >
-      <ProfilesSurfaceDetailOnlyBody />
+      <ProfilesSurfaceDetailStandaloneBody />
     </SurfaceDocDemoChrome>
   );
 }

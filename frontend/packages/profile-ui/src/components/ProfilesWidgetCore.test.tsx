@@ -221,27 +221,6 @@ describe("ProfilesWidgetCore", () => {
     expect(screen.getByLabelText("CardListColumn mock")).toHaveAttribute("data-height-mode", "fill");
   });
 
-  it("detail-only layout omits list column and selects first profile when autoSelectFirst", async () => {
-    const provider = buildProvider();
-    render(
-      <MantineProvider>
-        <ProfilesWidgetCore
-          hostContext={hostContext}
-          provider={provider}
-          layout="detail-only"
-          autoSelectFirst
-        />
-      </MantineProvider>,
-    );
-
-    expect(screen.queryByTestId("profiles-widget-list-column")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("CardListColumn mock")).not.toBeInTheDocument();
-    await screen.findByTestId("profiles-widget-detail-column");
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { name: new RegExp(p1, "i") })).toBeInTheDocument();
-    });
-  });
-
   it("loads list through provider and supports search/filter/pagination", async () => {
     const provider = buildProvider();
     render(
@@ -291,7 +270,7 @@ describe("ProfilesWidgetCore", () => {
     );
 
     expect(await screen.findByLabelText(`Profile row ${e1}`)).toBeInTheDocument();
-    expect(screen.getByText(/Select a profile from the left column/i)).toBeInTheDocument();
+    expect(screen.getByText(/No profile selected/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Add new item/i }));
     expect(await screen.findByLabelText("Profile name")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Profile name"), { target: { value: "Unique created" } });

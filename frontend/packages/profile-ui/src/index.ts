@@ -3,7 +3,16 @@ export type { ProfilesWidgetProps } from "./components/ProfilesWidget";
 export { ProfilesApiWidget } from "./components/ProfilesApiWidget";
 export type { ProfilesApiWidgetProps } from "./components/ProfilesApiWidget";
 export { ProfilesWidgetCore } from "./components/ProfilesWidgetCore";
-export type { ProfilesWidgetCoreProps, ProfilesWidgetLayout } from "./components/ProfilesWidgetCore";
+export type { ProfilesWidgetCoreProps } from "./components/ProfilesWidgetCore";
+export { ProfilesWidgetProfileDetail } from "./components/ProfilesWidgetProfileDetail";
+export type { ProfilesWidgetProfileDetailProps } from "./components/ProfilesWidgetProfileDetail";
+export { ProfilesApiWidgetProfileDetail } from "./components/ProfilesApiWidgetProfileDetail";
+export type { ProfilesApiWidgetProfileDetailProps } from "./components/ProfilesApiWidgetProfileDetail";
+export type {
+  ProfilesWidgetProfileDetailHandle,
+  ProfilesWidgetProfileDetailCoreProps,
+} from "./components/ProfilesWidgetProfileDetailCore";
+export { ProfilesWidgetProfileDetailCore } from "./components/ProfilesWidgetProfileDetailCore";
 export { EntityTypesWidget } from "./components/EntityTypesWidget";
 export type { EntityTypesWidgetProps } from "./components/EntityTypesWidget";
 export { EntityTypesApiWidget } from "./components/EntityTypesApiWidget";

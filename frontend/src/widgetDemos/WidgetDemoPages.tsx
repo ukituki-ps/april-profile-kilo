@@ -162,18 +162,18 @@ export function WidgetDemosIndexPage() {
 
         <DemoSection title="Спеки по поверхностям (markdown + тот же MSW)">
           <Text size="sm" c="dimmed">
-            Отдельный маршрут на каждый файл в <Code>docs/widgets/profile/</Code>: полный виджет + подсказка, какая
-            часть UI относится к спеке (отдельных npm-компонентов на поверхность пока нет).
+            Маршруты на <Code>docs/widgets/profile/</Code>: сборка <Code>profiles-widget</Code>, отдельный npm-виджет{" "}
+            <Code>ProfilesWidgetProfileDetail</Code>, плюс спеки каталога типов.
           </Text>
           <DemoRouteNavLink
-            to="/demo/surfaces/profiles-widget-list"
-            title="profiles-widget-list"
-            description="Список профилей (левая колонка)."
+            to="/demo/surfaces/profiles-widget"
+            title="profiles-widget (сборка)"
+            description="Список слева + карточка/документ справа (`ProfilesWidget`); MSW."
           />
           <DemoRouteNavLink
             to="/demo/surfaces/profiles-widget-profile-detail"
             title="profiles-widget-profile-detail"
-            description='Только карточка и документ (layout="detail-only"), без списка слева; MSW.'
+            description="Самостоятельный `ProfilesWidgetProfileDetail` (карточка + создание, ref); MSW."
           />
           <DemoRouteNavLink
             to="/demo/surfaces/entity-types-widget-catalog-list"

@@ -15,7 +15,8 @@ import {
   EntityTypesWidgetEntitiesUpgradeSurfaceDemoPage,
   EntityTypesWidgetIntegrationSurfaceDemoPage,
   EntityTypesWidgetSchemaAdminSurfaceDemoPage,
-  ProfilesWidgetListSurfaceDemoPage,
+  ProfilesWidgetAssemblySurfaceDemoPage,
+  ProfilesWidgetListSurfaceRedirectPage,
   ProfilesWidgetProfileDetailSurfaceDemoPage,
 } from "./widgetDemos/surfaceDemos/SurfaceDocDemoPages";
 
@@ -93,7 +94,8 @@ export default function App() {
         <Route path="/entity-types-api-widget-demo" element={<EntityTypesApiWidgetDemoPage />} />
         <Route path="/profiles-widget-core-demo" element={<ProfilesWidgetCoreDemoPage />} />
         <Route path="/entity-types-widget-core-demo" element={<EntityTypesWidgetCoreDemoPage />} />
-        <Route path="/demo/surfaces/profiles-widget-list" element={<ProfilesWidgetListSurfaceDemoPage />} />
+        <Route path="/demo/surfaces/profiles-widget-list" element={<ProfilesWidgetListSurfaceRedirectPage />} />
+        <Route path="/demo/surfaces/profiles-widget" element={<ProfilesWidgetAssemblySurfaceDemoPage />} />
         <Route
           path="/demo/surfaces/profiles-widget-profile-detail"
           element={<ProfilesWidgetProfileDetailSurfaceDemoPage />}

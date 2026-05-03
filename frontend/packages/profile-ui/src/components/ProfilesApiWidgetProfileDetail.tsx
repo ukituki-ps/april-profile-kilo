@@ -1,32 +1,25 @@
-import { useMemo, useRef } from "react";
-import { ProfilesWidgetCore } from "./ProfilesWidgetCore";
-import type { ProfilesWidgetCoreProps } from "./ProfilesWidgetCore";
+import { forwardRef, useMemo, useRef } from "react";
 import { createOpenApiProfilesProvider } from "../providers/openapiProfilesProvider";
 import type { ProviderContext } from "../providers/profilesDataProvider";
+import {
+  ProfilesWidgetProfileDetailCore,
+  type ProfilesWidgetProfileDetailCoreProps,
+  type ProfilesWidgetProfileDetailHandle,
+} from "./ProfilesWidgetProfileDetailCore";
 
-export type ProfilesApiWidgetProps = Omit<ProfilesWidgetCoreProps, "provider"> & {
+export type ProfilesApiWidgetProfileDetailProps = Omit<ProfilesWidgetProfileDetailCoreProps, "provider"> & {
   apiBaseUrl: string;
   accessToken?: string;
 };
 
-export function ProfilesApiWidget({
-  apiBaseUrl,
-  accessToken,
-  hostContext,
-  initialCreateEntityTypeId,
-  pageSize,
-  initialSearch,
-  initialTypeId,
-  initialSort,
-  autoSelectFirst,
-  onAction,
-  onError,
-  onObservability,
-  onOpenEntity,
-}: ProfilesApiWidgetProps) {
-  // Stable provider: token comes from `providerContext` per request, not from provider instance identity.
+export const ProfilesApiWidgetProfileDetail = forwardRef<
+  ProfilesWidgetProfileDetailHandle,
+  ProfilesApiWidgetProfileDetailProps
+>(function ProfilesApiWidgetProfileDetail(
+  { apiBaseUrl, accessToken, hostContext, ...rest },
+  ref,
+) {
   const provider = useMemo(() => createOpenApiProfilesProvider({ apiBaseUrl }), [apiBaseUrl]);
-  // Keycloak updates `accessToken` often; it must NOT recreate this object (WidgetCore effects + useMemo churn).
   const accessTokenRef = useRef(accessToken);
   accessTokenRef.current = accessToken;
   const providerContext = useMemo<Omit<ProviderContext, "signal">>(
@@ -54,20 +47,12 @@ export function ProfilesApiWidget({
   );
 
   return (
-    <ProfilesWidgetCore
+    <ProfilesWidgetProfileDetailCore
+      ref={ref}
       hostContext={hostContext}
       provider={provider}
       providerContext={providerContext}
-      initialCreateEntityTypeId={initialCreateEntityTypeId}
-      pageSize={pageSize}
-      initialSearch={initialSearch}
-      initialTypeId={initialTypeId}
-      initialSort={initialSort}
-      autoSelectFirst={autoSelectFirst}
-      onAction={onAction}
-      onError={onError}
-      onObservability={onObservability}
-      onOpenEntity={onOpenEntity}
+      {...rest}
     />
   );
-}
+});
