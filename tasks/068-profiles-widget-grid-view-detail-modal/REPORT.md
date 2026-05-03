@@ -8,7 +8,7 @@
 
 ## 2) Что сделано
 
-- **[frontend]** В `ProfilesWidgetCore`: управляемый вид `CardListColumn` (`view` / `onViewChange`); синхронизация выбора через `selectedItemId` / `onSelectItem`; при `grid` — колонка списка на всю ширину, правая колонка скрыта, деталь в **`AprilModal`**; открытие модалки при выборе строки или при «Добавить» в сетке (`gridCreateSession` + `requestAnimationFrame` → `openCreate()`); закрытие модалки сбрасывает выбор и вызывает `closeCreate()`; при входе в `grid` сбрасывается «свёрнутость» списка; при `created` сбрасывается сессия создания в сетке.
+- **[frontend]** В `ProfilesWidgetCore`: управляемый вид `CardListColumn` (`view` / `onViewChange`); синхронизация выбора через `selectedItemId` / `onSelectItem`; при `grid` — колонка списка на всю ширину, правая колонка скрыта, деталь в **`AprilModal`**; открытие модалки при выборе строки или при «Добавить» в сетке (`gridCreateSession` + `requestAnimationFrame` → `openCreate()`); закрытие модалки сбрасывает выбор и вызывает `closeCreate()`; **при входе в `grid`** сбрасываются выделение, сессия создания и `closeCreate()`, плюс «свёрнутость» списка — модалка не открывается сразу после переключения вида; при `created` сбрасывается сессия создания в сетке; клик по карточке: `stopPropagation` + игнор `null` в `onSelectItem` (toggle ДС vs `autoSelectFirst`).
 - **[docs]** Обновлены `docs/widgets/profile/profiles-widget.md`, `profiles-widget-profile-detail.md`.
 - **[tests]** Расширен мок `CardListColumn`; добавлены сценарии grid/modal/list и Add в сетке.
 

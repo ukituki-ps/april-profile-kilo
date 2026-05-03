@@ -148,6 +148,10 @@ export function ProfilesWidgetCore({
     setCardListView(next);
     if (next === "grid") {
       setListCollapsed(false);
+      detailRef.current?.closeCreate();
+      setSelectedEntityId(null);
+      setGridCreateSession(false);
+      setPendingGridOpenCreate(false);
     } else {
       setGridCreateSession(false);
       setPendingGridOpenCreate(false);
