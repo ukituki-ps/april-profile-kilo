@@ -1,5 +1,5 @@
 import { AprilModal, CardListColumn, DensityProvider, type CardListColumnView } from "@april/ui";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -35,8 +35,10 @@ export type ProfilesWidgetCoreProps = {
 
 const DEFAULT_PAGE_SIZE = 20;
 
-const CARD_LIST_COLLAPSE_ARIA = new Set(["Свернуть список", "Collapse list"]);
-const CARD_LIST_EXPAND_ARIA = new Set(["Развернуть список", "Expand list"]);
+/** DS ≥0.1.9: только `list` | `grid`; устаревшее значение (напр. `collapsed` в state после HMR) ломает chrome колонки. */
+function normalizeCardListColumnView(value: unknown): CardListColumnView {
+  return value === "grid" ? "grid" : "list";
+}
 
 const mapSecureMessage = (code: ProfilesProviderErrorCode): string => {
   if (code === "unauthorized") {
@@ -86,8 +88,13 @@ export function ProfilesWidgetCore({
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
-  const [listCollapsed, setListCollapsed] = useState(false);
   const [cardListView, setCardListView] = useState<CardListColumnView>("list");
+  const effectiveCardListView = normalizeCardListColumnView(cardListView);
+  useLayoutEffect(() => {
+    if (cardListView !== effectiveCardListView) {
+      setCardListView(effectiveCardListView);
+    }
+  }, [cardListView, effectiveCardListView]);
   /** В режиме сетки: держим модалку открытой для потока «Создать» без выбранной строки. */
   const [gridCreateSession, setGridCreateSession] = useState(false);
   const [pendingGridOpenCreate, setPendingGridOpenCreate] = useState(false);
@@ -134,7 +141,7 @@ export function ProfilesWidgetCore({
     [items, selectedEntityId],
   );
 
-  const isGridLayout = cardListView === "grid";
+  const isGridLayout = effectiveCardListView === "grid";
   const gridProfileModalOpened = isGridLayout && (Boolean(selectedEntityId) || gridCreateSession);
 
   const gridModalHeaderTitle = useMemo(() => {
@@ -145,9 +152,9 @@ export function ProfilesWidgetCore({
   }, [selectedRow]);
 
   const handleCardListViewChange = useCallback((next: CardListColumnView) => {
-    setCardListView(next);
-    if (next === "grid") {
-      setListCollapsed(false);
+    const v = normalizeCardListColumnView(next);
+    setCardListView(v);
+    if (v === "grid") {
       detailRef.current?.closeCreate();
       setSelectedEntityId(null);
       setGridCreateSession(false);
@@ -397,17 +404,6 @@ export function ProfilesWidgetCore({
           <Stack
             data-testid="profiles-widget-list-column"
             gap="xs"
-            onClickCapture={(event) => {
-              const btn = (event.target as HTMLElement | null)?.closest("button[aria-label]");
-              const label = btn?.getAttribute("aria-label");
-              if (label && CARD_LIST_COLLAPSE_ARIA.has(label)) {
-                setListCollapsed(true);
-                return;
-              }
-              if (label && CARD_LIST_EXPAND_ARIA.has(label)) {
-                setListCollapsed(false);
-              }
-            }}
             style={
               isGridLayout
                 ? {
@@ -421,9 +417,9 @@ export function ProfilesWidgetCore({
                   }
                 : {
                     flex: "0 0 auto",
-                    width: listCollapsed ? 72 : "clamp(280px, 30vw, 420px)",
-                    minWidth: listCollapsed ? 72 : 280,
-                    maxWidth: listCollapsed ? 72 : "44%",
+                    width: "clamp(280px, 30vw, 420px)",
+                    minWidth: 280,
+                    maxWidth: "44%",
                     display: "flex",
                     flexDirection: "column",
                     minHeight: 0,
@@ -436,7 +432,7 @@ export function ProfilesWidgetCore({
                 items={listItems}
                 mode="inline"
                 heightMode="fill"
-                view={cardListView}
+                view={effectiveCardListView}
                 onViewChange={handleCardListViewChange}
                 selectedItemId={selectedEntityId}
                 onSelectItem={handleSelectProfileFromList}
@@ -466,8 +462,8 @@ export function ProfilesWidgetCore({
                   }
                   void loadList({ append: true, cursor: nextCursor });
                 }}
-                defaultWidthPercent={listCollapsed ? 100 : 96}
-                minWidthPercent={listCollapsed ? 100 : 90}
+                defaultWidthPercent={96}
+                minWidthPercent={90}
                 maxWidthPercent={100}
                 renderCard={(item) => {
                   const source = items.find((current) => current.entityId === item.id);
