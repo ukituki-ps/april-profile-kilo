@@ -83,6 +83,8 @@
 
 ### Архитектура кода (task 042, расширение task 065)
 
+Обобщённое описание слоёв и потоков для **аналогичных** виджетов: [`../MASTER_DETAIL_WIDGET_PATTERN.md`](../MASTER_DETAIL_WIDGET_PATTERN.md).
+
 ```mermaid
 flowchart LR
     Host[Host App / AprilHub] -->|hostContext, callbacks| Facade[ProfilesWidget facade]
