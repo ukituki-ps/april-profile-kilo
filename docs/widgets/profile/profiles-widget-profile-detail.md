@@ -9,6 +9,8 @@
 
 > Сборка со списком слева: [`./profiles-widget.md`](./profiles-widget.md) (раздел про левую колонку и `GET /v1/entities`).
 
+В составном **`profiles-widget`** при виде сетки у `CardListColumn` деталь может монтироваться в **`AprilModal`**; публичный контракт **`ProfilesWidgetProfileDetail`** / **`ProfilesWidgetProfileDetailCore`** от этого не меняется.
+
 ## Назначение (две части)
 
 1. **Часть 1 — просмотр и опционально редактирование** выбранного профиля: карточка сущности, версии, сегменты Form / Tree / Source / Schema по текущей спеке. Host может отключить мутации документа и удаление: проп **`documentEditingEnabled`** (по умолчанию `true`) и **`allowProfileDelete`** (по умолчанию `true`).

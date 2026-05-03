@@ -1,5 +1,5 @@
-import { CardListColumn, DensityProvider } from "@april/ui";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { AprilModal, CardListColumn, DensityProvider, type CardListColumnView } from "@april/ui";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -87,6 +87,10 @@ export function ProfilesWidgetCore({
   const [totalCount, setTotalCount] = useState(0);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [listCollapsed, setListCollapsed] = useState(false);
+  const [cardListView, setCardListView] = useState<CardListColumnView>("list");
+  /** В режиме сетки: держим модалку открытой для потока «Создать» без выбранной строки. */
+  const [gridCreateSession, setGridCreateSession] = useState(false);
+  const [pendingGridOpenCreate, setPendingGridOpenCreate] = useState(false);
 
   const requestId = hostContext.telemetry?.requestId;
   const preferredSelectionRef = useRef<string | null>(null);
@@ -129,6 +133,47 @@ export function ProfilesWidgetCore({
     () => (selectedEntityId ? items.find((item) => item.entityId === selectedEntityId) ?? null : null),
     [items, selectedEntityId],
   );
+
+  const isGridLayout = cardListView === "grid";
+  const gridProfileModalOpened = isGridLayout && (Boolean(selectedEntityId) || gridCreateSession);
+
+  const gridModalHeaderTitle = useMemo(() => {
+    if (selectedRow) {
+      return listPrimaryLabel(selectedRow);
+    }
+    return "Create profile";
+  }, [selectedRow]);
+
+  const handleCardListViewChange = useCallback((next: CardListColumnView) => {
+    setCardListView(next);
+    if (next === "grid") {
+      setListCollapsed(false);
+    } else {
+      setGridCreateSession(false);
+      setPendingGridOpenCreate(false);
+    }
+  }, []);
+
+  const handleGridProfileModalClose = useCallback(() => {
+    detailRef.current?.closeCreate();
+    setGridCreateSession(false);
+    setPendingGridOpenCreate(false);
+    setSelectedEntityId(null);
+  }, []);
+
+  useEffect(() => {
+    if (!pendingGridOpenCreate) {
+      return;
+    }
+    if (!gridProfileModalOpened) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      detailRef.current?.openCreate();
+      setPendingGridOpenCreate(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pendingGridOpenCreate, gridProfileModalOpened]);
 
   const listItems = useMemo(
     () =>
@@ -279,6 +324,43 @@ export function ProfilesWidgetCore({
     );
   }
 
+  const renderProfileDetail = () => (
+    <ProfilesWidgetProfileDetailCore
+      ref={detailRef}
+      hostContext={hostContext}
+      provider={provider}
+      providerContext={providerContext}
+      entityId={selectedEntityId}
+      listItem={selectedRow}
+      listItemsForDuplicateCheck={items}
+      initialCreateEntityTypeId={initialCreateEntityTypeId}
+      documentEditingEnabled
+      allowProfileDelete
+      onAction={(action) => {
+        onAction?.(action);
+        if (action.type === "created") {
+          preferredSelectionRef.current = action.item.entityId;
+          setGridCreateSession(false);
+        }
+        void loadList({ append: false });
+      }}
+      onError={onError}
+      onObservability={onObservability}
+      onProfileUpdatedInList={() => {
+        void loadList({ append: false });
+      }}
+      onListRevalidate={() => loadList({ append: false })}
+      onEntityDeleted={() => {
+        preferredSelectionRef.current = null;
+        setSelectedEntityId(null);
+        void loadList({ append: false });
+      }}
+      onCreatedSelectEntity={(id) => {
+        preferredSelectionRef.current = id;
+      }}
+    />
+  );
+
   return (
     <DensityProvider>
       <Stack gap="md" style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -290,9 +372,9 @@ export function ProfilesWidgetCore({
             minHeight: 0,
             minWidth: 0,
             display: "flex",
-            flexDirection: "row",
+            flexDirection: isGridLayout ? "column" : "row",
             alignItems: "stretch",
-            gap: "1rem",
+            gap: isGridLayout ? 0 : "1rem",
             width: "100%",
           }}
         >
@@ -310,15 +392,27 @@ export function ProfilesWidgetCore({
                 setListCollapsed(false);
               }
             }}
-            style={{
-              flex: "0 0 auto",
-              width: listCollapsed ? 72 : "clamp(280px, 30vw, 420px)",
-              minWidth: listCollapsed ? 72 : 280,
-              maxWidth: listCollapsed ? 72 : "44%",
-              display: "flex",
-              flexDirection: "column",
-              minHeight: 0,
-            }}
+            style={
+              isGridLayout
+                ? {
+                    flex: "1 1 auto",
+                    width: "100%",
+                    maxWidth: "100%",
+                    minWidth: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    minHeight: 0,
+                  }
+                : {
+                    flex: "0 0 auto",
+                    width: listCollapsed ? 72 : "clamp(280px, 30vw, 420px)",
+                    minWidth: listCollapsed ? 72 : 280,
+                    maxWidth: listCollapsed ? 72 : "44%",
+                    display: "flex",
+                    flexDirection: "column",
+                    minHeight: 0,
+                  }
+            }
           >
             <Box style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
               <CardListColumn
@@ -326,6 +420,15 @@ export function ProfilesWidgetCore({
                 items={listItems}
                 mode="inline"
                 heightMode="fill"
+                view={cardListView}
+                onViewChange={handleCardListViewChange}
+                selectedItemId={selectedEntityId}
+                onSelectItem={(id) => {
+                  setSelectedEntityId(id);
+                  if (id) {
+                    onOpenEntity?.(id);
+                  }
+                }}
                 withSort={false}
                 withFilter
                 withAdd
@@ -337,7 +440,12 @@ export function ProfilesWidgetCore({
                 filterOptions={[{ value: "all", label: "All types" }, ...typeOptions.filter((option) => option.value !== "all")]}
                 onFilterChange={(value) => setFilterTypeId(value.type ?? "all")}
                 onAddItem={() => {
-                  detailRef.current?.openCreate();
+                  if (isGridLayout) {
+                    setGridCreateSession(true);
+                    setPendingGridOpenCreate(true);
+                  } else {
+                    detailRef.current?.openCreate();
+                  }
                 }}
                 totalItems={totalCount}
                 loadedItemsCount={items.length}
@@ -364,10 +472,6 @@ export function ProfilesWidgetCore({
                         ...(selected
                           ? { borderColor: "var(--mantine-color-teal-filled)", borderWidth: 2 }
                           : { borderWidth: 1 }),
-                      }}
-                      onClick={() => {
-                        setSelectedEntityId(item.id);
-                        onOpenEntity?.(item.id);
                       }}
                     >
                       <Text fw={600} lineClamp={1}>
@@ -396,52 +500,48 @@ export function ProfilesWidgetCore({
             ) : null}
           </Stack>
 
-          {/* Detail root defaults to flex-grow:0; slot must flex:1 to fill the row after the list column. */}
-          <Box
-            style={{
-              flex: 1,
-              minWidth: 0,
-              minHeight: 0,
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
+          {!isGridLayout ? (
+            <Box
+              style={{
+                flex: 1,
+                minWidth: 0,
+                minHeight: 0,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+              }}
+            >
+              {renderProfileDetail()}
+            </Box>
+          ) : null}
+        </Box>
+
+        {isGridLayout ? (
+          <AprilModal
+            opened={gridProfileModalOpened}
+            onClose={handleGridProfileModalClose}
+            headerTitle={gridModalHeaderTitle}
+            size="xl"
+            centered
+            styles={{
+              content: {
+                maxHeight: "min(92dvh, 900px)",
+                width: "min(96vw, 960px)",
+              },
             }}
           >
-            <ProfilesWidgetProfileDetailCore
-              ref={detailRef}
-              hostContext={hostContext}
-              provider={provider}
-              providerContext={providerContext}
-              entityId={selectedEntityId}
-              listItem={selectedRow}
-              listItemsForDuplicateCheck={items}
-              initialCreateEntityTypeId={initialCreateEntityTypeId}
-              documentEditingEnabled
-              allowProfileDelete
-              onAction={(action) => {
-                onAction?.(action);
-                if (action.type === "created") {
-                  preferredSelectionRef.current = action.item.entityId;
-                }
-                void loadList({ append: false });
+            <Box
+              style={{
+                width: "100%",
+                minHeight: "min(70dvh, 560px)",
+                display: "flex",
+                flexDirection: "column",
               }}
-              onError={onError}
-              onObservability={onObservability}
-              onProfileUpdatedInList={() => {
-                void loadList({ append: false });
-              }}
-              onListRevalidate={() => loadList({ append: false })}
-              onEntityDeleted={() => {
-                preferredSelectionRef.current = null;
-                setSelectedEntityId(null);
-                void loadList({ append: false });
-              }}
-              onCreatedSelectEntity={(id) => {
-                preferredSelectionRef.current = id;
-              }}
-            />
-          </Box>
-        </Box>
+            >
+              {renderProfileDetail()}
+            </Box>
+          </AprilModal>
+        ) : null}
       </Stack>
     </DensityProvider>
   );

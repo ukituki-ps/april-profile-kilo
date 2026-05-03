@@ -117,23 +117,40 @@ vi.mock("@april/ui", async () => {
   CardListColumn: ({
     items,
     heightMode,
+    view,
     onSearchChange,
     onReachListEnd,
     onAddItem,
     onFilterChange,
     onSelectItem,
+    onViewChange,
     renderCard,
+    selectedItemId,
   }: {
     items: Array<{ id: string; title: string }>;
     heightMode?: string;
+    view?: string;
+    selectedItemId?: string | null;
     onSearchChange?: (value: string) => void;
     onReachListEnd?: () => void;
     onAddItem?: () => void;
     onFilterChange?: (value: Record<string, string | undefined>) => void;
     onSelectItem?: (id: string | null) => void;
+    onViewChange?: (next: "list" | "grid" | "collapsed") => void;
     renderCard?: (item: { id: string; title: string }) => ReactNode;
   }) => (
-    <div aria-label="CardListColumn mock" data-height-mode={heightMode}>
+    <div
+      aria-label="CardListColumn mock"
+      data-height-mode={heightMode}
+      data-card-list-view={view ?? "list"}
+      data-selected-item-id={selectedItemId ?? ""}
+    >
+      <button type="button" aria-label="Switch column view to grid" onClick={() => onViewChange?.("grid")}>
+        View grid
+      </button>
+      <button type="button" aria-label="Switch column view to list" onClick={() => onViewChange?.("list")}>
+        View list
+      </button>
       <input aria-label="Search cards" onChange={(event) => onSearchChange?.(event.currentTarget.value)} />
       <button type="button" aria-label="Open filter options" onClick={() => onFilterChange?.({ type: "type-b" })}>
         Filter type-b
@@ -461,5 +478,65 @@ describe("ProfilesWidgetCore", () => {
 
     await screen.findByTestId("profiles-widget-edit-document");
     expect(screen.queryByRole("radio", { name: "Form" })).not.toBeInTheDocument();
+  });
+
+  it("in grid view hides inline detail and opens profile in modal after row selection", async () => {
+    const provider = buildProvider();
+    render(
+      <MantineProvider>
+        <ProfilesWidgetCore hostContext={hostContext} provider={provider} autoSelectFirst={false} />
+      </MantineProvider>,
+    );
+
+    await screen.findByLabelText(`Profile row ${e1}`);
+    expect(screen.getByTestId("profiles-widget-detail-column")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Switch column view to grid/i }));
+    expect(screen.getByLabelText("CardListColumn mock")).toHaveAttribute("data-card-list-view", "grid");
+    expect(screen.queryByTestId("profiles-widget-detail-column")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText(`Profile row ${e1}`));
+    await waitFor(() => {
+      expect(screen.getAllByRole("dialog", { hidden: true }).length).toBeGreaterThan(0);
+    });
+    const gridDialog = screen.getAllByRole("dialog", { hidden: true }).find((el) =>
+      within(el).queryByTestId("profiles-widget-detail-column"),
+    );
+    expect(gridDialog).toBeTruthy();
+    expect(within(gridDialog as HTMLElement).getByTestId("profiles-widget-detail-column")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Switch column view to list/i }));
+    await waitFor(() => {
+      expect(
+        screen.queryAllByRole("dialog", { hidden: true }).filter((el) =>
+          within(el).queryByTestId("profiles-widget-detail-column"),
+        ),
+      ).toHaveLength(0);
+    });
+    expect(screen.getByTestId("profiles-widget-detail-column")).toBeInTheDocument();
+  });
+
+  it("opens create flow from Add in grid view inside profile modal", async () => {
+    const provider = buildProvider();
+    render(
+      <MantineProvider>
+        <ProfilesWidgetCore hostContext={hostContext} provider={provider} autoSelectFirst={false} />
+      </MantineProvider>,
+    );
+
+    await screen.findByLabelText(`Profile row ${e1}`);
+    fireEvent.click(screen.getByRole("button", { name: /Switch column view to grid/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Add new item/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole("dialog", { hidden: true }).some((el) =>
+          within(el).queryByTestId("profiles-widget-detail-column"),
+        ),
+      ).toBe(true);
+    });
+    await waitFor(() => {
+      expect(screen.getByLabelText("Profile name")).toBeInTheDocument();
+    });
   });
 });
