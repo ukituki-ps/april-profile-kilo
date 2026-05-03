@@ -58,3 +58,4 @@
 - JSON-документ на DS: [`../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md).
 - RJSF (`AprilJsonSchemaForm`): [`../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/TASK.md`](../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/TASK.md).
 - Split npm + композиция: [`../../../tasks/065-profiles-widget-split-detail-composition/TASK.md`](../../../tasks/065-profiles-widget-split-detail-composition/TASK.md).
+- Мобильный shell детали/create, карусель режимов, версии (**073**): [`../../../tasks/073-profiles-widget-profile-detail-mobile-shell-toolbar/TASK.md`](../../../tasks/073-profiles-widget-profile-detail-mobile-shell-toolbar/TASK.md).
