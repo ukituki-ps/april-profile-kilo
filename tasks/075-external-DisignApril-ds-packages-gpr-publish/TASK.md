@@ -12,14 +12,17 @@
 ## Входит в объём
 - Сборка `dist` для обоих пакетов; `npm publish` (или эквивалент) в GPR с корректным `repository` для привязки пакета к org.
 - Документирование: какой PAT/secret (`GPR_PUBLISH_TOKEN` и т.д.), какой workflow запускает publish, как bump patch.
+- **Один каноничный publish-пайплайн** для этих пакетов в GPR: альтернативный способ публикации того же scope (например второй workflow в другом репо) — **пометить deprecated в README/workflow-комментарии или удалить**, чтобы не плодить расхождения версий и `repository` в манифестах; согласование между **DisignApril** и **april-worker** — в `REPORT.md` с ссылками на PR в обоих репозиториях при необходимости.
 
 ## Не входит в объём
-- Изменение кода april-profile / april-worker (кроме ссылок в отчёте на соседние PR).
+- Перевод **потребителей** с vendored `*.tgz` / `file:` на semver из GPR — задача **076** (april-profile) и **077** (april-worker `hub-shell`).
+- Изменение кода april-profile / april-worker (кроме ссылок в отчёте на соседние PR и кроме PR **внутри april-worker**, если там живёт выбранный каноничный publish-workflow).
 - Рефакторинг `AprilMobileShellBar` — задача **078**.
 
 ## Критерии готовности (acceptance)
 - [ ] С `NODE_AUTH_TOKEN` (read:packages) команда `npm view @ukituki-ps/april-ui versions` и `npm view @ukituki-ps/april-tokens versions` показывают опубликованные версии в нужном диапазоне.
 - [ ] В `REPORT.md` этой задачи (в april-profile) или в репозитории-исполнителе — ссылка на тег/commit релиза и инструкция повторной публикации.
+- [ ] Зафиксирован **единственный** каноничный путь публикации; дублирующие варианты для тех же GPR-пакетов — **устранены или явно помечены deprecated** (где и почему — в `REPORT.md`).
 
 ## Проверка (команды)
 ```bash
