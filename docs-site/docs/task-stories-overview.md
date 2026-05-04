@@ -61,6 +61,7 @@ sidebar_position: 20
 - [057 — DS JSON-редакторы в `entity-types-widget`](./task-story-057-phase-7-profile-ui-ds-json-entity-types)
 - [058 — DS JSON-редакторы в `profiles-widget`](./task-story-058-phase-7-profile-ui-ds-json-profiles-widget)
 - [059 — RJSF-форма документа в `profiles-widget`](./task-story-059-phase-7-profiles-widget-rjsf-document-form)
+- [074 — Фаза 8: GPR для DS + контур `AprilMobileShellBar` (эпик, подзадачи 075–080)](./task-story-074-phase-8-ds-gpr-mobile-shell-unification)
 
 ## Быстрый статус
 
@@ -114,3 +115,4 @@ sidebar_position: 20
 | 057 DS JSON в `entity-types-widget` | ✅ | [057](./task-story-057-phase-7-profile-ui-ds-json-entity-types) | `AprilJsonTreeEditor` / Source на DS, read-only ревизии, `schemaIssues` из 422, `peerDependencies` на `@april/ui` |
 | 058 DS JSON в `profiles-widget` | ✅ | [058](./task-story-058-phase-7-profile-ui-ds-json-profiles-widget) | Тот же стек Tree/Source + summary; read-only дерево просмотра; `DensityProvider`; Form по схеме отложен |
 | 059 RJSF Form в `profiles-widget` | ✅ | [059](./task-story-059-phase-7-profiles-widget-rjsf-document-form) | `AprilJsonSchemaForm` при наличии `published_schema`; Tree \| Source \| Form; один `document` на Save/Create |
+| 074 Фаза 8: DS GPR + mobile shell (075–080) | ⏳ | [074](./task-story-074-phase-8-ds-gpr-mobile-shell-unification) | Единая поставка `@ukituki-ps/april-*` из GitHub Packages; согласование `AprilMobileShellBar` и Hub по ADR-0006 (часть задач — DisignApril / april-worker) |
