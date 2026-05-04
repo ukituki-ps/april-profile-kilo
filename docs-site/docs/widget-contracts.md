@@ -6,7 +6,7 @@ sidebar_position: 6
 
 > Каноническая копия для правок в корне репозитория: `docs/WIDGET_CONTRACTS.md` (при изменениях синхронизируйте оба файла).
 
-**Связанные документы:** [Стратегия фронтенда](/docs/frontend-strategy), [ADR-0004](/adr/hybrid-ui-integration-model), [Версионирование](/docs/versioning-and-compatibility), [Наблюдаемость](/docs/widget-observability-guide).
+**Связанные документы:** [Стратегия фронтенда](/docs/frontend-strategy), [ADR-0004](/adr/hybrid-ui-integration-model), [ADR-0006](/adr/mobile-chrome-layers-widget-host), [Версионирование](/docs/versioning-and-compatibility), [Наблюдаемость](/docs/widget-observability-guide).
 
 Статус **v1** — минимальный общий знаменатель для AprilHub и пакетов `@april/*-ui`. Расширения оформляются новой minor-версией контракта и документируются в changelog виджета.
 
@@ -145,6 +145,18 @@ sidebar_position: 6
 
 - **Task 043** стартует только после фиксации list/search/filter/pagination API контракта и error envelope (`code`, `message`, `request_id`).
 - **Task 044** стартует только после готовности generated SDK с list endpoint и подтверждённого baseline из этого раздела.
+
+### 8.6 Mobile chrome: стратегия A, `AprilMobileShellBar`, AprilHub
+
+Канон: `docs/WIDGET_CONTRACTS.md` в репозитории `april-profile` — синхронизируйте оба файла.
+
+**Норматив:** submodule `design-system/DisignApril/DESIGN_SYSTEM.md` — §8 Mobile (стратегия A, стек владельца), §11 **«Нормативный контракт `AprilMobileShellBar`»** (MUST/MUST NOT, пропсы). Отклонения без ADR — блокер для публичных shell.
+
+**Стратегия A:** одна видимая нижняя капсула на ветку контента у нижнего края; вершина стека владеет панелью; родитель использует `hideMobileShellBar` у `CardListColumn` и т.п. Глобальный dock Hub — отдельный слой; чеклист — [интеграция виджетов](/docs/widget-integration-checklist). **«Назад»:** сначала модальность виджета, затем навигация host по intent.
+
+**Поставка:** lockfile shell должен содержать актуальный `@april/ui` с контрактными пропами.
+
+[ADR-0006](/adr/mobile-chrome-layers-widget-host), [стратегия фронтенда §5.1](/docs/frontend-strategy), карточка `docs/widgets/profile/profiles-widget.md` в репозитории.
 
 ---
 

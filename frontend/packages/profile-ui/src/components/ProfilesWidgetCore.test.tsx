@@ -1,8 +1,9 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProfilesWidgetCore } from "./ProfilesWidgetCore";
 import type { ProfilesDataProvider, ProfilesProviderError } from "../providers/profilesDataProvider";
 
@@ -47,11 +48,61 @@ function pickTreeDocumentView(container: HTMLElement) {
   fireEvent.click(within(document.body).getAllByRole("radio", { name: "Tree" })[0]);
 }
 
+vi.mock("@mantine/hooks", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@mantine/hooks")>();
+  return {
+    ...actual,
+    useMediaQuery: vi.fn(() => false),
+  };
+});
+
 vi.mock("@april/ui", async () => {
-  const { AprilIconCheck, AprilIconClose, AprilModal } = await vi.importActual<typeof import("@april/ui")>("@april/ui");
+  const {
+    AprilIconCheck,
+    AprilIconClose,
+    AprilModal,
+    aprilMobileShellBarContentPaddingBottom,
+    aprilMobileShellBarGhostWhiteBorderActionStyles,
+  } = await vi.importActual<typeof import("@april/ui")>("@april/ui");
   const { SegmentedControl } = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
   return {
     AprilModal,
+    AprilMobileShellBar: ({
+      center,
+      leading,
+    }: {
+      center?: ReactNode;
+      leading?: ReactNode;
+    }) => (
+      <div data-testid="profile-detail-mobile-shell-bar">
+        {leading}
+        {center}
+      </div>
+    ),
+    aprilMobileShellBarContentPaddingBottom,
+    aprilMobileShellBarGhostWhiteBorderActionStyles,
+    APRIL_MOBILE_SHELL_BAR_Z_INDEX: 400,
+    AprilVaulBottomSheet: ({
+      opened,
+      children,
+      headerTitle,
+      onClose,
+    }: {
+      opened: boolean;
+      children?: ReactNode;
+      headerTitle?: ReactNode;
+      onClose?: () => void;
+    }) =>
+      opened ? (
+        <div data-testid="profiles-widget-profile-overlay-sheet" role="dialog" aria-label="Profile detail sheet">
+          <div>{headerTitle}</div>
+          <button type="button" aria-label="Close profile sheet" onClick={onClose}>
+            Close sheet
+          </button>
+          <div>{children}</div>
+        </div>
+      ) : null,
+    APRIL_MOBILE_BOTTOM_SHEET_Z_INDEX: 350,
     AprilIconClose,
     AprilIconCheck,
     AprilGradientSegmentedControl: SegmentedControl,
@@ -117,6 +168,8 @@ vi.mock("@april/ui", async () => {
   CardListColumn: ({
     items,
     heightMode,
+    mobileLayout,
+    hideMobileShellBar,
     view,
     onSearchChange,
     onReachListEnd,
@@ -129,6 +182,8 @@ vi.mock("@april/ui", async () => {
   }: {
     items: Array<{ id: string; title: string }>;
     heightMode?: string;
+    mobileLayout?: string;
+    hideMobileShellBar?: boolean;
     view?: string;
     selectedItemId?: string | null;
     onSearchChange?: (value: string) => void;
@@ -142,6 +197,8 @@ vi.mock("@april/ui", async () => {
     <div
       aria-label="CardListColumn mock"
       data-height-mode={heightMode}
+      data-mobile-layout={mobileLayout ?? ""}
+      data-hide-mobile-shell-bar={hideMobileShellBar ? "true" : "false"}
       data-card-list-view={view ?? "list"}
       data-selected-item-id={selectedItemId ?? ""}
     >
@@ -250,6 +307,9 @@ const buildProvider = (): ProfilesDataProvider => ({
 });
 
 describe("ProfilesWidgetCore", () => {
+  beforeEach(() => {
+    vi.mocked(useMediaQuery).mockReturnValue(false);
+  });
   it("uses pageSize=20 by default for initial list request", async () => {
     const provider = buildProvider();
     render(
@@ -260,6 +320,17 @@ describe("ProfilesWidgetCore", () => {
 
     await screen.findByLabelText(`Profile row ${e1}`);
     expect(provider.list).toHaveBeenCalledWith(expect.objectContaining({ limit: 20 }), expect.anything());
+  });
+
+  it("passes mobileLayout auto to CardListColumn by default", async () => {
+    const provider = buildProvider();
+    render(
+      <MantineProvider>
+        <ProfilesWidgetCore hostContext={hostContext} provider={provider} />
+      </MantineProvider>,
+    );
+    await screen.findByLabelText("CardListColumn mock");
+    expect(screen.getByLabelText("CardListColumn mock")).toHaveAttribute("data-mobile-layout", "auto");
   });
 
   it("renders CardListColumn in fill height mode", async () => {
@@ -504,6 +575,7 @@ describe("ProfilesWidgetCore", () => {
     );
     expect(gridDialog).toBeTruthy();
     expect(within(gridDialog as HTMLElement).getByTestId("profiles-widget-detail-column")).toBeInTheDocument();
+    expect(screen.queryByTestId("profiles-widget-profile-overlay-sheet")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Switch column view to list/i }));
     await waitFor(() => {
@@ -514,6 +586,33 @@ describe("ProfilesWidgetCore", () => {
       ).toHaveLength(0);
     });
     expect(screen.getByTestId("profiles-widget-detail-column")).toBeInTheDocument();
+  });
+
+  it("on narrow viewport opens grid profile detail in bottom sheet instead of modal", async () => {
+    vi.mocked(useMediaQuery).mockReturnValue(true);
+    const provider = buildProvider();
+    render(
+      <MantineProvider>
+        <ProfilesWidgetCore hostContext={hostContext} provider={provider} autoSelectFirst={false} />
+      </MantineProvider>,
+    );
+
+    await screen.findByLabelText(`Profile row ${e1}`);
+    fireEvent.click(screen.getByRole("button", { name: /Switch column view to grid/i }));
+    fireEvent.click(screen.getByLabelText(`Profile row ${e1}`));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("profiles-widget-profile-overlay-sheet")).toBeInTheDocument();
+    });
+    expect(screen.getByLabelText("CardListColumn mock")).toHaveAttribute("data-hide-mobile-shell-bar", "true");
+    const sheet = screen.getByTestId("profiles-widget-profile-overlay-sheet");
+    expect(within(sheet).getByTestId("profiles-widget-detail-column")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Close profile sheet/i }));
+    await waitFor(() => {
+      expect(screen.queryByTestId("profiles-widget-profile-overlay-sheet")).not.toBeInTheDocument();
+    });
+    expect(screen.getByLabelText("CardListColumn mock")).toHaveAttribute("data-hide-mobile-shell-bar", "false");
   });
 
   it("opens create flow from Add in grid view inside profile modal", async () => {

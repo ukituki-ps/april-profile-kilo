@@ -3,13 +3,22 @@ import { fireEvent } from "@testing-library/react";
 import { createRef } from "react";
 import { MantineProvider } from "@mantine/core";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useMediaQuery } from "@mantine/hooks";
 import type { ProfilesDataProvider, ProfilesProviderError } from "../providers/profilesDataProvider";
 import type { ProfilesListItem } from "../types";
 import {
   ProfilesWidgetProfileDetailCore,
   type ProfilesWidgetProfileDetailHandle,
 } from "./ProfilesWidgetProfileDetailCore";
+
+vi.mock("@mantine/hooks", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@mantine/hooks")>();
+  return {
+    ...actual,
+    useMediaQuery: vi.fn(() => false),
+  };
+});
 
 vi.mock("@mantine/core", async () => {
   const actual = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
@@ -53,10 +62,52 @@ function pickTreeDocumentView(container: HTMLElement) {
 }
 
 vi.mock("@april/ui", async () => {
-  const { AprilIconCheck, AprilIconClose, AprilModal } = await vi.importActual<typeof import("@april/ui")>("@april/ui");
+  const {
+    AprilIconCheck,
+    AprilIconClose,
+    AprilModal,
+    aprilMobileShellBarContentPaddingBottom,
+    aprilMobileShellBarGhostWhiteBorderActionStyles,
+  } = await vi.importActual<typeof import("@april/ui")>("@april/ui");
   const { SegmentedControl } = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
   return {
     AprilModal,
+    AprilMobileShellBar: ({
+      center,
+      leading,
+    }: {
+      center?: ReactNode;
+      leading?: ReactNode;
+    }) => (
+      <div data-testid="profile-detail-mobile-shell-bar">
+        {leading}
+        {center}
+      </div>
+    ),
+    aprilMobileShellBarContentPaddingBottom,
+    aprilMobileShellBarGhostWhiteBorderActionStyles,
+    APRIL_MOBILE_SHELL_BAR_Z_INDEX: 400,
+    AprilVaulBottomSheet: ({
+      opened,
+      children,
+      headerTitle,
+      onClose,
+    }: {
+      opened: boolean;
+      children?: ReactNode;
+      headerTitle?: ReactNode;
+      onClose?: () => void;
+    }) =>
+      opened ? (
+        <div data-testid="profile-detail-version-sheet" role="dialog">
+          <div>{headerTitle}</div>
+          <button type="button" aria-label="Close version sheet" onClick={onClose}>
+            Close
+          </button>
+          {children}
+        </div>
+      ) : null,
+    APRIL_MOBILE_BOTTOM_SHEET_Z_INDEX: 350,
     AprilIconClose,
     AprilIconCheck,
     AprilGradientSegmentedControl: SegmentedControl,
@@ -182,6 +233,10 @@ const buildProvider = (): ProfilesDataProvider => ({
 });
 
 describe("ProfilesWidgetProfileDetailCore", () => {
+  beforeEach(() => {
+    vi.mocked(useMediaQuery).mockReturnValue(false);
+  });
+
   it("hides edit/delete/save controls when documentEditingEnabled is false", async () => {
     const provider = buildProvider();
     render(
@@ -227,6 +282,35 @@ describe("ProfilesWidgetProfileDetailCore", () => {
     await screen.findByTestId("profiles-widget-detail-column");
     fireEvent.click(screen.getByRole("button", { name: /External create/i }));
     expect(await screen.findByLabelText("Profile name")).toBeInTheDocument();
+  });
+
+  it("on narrow viewport create uses AprilMobileShellBar instead of AprilModal", async () => {
+    vi.mocked(useMediaQuery).mockReturnValue(true);
+    const provider = buildProvider();
+    const ref = createRef<ProfilesWidgetProfileDetailHandle>();
+    render(
+      <MantineProvider>
+        <>
+          <button type="button" onClick={() => ref.current?.openCreate()}>
+            External create
+          </button>
+          <ProfilesWidgetProfileDetailCore
+            ref={ref}
+            hostContext={hostContext}
+            provider={provider}
+            entityId={null}
+            listItem={null}
+            listItemsForDuplicateCheck={[listRow]}
+          />
+        </>
+      </MantineProvider>,
+    );
+
+    await screen.findByTestId("profiles-widget-detail-column");
+    fireEvent.click(screen.getByRole("button", { name: /External create/i }));
+    expect(await screen.findByLabelText("Profile name")).toBeInTheDocument();
+    expect(await screen.findByTestId("profile-detail-mobile-shell-bar")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Create profile/i })).toBeInTheDocument();
   });
 
   it("passes normalized code in onError payload", async () => {
@@ -288,5 +372,65 @@ describe("ProfilesWidgetProfileDetailCore", () => {
     await waitFor(() => {
       expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ type: "updated" }));
     });
+  });
+
+  it("on narrow overlay chrome opens version list in bottom sheet", async () => {
+    vi.mocked(useMediaQuery).mockReturnValue(true);
+    const provider = buildProvider();
+    const hostEl = document.createElement("div");
+    document.body.appendChild(hostEl);
+
+    render(
+      <MantineProvider>
+        <ProfilesWidgetProfileDetailCore
+          hostContext={hostContext}
+          provider={provider}
+          entityId={e1}
+          listItem={listRow}
+          listItemsForDuplicateCheck={[listRow]}
+          hostGridProfileModalChrome
+          gridModalDetailHeaderHostEl={hostEl}
+        />
+      </MantineProvider>,
+    );
+
+    await screen.findByTestId("profiles-widget-detail-column");
+    fireEvent.click(await screen.findByRole("button", { name: /Versions/i }));
+    expect(await screen.findByTestId("profile-detail-version-sheet")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Edit profile/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /v1/i }));
+    await waitFor(() => {
+      expect(screen.queryByTestId("profile-detail-version-sheet")).not.toBeInTheDocument();
+    });
+
+    hostEl.remove();
+  });
+
+  it("on narrow host grid shows mobile shell with document mode cycle", async () => {
+    vi.mocked(useMediaQuery).mockReturnValue(true);
+    const provider = buildProvider();
+    const hostEl = document.createElement("div");
+    document.body.appendChild(hostEl);
+
+    render(
+      <MantineProvider>
+        <ProfilesWidgetProfileDetailCore
+          hostContext={hostContext}
+          provider={provider}
+          entityId={e1}
+          listItem={listRow}
+          listItemsForDuplicateCheck={[listRow]}
+          hostGridProfileModalChrome
+          gridModalDetailHeaderHostEl={hostEl}
+        />
+      </MantineProvider>,
+    );
+
+    await screen.findByTestId("profiles-widget-detail-column");
+    expect(await screen.findByTestId("profile-detail-mobile-shell-bar")).toBeInTheDocument();
+    expect(screen.getByTestId("draft-json-editor-mode-cycle")).toBeInTheDocument();
+
+    hostEl.remove();
   });
 });

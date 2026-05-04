@@ -24,6 +24,17 @@ sidebar_position: 10
 - [ ] Обработчики `onSaveSuccess`, `onError`, intent-событий реализованы; навигация выполняется на host.
 - [ ] Fallback UI при ошибке загрузки виджета (lazy / error boundary) согласован.
 
+## Mobile chrome (`AprilMobileShellBar`, узкий viewport) — стратегия A
+
+Канон: `docs/WIDGET_INTEGRATION_CHECKLIST.md` в репозитории `april-profile`. Норматив DS: submodule `design-system/DisignApril/DESIGN_SYSTEM.md` — §8 (стек владельца), §11 (нормативный контракт `AprilMobileShellBar`).
+
+- [ ] **Стек:** при sheet/полноэкранном шаге не оставлять активной нижнюю панель родителя параллельно дочерней (`hideMobileShellBar` и т.п.).
+- [ ] **«Назад»:** сначала закрывается верхний слой виджета; глобальный обработчик Hub не перебивает `AprilVaulBottomSheet`.
+- [ ] **Маршруты** master–detail: согласовано отображение глобального dock Hub одновременно с dock виджета.
+- [ ] **`profiles-widget`:** при необходимости — `cardListColumnMobileLayout="off"` (см. `docs/widgets/profile/profiles-widget.md` в репозитории).
+- [ ] **`@april/ui`** в lockfile содержит контрактные пропы; vendored tarball — пересборка DS.
+- [ ] [ADR-0006](/adr/mobile-chrome-layers-widget-host), §8.6 [контрактов](/docs/widget-contracts), §5.1 [стратегии фронтенда](/docs/frontend-strategy).
+
 ## Наблюдаемость
 
 - [ ] `requestId` / трассировка прокидываются в telemetry ([контракты](/docs/widget-contracts), [наблюдаемость](/docs/widget-observability-guide)).

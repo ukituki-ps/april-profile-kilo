@@ -17,6 +17,7 @@ title: Architecture Decision Records
 | [0003](0003-april-profile-data-model-policies.md) | AprilProfile: метамодель, версии, authority, события | принято |
 | [0004](0004-hybrid-ui-integration-model.md) | Гибридная интеграция UI: Host / Widget / API–BFF-first | принято |
 | [0005](0005-entity-type-revisions-and-entity-binding.md) | Ревизии типа сущности и привязка entity к опубликованной схеме | принято |
+| [0006](0006-mobile-chrome-layers-widget-host.md) | `AprilMobileShellBar`: стратегия A, стек владельца, AprilHub (норматив в DS §11) | принято |
 
 ## Как добавить запись
 

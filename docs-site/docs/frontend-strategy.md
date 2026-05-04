@@ -7,7 +7,7 @@ sidebar_position: 4
 > Каноническая копия для правок в корне репозитория: `docs/FRONTEND_STRATEGY.md` (при изменениях синхронизируйте оба файла).
 
 **Статус:** согласованная модель для экосистемы April  
-**Связанные документы:** [Дизайн модуля](./design-april-profile), [Дизайн-система April](/guides/DESIGN_SYSTEM), `docs/AGENT_ARCHITECTURE_CONTEXT.md`, `docs/TESTING_STRATEGY.md`, [ADR-0004](/adr/hybrid-ui-integration-model), [Контракты виджетов](/docs/widget-contracts), [Матрица решений](/docs/decision-matrix-ui-integration), [Версионирование](/docs/versioning-and-compatibility)
+**Связанные документы:** [Дизайн модуля](./design-april-profile), [Дизайн-система April](/guides/DESIGN_SYSTEM), `docs/AGENT_ARCHITECTURE_CONTEXT.md`, `docs/TESTING_STRATEGY.md`, [ADR-0004](/adr/hybrid-ui-integration-model), [ADR-0006](/adr/mobile-chrome-layers-widget-host), [Контракты виджетов](/docs/widget-contracts), [Матрица решений](/docs/decision-matrix-ui-integration), [Версионирование](/docs/versioning-and-compatibility)
 
 ---
 
@@ -80,6 +80,10 @@ sidebar_position: 4
 ## 5. Композиция в AprilHub
 
 Host собирает страницу из layout, провайдеров (тема, OIDC) и **вставок** domain widgets. Виджет не дублирует корневые провайдеры и не владеет глобальным URL-пространством: он эмитит события, host решает, куда вести пользователя. Паттерн «админка vs встраиваемый блок» из §6–7 остаётся; выбор между host-only экраном и виджетом определяется §2 и матрицей.
+
+### 5.1 Нижняя mobile-панель (`AprilMobileShellBar`) — стратегия A
+
+Для `@april/*-ui` в AprilHub на узком viewport принята **стратегия A** ([ADR-0006](/adr/mobile-chrome-layers-widget-host)): вершина стека сценария владеет нижней капсулой; родитель не оставляет свою панель активной параллельно дочерней. Глобальный dock Hub — отдельное решение ([чеклист интеграции](/docs/widget-integration-checklist)). Жёсткие правила по пропам и MUST — в submodule DS `DESIGN_SYSTEM.md` §11; контракт виджетов — [§8.6](/docs/widget-contracts).
 
 ---
 

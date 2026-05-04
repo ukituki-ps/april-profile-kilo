@@ -3,7 +3,7 @@
 > Публикация на сайте Docusaurus: [`docs-site/docs/frontend-strategy.md`](../docs-site/docs/frontend-strategy.md) — при правках синхронизируйте оба файла.
 
 **Статус:** согласованная модель для экосистемы April  
-**Связанные документы:** [`DESIGN_AprilProfile.md`](./DESIGN_AprilProfile.md), [`guides/DESIGN_SYSTEM.md`](./guides/DESIGN_SYSTEM.md), [`AGENT_ARCHITECTURE_CONTEXT.md`](./AGENT_ARCHITECTURE_CONTEXT.md), [`TESTING_STRATEGY.md`](./TESTING_STRATEGY.md), [`adr/0004-hybrid-ui-integration-model.md`](./adr/0004-hybrid-ui-integration-model.md), [`WIDGET_CONTRACTS.md`](./WIDGET_CONTRACTS.md), [`DECISION_MATRIX_UI_INTEGRATION.md`](./DECISION_MATRIX_UI_INTEGRATION.md), [`VERSIONING_AND_COMPATIBILITY.md`](./VERSIONING_AND_COMPATIBILITY.md)
+**Связанные документы:** [`DESIGN_AprilProfile.md`](./DESIGN_AprilProfile.md), [`guides/DESIGN_SYSTEM.md`](./guides/DESIGN_SYSTEM.md), [`AGENT_ARCHITECTURE_CONTEXT.md`](./AGENT_ARCHITECTURE_CONTEXT.md), [`TESTING_STRATEGY.md`](./TESTING_STRATEGY.md), [`adr/0004-hybrid-ui-integration-model.md`](./adr/0004-hybrid-ui-integration-model.md), [`adr/0006-mobile-chrome-layers-widget-host.md`](./adr/0006-mobile-chrome-layers-widget-host.md), [`WIDGET_CONTRACTS.md`](./WIDGET_CONTRACTS.md), [`DECISION_MATRIX_UI_INTEGRATION.md`](./DECISION_MATRIX_UI_INTEGRATION.md), [`VERSIONING_AND_COMPATIBILITY.md`](./VERSIONING_AND_COMPATIBILITY.md)
 
 ---
 
@@ -76,6 +76,10 @@
 ## 5. Композиция в AprilHub
 
 Host собирает страницу из layout, провайдеров (тема, OIDC) и **вставок** domain widgets. Виджет не дублирует корневые провайдеры и не владеет глобальным URL-пространством: он эмитит события, host решает, куда вести пользователя. Паттерн «админка vs встраиваемый блок» из §6–7 остаётся; выбор между host-only экраном и виджетом определяется §2 и матрицей.
+
+### 5.1 Нижняя mobile-панель (`AprilMobileShellBar`) — стратегия A
+
+Для встраиваемых `@april/*-ui` в **AprilHub** на узком viewport принята **стратегия A** (ADR-0006): **вершина стека** сценария в ветке UI владеет нижней капсулой у контента; родительские уровни **не** оставляют свою `AprilMobileShellBar` видимой параллельно (например `hideMobileShellBar` у `CardListColumn`). Глобальный dock Hub — **отдельное** продуктовое решение; согласование с виджетом — [`WIDGET_INTEGRATION_CHECKLIST.md`](./WIDGET_INTEGRATION_CHECKLIST.md). **Жёсткие** правила по пропам, слотам, `position`, `withSearch`, z-index и a11y — только в дизайн-системе (`design-system/DisignApril/DESIGN_SYSTEM.md`, §8 и §11 «Нормативный контракт `AprilMobileShellBar`»); контракт виджетов — [`WIDGET_CONTRACTS.md`](./WIDGET_CONTRACTS.md) §8.6.
 
 ---
 

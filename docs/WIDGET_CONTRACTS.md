@@ -1,6 +1,6 @@
 # Контракты виджетов и host (v1)
 
-> **Связанные документы:** [`FRONTEND_STRATEGY.md`](./FRONTEND_STRATEGY.md), [`adr/0004-hybrid-ui-integration-model.md`](./adr/0004-hybrid-ui-integration-model.md), [`WIDGET_DOCS_OPERATING_MODEL.md`](./WIDGET_DOCS_OPERATING_MODEL.md), [`VERSIONING_AND_COMPATIBILITY.md`](./VERSIONING_AND_COMPATIBILITY.md), [`WIDGET_OBSERVABILITY_GUIDE.md`](./WIDGET_OBSERVABILITY_GUIDE.md).  
+> **Связанные документы:** [`FRONTEND_STRATEGY.md`](./FRONTEND_STRATEGY.md), [`adr/0004-hybrid-ui-integration-model.md`](./adr/0004-hybrid-ui-integration-model.md), [`adr/0006-mobile-chrome-layers-widget-host.md`](./adr/0006-mobile-chrome-layers-widget-host.md), [`WIDGET_DOCS_OPERATING_MODEL.md`](./WIDGET_DOCS_OPERATING_MODEL.md), [`VERSIONING_AND_COMPATIBILITY.md`](./VERSIONING_AND_COMPATIBILITY.md), [`WIDGET_OBSERVABILITY_GUIDE.md`](./WIDGET_OBSERVABILITY_GUIDE.md).  
 > Опубликованная копия на сайте: `docs-site/docs/widget-contracts.md` — при правках синхронизируйте оба файла.
 
 Статус **v1** — минимальный общий знаменатель для AprilHub и пакетов `@april/*-ui`. Расширения оформляются новой minor-версией контракта и документируются в changelog виджета.
@@ -140,6 +140,18 @@
 
 - **Task 043** стартует только после фиксации list/search/filter/pagination API контракта и error envelope (`code`, `message`, `request_id`).
 - **Task 044** стартует только после готовности generated SDK с list endpoint и подтверждённого baseline из этого раздела.
+
+### 8.6 Mobile chrome: стратегия A, `AprilMobileShellBar`, AprilHub
+
+**Источник норм:** `design-system/DisignApril/DESIGN_SYSTEM.md` — §8 Mobile (встраивание, стек владельца), §11 **«Нормативный контракт `AprilMobileShellBar`»** (таблицы MUST/MUST NOT и пропсы). Отклонения в продуктовом UI без обновления DS и ADR — **не допускаются** для публичных shell AprilHub.
+
+**Стратегия A (по умолчанию):** в каждой ветке UI **одна видимая** нижняя капсула у контента, отражающая **вершину стека** сценария. Вложенные виджеты и листы **не** накапливают конкурирующие `AprilMobileShellBar`; родитель скрывает свою панель (`CardListColumn.hideMobileShellBar`, условный рендер и т.д.). Глобальный dock AprilHub — **отдельный** слой; согласование с виджетом — [`WIDGET_INTEGRATION_CHECKLIST.md`](./WIDGET_INTEGRATION_CHECKLIST.md).
+
+**«Назад»:** сначала закрывается модальность / sheet виджета (`leading` панели вершины, `onClose` листа), затем host обрабатывает навигацию по intent; не перехватывать системный back раньше листа.
+
+**Поставка:** версия **`@april/ui`** в lockfile shell **обязана** содержать контрактные пропы (`hideMobileShellBar` и др.); иначе стратегия A неработоспособна в runtime.
+
+Решение и альтернатива B: [`adr/0006-mobile-chrome-layers-widget-host.md`](./adr/0006-mobile-chrome-layers-widget-host.md). Пример виджета: [`widgets/profile/profiles-widget.md`](./widgets/profile/profiles-widget.md). Стратегия сборки фронта в Hub: [`FRONTEND_STRATEGY.md`](./FRONTEND_STRATEGY.md) §5.1.
 
 ---
 

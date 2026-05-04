@@ -4,11 +4,12 @@ import {
   AprilJsonSchemaForm,
   AprilJsonTreeEditor,
   AprilJsonValidationSummary,
+  aprilMobileShellBarGhostWhiteBorderActionStyles,
 } from "@april/ui";
-import { IconBraces, IconBrackets, IconCode, IconForms } from "@tabler/icons-react";
+import { IconBraces, IconBrackets, IconCode, IconForms, IconChevronRight } from "@tabler/icons-react";
 import type { RJSFSchema } from "@rjsf/utils";
 import type { SegmentedControlProps } from "@mantine/core";
-import { Alert, Box, Stack, Text, Textarea, VisuallyHidden } from "@mantine/core";
+import { ActionIcon, Alert, Box, Stack, Text, Textarea, Tooltip, VisuallyHidden } from "@mantine/core";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 const MODE_ICON_PX = 16;
@@ -86,11 +87,64 @@ export type DraftJsonEditorToolbarProps = {
   compact?: boolean;
   withFormMode?: boolean;
   withSchemaPanel?: boolean;
+  /**
+   * `segmented` — полный `AprilGradientSegmentedControl` (десктоп / широкий chrome).
+   * `cycle` — одна кнопка «следующий режим» для {@link AprilMobileShellBar} на узком экране.
+   */
+  modeControlVariant?: "segmented" | "cycle";
+  /** Стили кнопки цикла на фоне teal shell (`aprilMobileShellBarGhostWhiteBorderActionStyles`). */
+  cycleActionForMobileShell?: boolean;
 };
 
 /**
  * Переключатель режимов документа: **AprilGradientSegmentedControl** (иконки + `VisuallyHidden` для a11y).
  */
+function draftJsonModeOrder(withFormMode: boolean, withSchemaPanel: boolean): DraftJsonEditorMode[] {
+  const order: DraftJsonEditorMode[] = [];
+  if (withFormMode) {
+    order.push("form");
+  }
+  order.push("tree", "source");
+  if (withSchemaPanel) {
+    order.push("schema");
+  }
+  return order;
+}
+
+function draftJsonModeTooltipLabel(mode: DraftJsonEditorMode): string {
+  switch (mode) {
+    case "form":
+      return "Form";
+    case "tree":
+      return "Tree";
+    case "source":
+      return "Source";
+    case "schema":
+      return "Schema";
+    default:
+      return mode;
+  }
+}
+
+function modeCycleIcon(mode: DraftJsonEditorMode, withFormMode: boolean, withSchemaPanel: boolean) {
+  const order = draftJsonModeOrder(withFormMode, withSchemaPanel);
+  const idx = Math.max(0, order.indexOf(mode));
+  const next = order[(idx + 1) % order.length];
+  const iconProps = { size: MODE_ICON_PX, stroke: MODE_ICON_STROKE };
+  switch (next) {
+    case "form":
+      return <IconForms {...iconProps} aria-hidden />;
+    case "tree":
+      return <IconBraces {...iconProps} aria-hidden />;
+    case "source":
+      return <IconCode {...iconProps} aria-hidden />;
+    case "schema":
+      return <IconBrackets {...iconProps} aria-hidden />;
+    default:
+      return <IconChevronRight size={MODE_ICON_PX} stroke={MODE_ICON_STROKE} aria-hidden />;
+  }
+}
+
 export function DraftJsonEditorToolbar({
   mode,
   onModeChange,
@@ -102,6 +156,8 @@ export function DraftJsonEditorToolbar({
   compact = false,
   withFormMode = false,
   withSchemaPanel = false,
+  modeControlVariant = "segmented",
+  cycleActionForMobileShell = false,
 }: DraftJsonEditorToolbarProps) {
   const [sourceSwitchError, setSourceSwitchError] = useState<string | null>(null);
 
@@ -229,21 +285,56 @@ export function DraftJsonEditorToolbar({
   const allowedValues = useMemo(() => new Set(segmentedData.map((row) => row.value)), [segmentedData]);
   const segmentedValue = allowedValues.has(mode) ? mode : segmentedData[0]?.value ?? "tree";
 
+  const modeOrder = useMemo(() => draftJsonModeOrder(withFormMode, withSchemaPanel), [withFormMode, withSchemaPanel]);
+
+  const handleCycleMode = useCallback(() => {
+    const idx = Math.max(0, modeOrder.indexOf(mode));
+    const next = modeOrder[(idx + 1) % modeOrder.length];
+    handleModeChange(next);
+  }, [handleModeChange, mode, modeOrder]);
+
+  const cycleTooltip = useMemo(() => {
+    const idx = Math.max(0, modeOrder.indexOf(mode));
+    const next = modeOrder[(idx + 1) % modeOrder.length];
+    return `Document view: ${draftJsonModeTooltipLabel(mode)}. Next: ${draftJsonModeTooltipLabel(next)}.`;
+  }, [mode, modeOrder]);
+
+  const cycleShellStyles = cycleActionForMobileShell ? aprilMobileShellBarGhostWhiteBorderActionStyles : undefined;
+
   return (
     <Stack gap="xs" style={{ minWidth: 0 }}>
-      <AprilGradientSegmentedControl
-        data-testid="draft-json-editor-mode"
-        size={compact ? "xs" : "sm"}
-        radius="md"
-        value={segmentedValue}
-        onChange={(next) => {
-          if (next !== null) {
-            handleModeChange(next);
-          }
-        }}
-        data={segmentedData}
-        styles={DRAFT_JSON_MODE_SEGMENTED_STYLES}
-      />
+      {modeControlVariant === "cycle" ? (
+        <Tooltip label={cycleTooltip} withArrow>
+          <ActionIcon
+            type="button"
+            variant="default"
+            size="lg"
+            radius="xl"
+            styles={cycleShellStyles}
+            aria-label={cycleTooltip}
+            data-testid="draft-json-editor-mode-cycle"
+            onClick={() => {
+              handleCycleMode();
+            }}
+          >
+            {modeCycleIcon(mode, withFormMode, withSchemaPanel)}
+          </ActionIcon>
+        </Tooltip>
+      ) : (
+        <AprilGradientSegmentedControl
+          data-testid="draft-json-editor-mode"
+          size={compact ? "xs" : "sm"}
+          radius="md"
+          value={segmentedValue}
+          onChange={(next) => {
+            if (next !== null) {
+              handleModeChange(next);
+            }
+          }}
+          data={segmentedData}
+          styles={DRAFT_JSON_MODE_SEGMENTED_STYLES}
+        />
+      )}
       {!readOnly && sourceSwitchError ? (
         <Alert color="red" title="Cannot change document view">
           <Text size="sm">{sourceSwitchError}</Text>

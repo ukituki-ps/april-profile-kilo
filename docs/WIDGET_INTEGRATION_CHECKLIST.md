@@ -20,6 +20,17 @@
 - [ ] Обработчики `onSaveSuccess`, `onError`, intent-событий реализованы; навигация выполняется на host.
 - [ ] Fallback UI при ошибке загрузки виджета (lazy / error boundary) согласован.
 
+## Mobile chrome (`AprilMobileShellBar`, узкий viewport) — стратегия A
+
+**Норматив:** `design-system/DisignApril/DESIGN_SYSTEM.md` — §8 Mobile (встраивание, стек владельца), §11 **«Нормативный контракт `AprilMobileShellBar`»** (MUST/MUST NOT, таблица пропсов). Встраивание в **AprilHub** следует **стратегии A**: одна видимая капсула на ветку контента у нижнего края; глобальный dock Hub — отдельное продуктовое решение.
+
+- [ ] **Стек:** при открытии sheet/полноэкранного шага виджет **не** оставляет нижнюю панель родительского уровня активной параллельно дочерней (например `hideMobileShellBar` у `CardListColumn`, см. [`widgets/profile/profiles-widget.md`](./widgets/profile/profiles-widget.md)).
+- [ ] **«Назад»:** кнопка в слоте `leading` / закрытие листа **снимает верхний слой** до обработки смены маршрута в Hub; глобальный обработчик back/popstate **не** перебивает закрытие `AprilVaulBottomSheet`.
+- [ ] **Маршруты** с master–detail / редактором на узкой ширине: зафиксировано, показывается ли глобальный нижний shell Hub **одновременно** с dock виджета; при риске двух конкурирующих рядов иконок — immersive (скрыть host dock) или full-bleed.
+- [ ] **`profiles-widget`:** при необходимости отключить только shell списка — `cardListColumnMobileLayout="off"` на `ProfilesWidgetCore` (панель детали на узком **не** отключается этим пропом).
+- [ ] **`@april/ui`** в lockfile Hub соответствует контракту (проп `hideMobileShellBar` и др.); vendored tarball — пересборка DS и обновление архива в shell.
+- [ ] Прочитаны ADR-0006 и §8.6 [`WIDGET_CONTRACTS.md`](./WIDGET_CONTRACTS.md); спорные случаи — только с явным ADR/исключением в задаче.
+
 ## Наблюдаемость
 
 - [ ] `requestId` / трассировка прокидываются в [`WIDGET_CONTRACTS.md`](./WIDGET_CONTRACTS.md) telemetry ([`WIDGET_OBSERVABILITY_GUIDE.md`](./WIDGET_OBSERVABILITY_GUIDE.md)).

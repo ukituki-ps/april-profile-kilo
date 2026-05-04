@@ -22,10 +22,22 @@
 Переключатель вида в шапке `CardListColumn` (список ↔ сетка; в DS **0.1.9+** публичный вид **`collapsed`** снят — узкий rail списка в продукте по-прежнему через локальное «свернуть список», см. `ProfilesWidgetCore`) поддерживается в сборке **`ProfilesWidgetCore`**. В виде **`grid`**:
 
 - левая колонка занимает **100% ширины** области виджета (правая колонка master–detail скрыта);
-- **`ProfilesWidgetProfileDetailCore`** показывается в **`AprilModal`** (`@april/ui`): модалка открывается при **выборе строки** или при нажатии **«Добавить»** (поток создания без предварительного выбора);
-- закрытие модалки (крестик, Escape, клик по оверлею — по поведению Mantine) **снимает выбор** (`entityId` для детальной карточки становится `null`) и закрывает вложенную модалку создания, если она была открыта;
+- **`ProfilesWidgetProfileDetailCore`** показывается **поверх списка**: на **широком viewport** — в **`AprilModal`** (`@april/ui`); на **узком** (`(max-width: 47.99em)`, как у `CardListColumn` с `mobileLayout: 'auto'`) — в **`AprilVaulBottomSheet`**. Открытие при **выборе строки** или **«Добавить»** (создание без предварительного выбора в сетке); на узком экране основные действия детали / create и карусель режимов JSON-документа — в нижней **`AprilMobileShellBar`** внутри тела карточки (**073**), шапка родительского modal/sheet — заголовок и системный close без портала действий в `headerActions`; при открытом sheet/modal детали **`CardListColumn`** получает **`hideMobileShellBar`**, чтобы **не оставалось двух** нижних панелей (норма «один активный контекст», §8 DS);
+- закрытие оверлея (крестик / жест sheet / Escape и т.д. — по компоненту ДС) **снимает выбор** (`entityId` для детальной карточки становится `null`) и закрывает вложенную модалку создания, если она была открыта;
 - при переключении обратно на **`list`** правая колонка снова отображается; выбранный `entityId` **сохраняется**, если пользователь его не сбросил закрытием модалки в сетке;
-- при **входе в `grid`** сбрасываются выделение строки (`entityId`), сессия «создать из сетки» и вложенная модалка создания — чтобы модалка детальной карточки **не открывалась сразу** после переключения вида; также сбрасывается локальное «свёрнуть список» (узкий rail).
+- при **входе в `grid`** сбрасываются выделение строки (`entityId`), сессия «создать из сетки» и вложенная модалка создания — чтобы детальная карточка **не открывалась сразу** после переключения вида; также сбрасывается локальное «свёрнуть список» (узкий rail).
+
+**Узкий экран и режим `list`:** при том же пороге ширины `ProfilesWidgetCore` переводит раскладку в **одноколоночный** поток (список на всю ширину); выбранная деталь открывается в **`AprilVaulBottomSheet`**, а не в правой колонке. Кнопка **«Добавить»** на узком экране (и в сетке) открывает **тот же bottom sheet** с потоком создания (**встроенный** UI, без отдельной **`AprilModal`**). Для `ref.openCreate()` с хоста при list+узкий без сессии списка по-прежнему используется скрытый mount детальной карточки. Проп **`cardListColumnMobileLayout`** (по умолчанию `auto`, см. тип `ProfilesWidgetCoreProps`) пробрасывается в `CardListColumn.mobileLayout`; значение **`off`** отключает мобильный shell/sheets колонки (например узкий iframe витрины).
+
+### Мобильная нижняя панель: стратегия A (стек владельца) и AprilHub
+
+Сборка следует **стратегии A** ([`../../adr/0006-mobile-chrome-layers-widget-host.md`](../../adr/0006-mobile-chrome-layers-widget-host.md)): в ветке master–detail на узком экране **одна видимая** нижняя капсула у контента — у **вершины стека** (деталь/create в sheet); пока открыт sheet/modal детали, **`CardListColumn`** получает **`hideMobileShellBar`**, чтобы не конкурировать со списком. Глубина вложенности виджетов **не** ограничена тремя «слоями»; ограничение — норма DS **«один активный контекст в одной капсуле»** и таблица MUST в `design-system/DisignApril/DESIGN_SYSTEM.md` §11.
+
+- **AprilHub** может дополнительно показывать **глобальный** нижний dock — продуктовое решение и чеклист [`../../WIDGET_INTEGRATION_CHECKLIST.md`](../../WIDGET_INTEGRATION_CHECKLIST.md).
+- **Проп `cardListColumnMobileLayout="off"`** — только отключение mobile-режима **списка** (витрина); панель детали на узком этим пропом **не** отключается.
+- **Жёсткие правила** по пропам `AprilMobileShellBar`, `leading` / `center` / `withSearch`, `position` — только в DS §11; в виджете для детали/create: `withSearch={false}`, `position="absolute"` внутри контейнера sheet.
+
+**Поставка `@april/ui`:** в установленном пакете **обязаны** быть `hideMobileShellBar` у `CardListColumn` и актуальный контракт `AprilMobileShellBar` (vendored tarball / registry). Резюме контракта embed: [`../../WIDGET_CONTRACTS.md`](../../WIDGET_CONTRACTS.md) §8.6. Деталь: [`profiles-widget-profile-detail.md`](./profiles-widget-profile-detail.md).
 
 ## 3) Левая колонка: список профилей
 
@@ -56,7 +68,7 @@
 
 ### UI и дизайн-система
 
-- Список строится на **`CardListColumn`** из `@april/ui` (≥ **0.1.9**); корень сборки оборачивается в **`DensityProvider`** (общий с виджетом детальной карточки).
+- Список строится на **`CardListColumn`** из `@april/ui` (≥ **0.1.9**); корень сборки оборачивается в **`DensityProvider`** (общий с виджетом детальной карточки). В мобильном режиме колонки в **`AprilMobileShellBar`** доступна кнопка цикла **list ↔ grid** (проп ДС **`withMobileViewCycle`**, по умолчанию включён).
 - Уникальность **`document.name`**: клиентская проверка возможна **только** по уже загруженной странице списка; финальная уникальность — на сервере, когда контракт это отразит.
 
 ### Observability (список)
@@ -141,3 +153,5 @@ Host или будущий **registry** смогут подставить аль
 - RJSF (059): [`../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/TASK.md`](../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/TASK.md), [`../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/PLAN.md`](../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/PLAN.md), [`../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/REPORT.md`](../../../tasks/059-phase-7-profiles-widget-rjsf-document-form/REPORT.md) (зависит от [`058`](../../../tasks/058-phase-7-profile-ui-ds-json-profiles-widget-integration/TASK.md)).
 - Разнесение спецификации list/detail (062): [`../../../tasks/062-docs-profiles-widget-spec-list-content-assembly/TASK.md`](../../../tasks/062-docs-profiles-widget-spec-list-content-assembly/TASK.md), [`../../../tasks/062-docs-profiles-widget-spec-list-content-assembly/REPORT.md`](../../../tasks/062-docs-profiles-widget-spec-list-content-assembly/REPORT.md).
 - Split npm detail + композиция (065): [`../../../tasks/065-profiles-widget-split-detail-composition/TASK.md`](../../../tasks/065-profiles-widget-split-detail-composition/TASK.md), [`../../../tasks/065-profiles-widget-split-detail-composition/REPORT.md`](../../../tasks/065-profiles-widget-split-detail-composition/REPORT.md).
+- Мобильный shell / bottom sheet / версии (072): [`../../../tasks/072-profiles-widget-mobile-shell-bottom-sheet/TASK.md`](../../../tasks/072-profiles-widget-mobile-shell-bottom-sheet/TASK.md), [`../../../tasks/072-profiles-widget-mobile-shell-bottom-sheet/REPORT.md`](../../../tasks/072-profiles-widget-mobile-shell-bottom-sheet/REPORT.md).
+- Мобильный **`AprilMobileShellBar`** в детали/create, карусель режимов JSON, версии (**073**): [`../../../tasks/073-profiles-widget-profile-detail-mobile-shell-toolbar/TASK.md`](../../../tasks/073-profiles-widget-profile-detail-mobile-shell-toolbar/TASK.md).

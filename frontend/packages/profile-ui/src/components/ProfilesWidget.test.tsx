@@ -32,10 +32,49 @@ vi.mock("@mantine/core", async () => {
 });
 
 vi.mock("@april/ui", async () => {
-  const { AprilIconCheck, AprilIconClose, AprilModal } = await vi.importActual<typeof import("@april/ui")>("@april/ui");
+  const {
+    AprilIconCheck,
+    AprilIconClose,
+    AprilModal,
+    aprilMobileShellBarContentPaddingBottom,
+    aprilMobileShellBarGhostWhiteBorderActionStyles,
+  } = await vi.importActual<typeof import("@april/ui")>("@april/ui");
   const { SegmentedControl } = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
   return {
     AprilModal,
+    AprilMobileShellBar: ({
+      center,
+      leading,
+    }: {
+      center?: ReactNode;
+      leading?: ReactNode;
+    }) => (
+      <div data-testid="profile-detail-mobile-shell-bar">
+        {leading}
+        {center}
+      </div>
+    ),
+    aprilMobileShellBarContentPaddingBottom,
+    aprilMobileShellBarGhostWhiteBorderActionStyles,
+    APRIL_MOBILE_SHELL_BAR_Z_INDEX: 400,
+    AprilVaulBottomSheet: ({
+      opened,
+      children,
+      onClose,
+    }: {
+      opened: boolean;
+      children?: ReactNode;
+      onClose?: () => void;
+    }) =>
+      opened ? (
+        <div data-testid="profiles-widget-mock-vaul" role="dialog">
+          <button type="button" aria-label="Close vaul mock" onClick={onClose}>
+            close
+          </button>
+          {children}
+        </div>
+      ) : null,
+    APRIL_MOBILE_BOTTOM_SHEET_Z_INDEX: 350,
     AprilIconClose,
     AprilIconCheck,
     AprilGradientSegmentedControl: SegmentedControl,

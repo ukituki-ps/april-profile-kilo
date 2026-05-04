@@ -1,6 +1,6 @@
 # `@april/profile-ui`
 
-Embeddable React widgets for AprilProfile in AprilHub/host apps. Публичная поверхность пакета: **`ProfilesWidget`** (сборка `profiles-widget`), **`ProfilesWidgetProfileDetail`** (карточка + создание), **`EntityTypesWidget`** (`entity-types-widget`), плюс провайдеры/OpenAPI-клиент для кастомного wiring.
+Embeddable React widgets for AprilProfile in AprilHub/host apps. Публичная поверхность пакета: **`ProfilesWidget`** (сборка `profiles-widget`), **`ProfilesWidgetProfileDetail`** (карточка + создание), **`EntityTypesWidget`** (`entity-types-widget`), **`EntityTypesWidgetDetailCore`** (детальная карточка типов отдельно от каталога), плюс провайдеры/OpenAPI-клиент для кастомного wiring.
 
 Локальные демо с MSW (в репозитории `april-profile`, Vite shell): см. **`frontend/README.md`** — маршрут **`/widget-demos`** и вложенные страницы для фасадов, `*ApiWidget`, `*WidgetCore` + OpenAPI.
 
@@ -39,13 +39,13 @@ Props (см. также `ProfilesWidgetProps` в исходниках):
 
 ## `EntityTypesWidget`
 
-Фасад каталога семейств типов (`widgetId`: `entity-types-widget`): **`EntityTypesWidgetCore`** + **`EntityTypesApiWidget`** + **`createOpenApiEntityTypesProvider`**.
+Фасад каталога семейств типов (`widgetId`: `entity-types-widget`): **`EntityTypesWidgetCore`** (список + создание) + **`EntityTypesWidgetDetailCore`** (деталь) внутри сборки, **`EntityTypesApiWidget`** + **`createOpenApiEntityTypesProvider`**.
 
 Props: как у профилей по `hostContext` / `apiBaseUrl` / `accessToken`, плюс `pageSize?`, `providerContext?`, `onAction?`, `onError?`, `onObservability?`, `onOpenEntity?`.
 
 Спецификация по поверхностям: `docs/widgets/profile/entity-types-widget.md` (сборка), `docs/widgets/profile/entity-types-widget-catalog-list.md`, `docs/widgets/profile/entity-types-widget-schema-admin.md`, `docs/widgets/profile/entity-types-widget-entities-upgrade.md`, `docs/widgets/profile/entity-types-widget-integration.md`.
 
-Экспорты: **`EntityTypesWidgetCore`**, **`EntityTypesApiWidget`**, **`EntityTypesDataProvider`**, **`createOpenApiEntityTypesProvider`**.
+Экспорты: **`EntityTypesWidgetCore`**, **`EntityTypesWidgetDetailCore`**, **`EntityTypesApiWidget`**, **`EntityTypesDataProvider`**, **`createOpenApiEntityTypesProvider`**.
 
 ## Generated OpenAPI client
 

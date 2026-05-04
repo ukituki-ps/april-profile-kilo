@@ -48,6 +48,8 @@ sh frontend/scripts/repack-ds-vendor.sh
 
 Подробности по токенам и паттернам — в `DESIGN_SYSTEM.md` внутри репозитория DisignApril.
 
+**Нижняя mobile-панель (`AprilMobileShellBar`):** в submodule `design-system/DisignApril/DESIGN_SYSTEM.md` — §8 Mobile (**стратегия A**, стек владельца, AprilHub), §11 **нормативный контракт** (таблицы MUST/MUST NOT, все публичные пропсы). Проп **`hideMobileShellBar`** у `CardListColumn` — §13. ADR — [`adr/0006-mobile-chrome-layers-widget-host.md`](../adr/0006-mobile-chrome-layers-widget-host.md); чеклист AprilHub — [`WIDGET_INTEGRATION_CHECKLIST.md`](../WIDGET_INTEGRATION_CHECKLIST.md); контракт виджетов — [`WIDGET_CONTRACTS.md`](../WIDGET_CONTRACTS.md) §8.6; сборка Hub — [`FRONTEND_STRATEGY.md`](../FRONTEND_STRATEGY.md) §5.1.
+
 ## 3.1 Политика DS-first (обязательно)
 
 Для продуктовых задач по фронтенду действует приоритет:
