@@ -1,8 +1,8 @@
 # Прикладной фронтенд (SPA)
 
-Минимальный **Vite + React 18** shell на дизайн-системе April: **`@april/tokens`** и **`@april/ui`** сейчас подключены как **`file:vendor/ds-packs/*.tgz`** (зафиксированные архивы из submodule, см. [`package.json`](./package.json)). Для установки **достаточно** `npm ci` **без** токена к GitHub Packages.
+Минимальный **Vite + React 18** shell на дизайн-системе April: **`@april/tokens`** и **`@april/ui`** подключаются через npm aliases к **GitHub Packages** (`npm:@ukituki-ps/april-tokens`, `npm:@ukituki-ps/april-ui`). Для установки нужен **`NODE_AUTH_TOKEN`** (scope `read:packages`) — см. [`.npmrc`](./.npmrc).
 
-Чтобы снова перейти на **только registry** (`npm:@ukituki-ps/…`), задайте **`NODE_AUTH_TOKEN`** (`read:packages`), поменяйте зависимости в `package.json` и выполните `npm install` — см. [`vendor/ds-packs/README.md`](./vendor/ds-packs/README.md) и [`.npmrc`](./.npmrc).
+Каталог [`vendor/ds-packs`](./vendor/ds-packs/) остаётся как fallback для офлайн/аварийных сценариев, но не как основной путь для `npm ci`.
 
 Submodule **`design-system/DisignApril`** нужен для **`ds:prepare`** (SVG в `frontend/public`) и для **`scripts/repack-ds-vendor.sh`** при обновлении vendored tarball’ов.
 

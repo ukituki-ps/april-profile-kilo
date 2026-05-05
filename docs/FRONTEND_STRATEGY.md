@@ -183,7 +183,7 @@ Host собирает страницу из layout, провайдеров (те
 
 ## 11. На что смотреть, чтобы гибрид не ломался (чеклист)
 
-1. **Дизайн-система:** все зоны (админка и встраиваемые блоки) используют **одни** `@april/tokens` / `@april/ui`; версии согласованы с Hub (см. [`guides/DESIGN_SYSTEM.md`](./guides/DESIGN_SYSTEM.md) — vendored **0.1.0** до registry, затем semver из GitHub Packages).
+1. **Дизайн-система:** все зоны (админка и встраиваемые блоки) используют **одни** `@april/tokens` / `@april/ui`; версии согласованы с Hub (см. [`guides/DESIGN_SYSTEM.md`](./guides/DESIGN_SYSTEM.md) — основной поток через semver из GitHub Packages, vendored tarball'ы только fallback).
 2. **Аутентификация и tenant:** токен и `tenant_id` только из **доверенного** контекста (Keycloak / BFF); UI не подставляет tenant из недоверенных полей формы.
 3. **Дублирование логики:** запросы к AprilProfile API — через **общий слой** (сгенерированный клиент, хуки), а не отдельные копии `fetch` в админке и в Hub.
 4. **Два Router / два React:** запрещено для встраиваемого режима; для MF — жёсткий `shared` и отсутствие второго корня провайдеров в remote.
@@ -196,7 +196,7 @@ Host собирает страницу из layout, провайдеров (те
 
 ## 12. Каркас в этом репозитории
 
-Каталог **`frontend/`** — Vite + React + Mantine; дизайн-система — **`@april/ui`** / **`@april/tokens`** через **`file:vendor/ds-packs/*.tgz`** (см. [`guides/DESIGN_SYSTEM.md`](./guides/DESIGN_SYSTEM.md)); переключение на **GitHub Packages** (`npm:@ukituki-ps/…`) — в `frontend/vendor/ds-packs/README.md`. **git submodule** `design-system/DisignApril` — для SVG (`ds:prepare`) и пересборки tarball’ов. Пакет **`@april/profile-ui`** и сценарии Hub — см. [`VERSIONING_AND_COMPATIBILITY.md`](./VERSIONING_AND_COMPATIBILITY.md).
+Каталог **`frontend/`** — Vite + React + Mantine; дизайн-система — **`@april/ui`** / **`@april/tokens`** через **GitHub Packages** (`npm:@ukituki-ps/…`, см. [`guides/DESIGN_SYSTEM.md`](./guides/DESIGN_SYSTEM.md) и `frontend/.npmrc`). **git submodule** `design-system/DisignApril` — для SVG (`ds:prepare`) и fallback-переупаковки tarball’ов при необходимости. Пакет **`@april/profile-ui`** и сценарии Hub — см. [`VERSIONING_AND_COMPATIBILITY.md`](./VERSIONING_AND_COMPATIBILITY.md).
 
 ---
 

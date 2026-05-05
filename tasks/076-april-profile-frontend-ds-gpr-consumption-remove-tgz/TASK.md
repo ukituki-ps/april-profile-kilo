@@ -25,8 +25,8 @@
 
 ## Критерии готовности (acceptance)
 - [ ] `cd frontend && npm ci && npm run lint && npm run test && npm run build` с установленным `NODE_AUTH_TOKEN`.
-- [ ] В lockfile `@april/ui` / `@april/tokens` резолвятся в **`https://npm.pkg.github.com/...`** (или эквивалент GPR), не `file:vendor/ds-packs`.
-- [ ] Документация отражает основной поток через GPR.
+- [x] В lockfile `@april/ui` / `@april/tokens` резолвятся в **`https://npm.pkg.github.com/...`** (или эквивалент GPR), не `file:vendor/ds-packs`.
+- [x] Документация отражает основной поток через GPR.
 
 ## Проверка (команды)
 ```bash
@@ -34,7 +34,7 @@ cd frontend && npm ci && npm run lint && npm run test && npm run build
 ```
 
 ## Человекопонятная история в docs-site
-- [ ] Обновить или связать с [`task-story-074-phase-8-ds-gpr-mobile-shell-unification`](../../docs-site/docs/task-story-074-phase-8-ds-gpr-mobile-shell-unification.md).
+- [x] Обновить или связать с [`task-story-074-phase-8-ds-gpr-mobile-shell-unification`](../../docs-site/docs/task-story-074-phase-8-ds-gpr-mobile-shell-unification.md).
 
 ## Результат в отчёте
 [`REPORT.md`](./REPORT.md): список файлов, версии пакетов, ссылка на PR в april-profile.
