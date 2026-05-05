@@ -1,6 +1,8 @@
-# Vendored tarball’ы `@april/ui` и `@april/tokens`
+# Vendored tarball’ы `@april/ui` и `@april/tokens` (fallback)
 
-**Сейчас (версия 0.1.9):** в `frontend/package.json` зависимости заданы как **`file:vendor/ds-packs/april-tokens-0.1.9.tgz`** и **`file:vendor/ds-packs/april-ui-0.1.9.tgz`** — `npm ci` не требует **`NODE_AUTH_TOKEN`**.
+**Основной поток:** зависимости в `frontend/package.json` и `frontend/packages/profile-ui/package.json` заданы через registry aliases — **`npm:@ukituki-ps/april-tokens@^0.1.9`** и **`npm:@ukituki-ps/april-ui@^0.1.9`**. Для `npm ci` нужен **`NODE_AUTH_TOKEN`** (`read:packages`) согласно `frontend/.npmrc`.
+
+Vendored `.tgz` в этом каталоге — **опциональный fallback** для офлайн/аварийных сценариев.
 
 Архивы получают из submodule **`design-system/DisignApril`**:
 
@@ -9,11 +11,14 @@ sh frontend/scripts/repack-ds-vendor.sh
 cd frontend && npm install   # обновит package-lock.json при смене содержимого .tgz
 ```
 
-## Переход обратно на GitHub Packages (один источник — npm)
+## Временный переход на `.tgz` (если registry недоступен)
 
-1. Опубликовать **`@ukituki-ps/april-tokens`** и **`@ukituki-ps/april-ui`** **0.1.9** (или ту же сборку, что в tarball’ах).
-2. В `frontend/package.json` заменить `file:…` на **`npm:@ukituki-ps/april-tokens@^0.1.9`** и **`npm:@ukituki-ps/april-ui@^0.1.9`**.
-3. С **`NODE_AUTH_TOKEN`** (`read:packages`): `cd frontend && rm -rf node_modules && npm install`.
-4. Закоммитить обновлённый **`package-lock.json`**, при желании удалить `.tgz` из репозитория.
+1. Обновить архивы из submodule:
 
-Подробнее — задачи **048–050**, эпик **049**.
+   ```bash
+   sh frontend/scripts/repack-ds-vendor.sh
+   ```
+
+2. Временно переключить зависимости `@april/tokens` и `@april/ui` на `file:vendor/ds-packs/*.tgz`.
+3. Выполнить `cd frontend && npm install` и зафиксировать lock.
+4. После восстановления registry вернуть aliases `npm:@ukituki-ps/...` и повторно обновить lock.
