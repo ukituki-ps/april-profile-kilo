@@ -19,8 +19,8 @@
 
 ## PR / коммиты
 
-- Реализация в **april-worker**: коммит [`31a5670`](https://github.com/ukituki-ps/april-worker/commit/31a5670) (ветка [`feature/053-hub-shell-ds-gpr-077`](https://github.com/ukituki-ps/april-worker/tree/feature/053-hub-shell-ds-gpr-077)); сравнение с `develop`: https://github.com/ukituki-ps/april-worker/compare/develop...feature/053-hub-shell-ds-gpr-077
-- Документация / трекинг в **april-profile**: ветка [`docs/task-077-report-hub-shell-gpr`](https://github.com/ukituki-ps/april-profile/tree/docs/task-077-report-hub-shell-gpr), коммит `c15e241` (открыть PR в `develop`).
+- Реализация в **april-worker**: коммиты [`31a5670`](https://github.com/ukituki-ps/april-worker/commit/31a5670) (основной), [`cc16495`](https://github.com/ukituki-ps/april-worker/commit/cc16495) (отчёт) на ветке [`feature/053-hub-shell-ds-gpr-077`](https://github.com/ukituki-ps/april-worker/tree/feature/053-hub-shell-ds-gpr-077); compare: https://github.com/ukituki-ps/april-worker/compare/develop...feature/053-hub-shell-ds-gpr-077
+- Документация / трекинг в **april-profile**: ветка [`docs/task-077-report-hub-shell-gpr`](https://github.com/ukituki-ps/april-profile/tree/docs/task-077-report-hub-shell-gpr) (коммиты `c15e241`, `23ccbfc`); compare: https://github.com/ukituki-ps/april-profile/compare/develop...docs/task-077-report-hub-shell-gpr
 
 ## Риски / follow-up
 
