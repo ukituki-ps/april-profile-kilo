@@ -10,12 +10,16 @@
 - **Документация DS:** `DESIGN_SYSTEM.md` §11 — уточнение MUST по `aria-expanded`; пример алиаса в `docs/PUBLISHING.md` обновлён на `^0.1.10` для UI.
 - **Showcase:** правок не потребовалось — сценарий Vaul в Mobile lab уже отключает поиск при открытом листе (`shellWithSearch={!opened}`).
 
+## Статус публикации (обновлено)
+
+- **PR:** https://github.com/ukituki-ps/DisignApril/pull/34 (merged в `main`).
+- **GPR:** `@ukituki-ps/april-tokens@0.1.10`, `@ukituki-ps/april-ui@0.1.10` — workflow https://github.com/ukituki-ps/DisignApril/actions/runs/25639729831 (`both`, success).
+
 ## Следующие шаги
 
-1. Закоммитить и смержить изменения в **DisignApril**, опубликовать **0.1.10** в GitHub Packages (штатный workflow).
-2. Поднять lock/диапазон semver у потребителей (**076/077** или micro-bump) после появления пакета в GPR.
-3. Отметить чеклист в `TASK.md` этой папки при закрытии трекинга.
+1. Поднять lock/диапазон semver у потребителей (**076/077** или micro-bump) при необходимости.
+2. Закоммитить этот `REPORT.md` в **april-profile**.
 
 ## Ссылка
 
-- Постановка и отчёт DS: репозиторий `DisignApril`, ветка/PR — по факту команды; папка задачи `tasks/ds-015-april-profile-task-078-mobile-shell-bar/`.
+- Отчёт DS-015: `DisignApril` — `tasks/ds-015-april-profile-task-078-mobile-shell-bar/REPORT.md`.
