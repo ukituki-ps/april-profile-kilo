@@ -42,3 +42,4 @@ sidebar_position: 255
 
 - Эпик: [`tasks/074-phase-8-ds-gpr-and-mobile-shell-unification/`](https://github.com/ukituki-ps/april-profile/tree/develop/tasks/074-phase-8-ds-gpr-and-mobile-shell-unification) (`TASK.md`, `PLAN.md`).
 - Подзадачи **075–080** — см. ссылки в [`tasks/074-phase-8-ds-gpr-and-mobile-shell-unification/TASK.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/074-phase-8-ds-gpr-and-mobile-shell-unification/TASK.md).
+- **077** (AprilHub / `hub-shell` в **april-worker**): отчёт исполнения — [`tasks/077-external-april-worker-hub-shell-ds-gpr-consumption/REPORT.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/077-external-april-worker-hub-shell-ds-gpr-consumption/REPORT.md).
