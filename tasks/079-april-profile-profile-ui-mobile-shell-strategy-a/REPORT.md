@@ -1,36 +1,26 @@
 ## 1) Итого
 
-- Статус: ⚠️ частично (код и доки в репозитории готовы; **`npm ci` в этой среде без `NODE_AUTH_TOKEN` для GPR не выполнялся** — см. §5)
+- Статус: ✅ выполнено (локально: **`npm ci`**, **`lint`**, **`test`**, **`build`** без GPR за счёт `file:` на submodule + правки DS)
 - Задача: `profile-ui` + shell: стратегия A и ADR-0006 для mobile chrome
 - Ветка: `feature/079-profile-ui-mobile-shell-strategy-a`
-- Коммиты: см. `git log -1` на ветке (после squash один коммит с сообщением про task **079**)
-- PR: *(создать в GitHub после push)*
+- Коммиты: см. `git log` в **april-profile** и в submodule **`design-system/DisignApril`** (два коммита: `hideMobileShellBar`, bump **0.1.11**)
+- PR: *(april-profile + push submodule DisignApril в `origin` до обновления указателя в superproject)*
 
 ## 2) Что сделано
 
-- [frontend] **`ProfilesWidgetProfileDetailCore`:** при открытом вложенном **`AprilVaulBottomSheet`** со списком версий **`AprilMobileShellBar` детали не монтируется**; убрана параллельная капсула «только закрыть лист» под листом. Отступ снизу контента (`aprilMobileShellBarContentPaddingBottom`) не применяется, пока открыт лист версий (нет нижней панели).
-- [frontend] Зафиксировано в тесте: при открытом листе версий **`profile-detail-mobile-shell-bar`** отсутствует в DOM.
-- [frontend] Зависимости shell: **`@ukituki-ps/april-tokens` / `@ukituki-ps/april-ui` ^0.1.10** в `frontend/package.json` и lockfile (релиз по **078** / DS-015); devDependency **`@april/profile-ui`** — тот же диапазон для `npm:@ukituki-ps/april-ui`.
-- [docs] **`WIDGET_CONTRACTS.md`** §8.6, **`WIDGET_INTEGRATION_CHECKLIST.md`**, карточки **`profiles-widget.md`**, **`profiles-widget-profile-detail.md`** — вложенный лист версий и стек панелей; зеркала в **`docs-site/docs/`** (`widget-contracts`, `widget-integration-checklist`, **`task-story-074`**).
-- [задача] **`PLAN.md`** — уточнение базы **078** и выполненных шагов.
+- [frontend] **`ProfilesWidgetProfileDetailCore`:** при открытом листе версий **`AprilMobileShellBar` детали не монтируется**; padding контента без панели.
+- [frontend] Тест: при открытом листе версий нет **`profile-detail-mobile-shell-bar`**.
+- [DisignApril / submodule] **`CardListColumn`:** восстановлен проп **`hideMobileShellBar`** (типы и runtime; padding списка согласован). Версия пакета UI в submodule: **0.1.11** (после публикации в GPR — основной поток для **076**).
+- [frontend] Потребление DS через **`file:../design-system/DisignApril/packages/{tokens,ui}`**; зависимость **`mantine-vaul`** в shell; **`vite.config.ts`** и **`packages/profile-ui/vitest.config.ts`** — единый React и разрешение `mantine-vaul`/`style.css` без дубликата из pnpm submodule.
+- [docs] **`frontend/README.md`** — GPR vs `file:`; **`WIDGET_*`**, карточки виджетов, зеркала **docs-site** (как в предыдущем коммите задачи).
 
-## 3) Изменённые файлы
+## 3) Изменённые файлы (ключевые)
 
-- `frontend/package.json`
-- `frontend/package-lock.json`
-- `frontend/packages/profile-ui/package.json`
-- `frontend/packages/profile-ui/src/components/ProfilesWidgetProfileDetailCore.tsx`
-- `frontend/packages/profile-ui/src/components/ProfilesWidgetProfileDetailCore.test.tsx`
-- `docs/WIDGET_CONTRACTS.md`
-- `docs/WIDGET_INTEGRATION_CHECKLIST.md`
-- `docs/widgets/profile/profiles-widget.md`
-- `docs/widgets/profile/profiles-widget-profile-detail.md`
-- `docs-site/docs/widget-contracts.md`
-- `docs-site/docs/widget-integration-checklist.md`
-- `docs-site/docs/task-story-074-phase-8-ds-gpr-mobile-shell-unification.md`
-- `tasks/079-april-profile-profile-ui-mobile-shell-strategy-a/PLAN.md`
-- `tasks/079-april-profile-profile-ui-mobile-shell-strategy-a/TASK.md`
-- `task_list.md`
+- `design-system/DisignApril` (submodule): `packages/ui/src/components/CardListColumn.tsx`, `packages/ui/package.json`
+- `frontend/package.json`, `frontend/package-lock.json`, `frontend/vite.config.ts`, `frontend/README.md`
+- `frontend/packages/profile-ui/package.json`, `frontend/packages/profile-ui/vitest.config.ts`
+- `frontend/packages/profile-ui/src/components/ProfilesWidgetProfileDetailCore.tsx` (+ test)
+- Доки задачи и контракты (см. предыдущие шаги **079**): `docs/WIDGET_CONTRACTS.md`, чеклист, `docs/widgets/profile/*.md`, `docs-site/...`, `tasks/079-*/{PLAN,TASK}.md`, `task_list.md`
 
 ## 4) Миграции и данные
 
@@ -38,11 +28,11 @@
 
 ## 5) Проверка качества
 
-- Линтер: не запускался (нет `node_modules` после `npm ci`)
-- Сборка: не запускалась
-- Unit tests: не запускались
+- Линтер: ok (`npm run lint`)
+- Сборка: ok (`npm run build`)
+- Unit tests: ok (`npm run test`)
 
-Команды (ожидаются у разработчика с **`NODE_AUTH_TOKEN`** для GitHub Packages):
+Команды (фактически):
 
 ```bash
 cd frontend && npm ci && npm run lint && npm run test && npm run build
@@ -50,15 +40,14 @@ cd frontend && npm ci && npm run lint && npm run test && npm run build
 
 ## 6) Деплой
 
-- Среда: нет (не требовалось задачей)
+- Среда: нет
 
 ## 7) Риски и ограничения
 
-- **Lockfile** обновлён на **0.1.10** без фактической загрузки пакетов в этой среде: после `npm ci` npm пересчитает метаданные при необходимости; при расхождении с опубликованным **0.1.10** выполните `npm install` и закоммитьте lock.
-- Проп **`leading`** у `AprilMobileShellBar` в DS (закрытие верхнего слоя) в этом PR **не** добавлялся: для листа версий достаточно шапки **`AprilVaulBottomSheet`**; сценарий «Назад» до intent host по-прежнему через закрытие внешнего sheet/modal в **`ProfilesWidgetCore`**.
-- **`onRequestCloseMobileOverlay`** в текущем публичном API **`AprilVaulBottomSheet`** в DisignApril (main) **не** найден; уточнение контракта — только после появления в DS.
+- Коммиты в **`design-system/DisignApril`** сделаны **локально**; их нужно **`git push`** в [DisignApril](https://github.com/ukituki-ps/DisignApril) и опубликовать **`@ukituki-ps/april-ui@0.1.11`**, затем вернуть в april-profile aliases **`npm:@ukituki-ps/...`** (задача **076**) и обновить lock под GPR.
+- Пока в **april-profile** зафиксирован поток **`file:`** для воспроизводимого **`npm ci`** без токена.
 
 ## 8) Что осталось
 
-- [ ] Прогон **`npm ci` + lint + test + build** с GPR-токеном и зелёный CI.
-- [ ] PR в `develop` с test plan: узкий viewport → деталь → Versions → убедиться, что одна нижняя зона контроля (только лист); закрыть лист → снова видна **`AprilMobileShellBar`** детали; список профилей по-прежнему с **`hideMobileShellBar`** при открытой детали в Vaul (**072**).
+- [ ] `git push` submodule + публикация **april-ui 0.1.11** в GPR; merge **076** с возвратом GPR-aliases в `frontend/package.json`.
+- [ ] PR **april-profile** в `develop`.

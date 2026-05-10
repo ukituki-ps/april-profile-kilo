@@ -18,7 +18,7 @@
 - Публикация DS — **078**.
 
 ## Критерии готовности (acceptance)
-- [ ] `cd frontend && npm ci && npm run test && npm run build` (с `NODE_AUTH_TOKEN` для GPR).
+- [x] `cd frontend && npm ci && npm run test && npm run build` (выполнено с **`file:`** на submodule DS; GPR — после **076** и publish **0.1.11**).
 - [x] Доки и ADR-0006 согласованы с поведением (§8.6, чеклист, карточки; вложенный лист версий — без параллельной панели детали); чеклист интеграции обновлён.
 
 ## Проверка (команды)
