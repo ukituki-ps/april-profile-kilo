@@ -18,8 +18,8 @@
 - Публикация DS — **078**.
 
 ## Критерии готовности (acceptance)
-- [ ] `cd frontend && npm ci && npm run test && npm run build`.
-- [ ] Доки и ADR-0006 согласованы с поведением; чеклист интеграции обновлён при новых правилах.
+- [ ] `cd frontend && npm ci && npm run test && npm run build` (с `NODE_AUTH_TOKEN` для GPR).
+- [x] Доки и ADR-0006 согласованы с поведением (§8.6, чеклист, карточки; вложенный лист версий — без параллельной панели детали); чеклист интеграции обновлён.
 
 ## Проверка (команды)
 ```bash
@@ -27,7 +27,7 @@ cd frontend && npm ci && npm run lint && npm run test && npm run build
 ```
 
 ## Человекопонятная история в docs-site
-- [ ] Связать с [`task-story-074`](../../docs-site/docs/task-story-074-phase-8-ds-gpr-mobile-shell-unification.md) или отдельная story при крупном UX-изменении.
+- [x] Связано с [`task-story-074`](../../docs-site/docs/task-story-074-phase-8-ds-gpr-mobile-shell-unification.md) (пункт про **079**).
 
 ## Результат в отчёте
 [`REPORT.md`](./REPORT.md): PR april-profile, краткий список сценариев и тестов.

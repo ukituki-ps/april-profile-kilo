@@ -1419,7 +1419,10 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
                   flex: 1,
                   minHeight: 0,
                   overflow: "auto",
-                  paddingBottom: useMobileProfileShell ? aprilMobileShellBarContentPaddingBottom() : undefined,
+                  paddingBottom:
+                    useMobileProfileShell && !versionSheetOpened
+                      ? aprilMobileShellBarContentPaddingBottom()
+                      : undefined,
                 }}
               >
                 {createProfileEditorStack}
@@ -1528,7 +1531,9 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
                     alignItems: "center",
                     gap: "0.5rem",
                     paddingBottom:
-                      useMobileProfileShell && selectedItem ? aprilMobileShellBarContentPaddingBottom() : undefined,
+                      useMobileProfileShell && selectedItem && !versionSheetOpened
+                        ? aprilMobileShellBarContentPaddingBottom()
+                        : undefined,
                   }}
                 >
                   <Loader size="sm" />
@@ -1551,7 +1556,9 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
                       minHeight: 0,
                       overflow: "auto",
                       paddingBottom:
-                        useMobileProfileShell && selectedItem ? aprilMobileShellBarContentPaddingBottom() : undefined,
+                        useMobileProfileShell && selectedItem && !versionSheetOpened
+                          ? aprilMobileShellBarContentPaddingBottom()
+                          : undefined,
                     }}
                   >
                     {documentEditingEnabled && editMode && !historicalView ? (
@@ -1612,30 +1619,15 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
                       </Box>
                     )}
                   </Box>
-                  {useMobileProfileShell && selectedItem ? (
+                  {/**
+                   * Стратегия A (ADR-0006): пока открыт вложенный лист версий, нижняя панель детали не монтируется —
+                   * один активный контекст; закрытие — шапка/жесты {@link AprilVaulBottomSheet}.
+                   */}
+                  {useMobileProfileShell && selectedItem && !versionSheetOpened ? (
                     <AprilMobileShellBar
                       position="absolute"
                       withSearch={false}
-                      center={
-                        compactProfileOverlayChrome && versionSheetOpened ? (
-                          <Group gap={6} justify="flex-end" wrap="nowrap" style={{ width: "100%", minWidth: 0 }}>
-                            <Tooltip label="Close version list" withArrow>
-                              <ActionIcon
-                                variant="default"
-                                size="lg"
-                                radius="xl"
-                                styles={aprilMobileShellBarGhostWhiteBorderActionStyles}
-                                aria-label="Close version list"
-                                onClick={() => setVersionSheetOpened(false)}
-                              >
-                                <AprilIconClose size={20} aria-hidden />
-                              </ActionIcon>
-                            </Tooltip>
-                          </Group>
-                        ) : (
-                          profileDetailMobileShellMainCenter
-                        )
-                      }
+                      center={profileDetailMobileShellMainCenter}
                     />
                   ) : null}
                 </Box>

@@ -17,7 +17,7 @@
 
 - **`AprilMobileShellBar`** (`@april/ui`, `position="absolute"`, `withSearch={false}`): на узком экране **основные действия** детали и **create** — в нижней капсуле внутри **`ProfilesWidgetProfileDetailCore`** (стратегия A: панель у **вершины стека** в sheet); **`aprilMobileShellBarContentPaddingBottom()`** на прокручиваемой области; **`center`** — `justify="flex-end"` и порядок DOM по **DS §11** (нормативный контракт `AprilMobileShellBar`). На **широком** экране тулбар в шапке **`AprilModal`** / в строке заголовка standalone-колонки. Сборка со списком и Hub: [`./profiles-widget.md`](./profiles-widget.md); ADR-0006 [`../../adr/0006-mobile-chrome-layers-widget-host.md`](../../adr/0006-mobile-chrome-layers-widget-host.md); DS §8–§11 (`design-system/DisignApril/DESIGN_SYSTEM.md`).
 - **Режимы JSON-документа** (Form / Tree / Source / Schema — по флагу провайдера и схеме): на узком экране — **одна кнопка-карусель** (`DraftJsonEditorToolbar`, `modeControlVariant="cycle"`, осмысленный `aria-label` / tooltip); на широком — сегменты **`AprilGradientSegmentedControl`**.
-- **Версии:** при **`hostGridProfileModalChrome`** (деталь в sheet/modal родителя) — иконка **Versions** в shell открывает **`AprilVaulBottomSheet`** со списком; пока лист открыт, **в shell только действие слоя версий** (закрыть лист), без кнопок детали (норма «один активный контекст» из DS). **`z-index`** листа версий выше **`APRIL_MOBILE_SHELL_BAR_Z_INDEX`**, чтобы лист был поверх нижней панели детали. В **standalone**-сборке без хост-chrome на узком экране по-прежнему **`Select`** версий под заголовком карточки.
+- **Версии:** при **`hostGridProfileModalChrome`** (деталь в sheet/modal родителя) — иконка **Versions** в shell открывает **`AprilVaulBottomSheet`** со списком; пока лист открыт, **`AprilMobileShellBar` детали не монтируется** (норма «один активный контекст», ADR-0006): закрытие — шапка и жесты листа, без второй нижней капсулы. **`z-index`** листа версий выше **`APRIL_MOBILE_SHELL_BAR_Z_INDEX`**. В **standalone**-сборке без хост-chrome на узком экране по-прежнему **`Select`** версий под заголовком карточки.
 
 ## Назначение (две части)
 
@@ -37,7 +37,7 @@
 
 ## Зависимости и JSON-документ (DS)
 
-- `@april/profile-ui`, `@april/ui` (≥ **0.1.9**).
+- `@april/profile-ui`, `@april/ui` (≥ **0.1.10** рекомендуется с **078** — a11y поиска в shell; минимум **0.1.9** для вида `CardListColumn` без `collapsed`).
 - **`DensityProvider`** в корне виджета детальной карточки.
 - Поле **`document`**: **`EntityTypesDraftJsonEditor`** — **Form** (RJSF при валидной published-схеме) → **Tree** → **Source** → при наличии у провайдера **`getEntityTypePublishedSchema`** — **Schema** (read-only `published_schema` с `GET /v1/entity-types/{id}`). На широком экране — сегменты в тулбаре; на узком — тот же порядок в **карусели** (см. выше).
 - **`AprilJsonValidationSummary`** для **`schemaIssues`**. Стек согласован с задачами **057–059**; минимальная клиентская валидация корня документа: `{ "type": "object" }`.

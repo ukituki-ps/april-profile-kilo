@@ -33,7 +33,7 @@
 
 Сборка следует **стратегии A** ([`../../adr/0006-mobile-chrome-layers-widget-host.md`](../../adr/0006-mobile-chrome-layers-widget-host.md)): в ветке master–detail на узком экране **одна видимая** нижняя капсула у контента — у **вершины стека** (деталь/create в sheet); пока открыт sheet/modal детали, **`CardListColumn`** получает **`hideMobileShellBar`**, чтобы не конкурировать со списком. Глубина вложенности виджетов **не** ограничена тремя «слоями»; ограничение — норма DS **«один активный контекст в одной капсуле»** и таблица MUST в `design-system/DisignApril/DESIGN_SYSTEM.md` §11.
 
-- **AprilHub** может дополнительно показывать **глобальный** нижний dock — продуктовое решение и чеклист [`../../WIDGET_INTEGRATION_CHECKLIST.md`](../../WIDGET_INTEGRATION_CHECKLIST.md).
+- **AprilHub** может дополнительно показывать **глобальный** нижний dock — продуктовое решение и чеклист [`../../WIDGET_INTEGRATION_CHECKLIST.md`](../../WIDGET_INTEGRATION_CHECKLIST.md). Вложенный лист (**версии** в `profiles-widget-profile-detail`) — вершина стека: **`AprilMobileShellBar` детали скрывается**, пока лист открыт (задача **079**).
 - **Проп `cardListColumnMobileLayout="off"`** — только отключение mobile-режима **списка** (витрина); панель детали на узком этим пропом **не** отключается.
 - **Жёсткие правила** по пропам `AprilMobileShellBar`, `leading` / `center` / `withSearch`, `position` — только в DS §11; в виджете для детали/create: `withSearch={false}`, `position="absolute"` внутри контейнера sheet.
 

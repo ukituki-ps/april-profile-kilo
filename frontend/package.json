@@ -23,8 +23,8 @@
   },
   "dependencies": {
     "@april/profile-ui": "file:./packages/profile-ui",
-    "@april/tokens": "npm:@ukituki-ps/april-tokens@^0.1.9",
-    "@april/ui": "npm:@ukituki-ps/april-ui@^0.1.9",
+    "@april/tokens": "npm:@ukituki-ps/april-tokens@^0.1.10",
+    "@april/ui": "npm:@ukituki-ps/april-ui@^0.1.10",
     "@emotion/react": "^11.14.0",
     "@mantine/core": "^7.17.8",
     "@xyflow/react": "^12.10.2",

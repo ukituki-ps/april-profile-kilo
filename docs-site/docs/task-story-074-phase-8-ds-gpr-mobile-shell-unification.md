@@ -19,7 +19,7 @@ sidebar_position: 255
 **Волна B — mobile chrome**
 
 4. **[078]** DisignApril: контракт и тесты **`AprilMobileShellBar`** (и смежное по ADR-0006 / DS §8–11), публикация новой версии UI при необходимости.
-5. **[079]** april-profile: **`@april/profile-ui`** и shell — стратегия A, один активный контекст панели, back-order, тесты и карточки виджетов.
+5. **[079]** april-profile: **`@april/profile-ui`** и shell — стратегия A, один активный контекст панели, back-order, тесты и карточки виджетов (закрыто: вложенный лист версий без параллельной `AprilMobileShellBar` детали; bump **`@ukituki-ps/april-ui` / tokens** к **0.1.10** по **078** — см. [`tasks/079-april-profile-profile-ui-mobile-shell-strategy-a/REPORT.md`](https://github.com/ukituki-ps/april-profile/blob/develop/tasks/079-april-profile-profile-ui-mobile-shell-strategy-a/REPORT.md)).
 6. **[080]** april-worker: согласование **глобального dock Hub** с виджетом, bump **`vendor/april-profile`**, e2e smoke на mobile.
 
 ## Что это даёт

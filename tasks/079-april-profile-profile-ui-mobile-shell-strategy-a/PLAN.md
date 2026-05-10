@@ -1,11 +1,21 @@
 # План задачи 079 [april-profile] — стратегия A в виджетах
 
-## Шаги
-1. Поднять lock на версию **`@ukituki-ps/april-ui`**, выпущенную по **078** (если отличается от текущей).
-2. Инвентаризация всех монтирований **`AprilMobileShellBar`** и связанных sheet в `profile-ui`.
-3. Для каждого сценария: родитель скрывает бар при дочернем слое; вершина стека показывает бар; back закрывает верхний слой.
-4. Тесты на регрессии (в т.ч. из **072–073**).
-5. Обновить `docs/widgets/profile/*.md`, `WIDGET_CONTRACTS` §8.6 при изменении контракта виджета.
+- **Задача:** [`TASK.md`](./TASK.md)
+- **Дата плана:** 2026-05-10
+- **Статус плана:** согласован с выполнением (код + доки; CI — после `npm ci` с GPR)
+
+## Исходные допущения
+
+- **078** закрыт во **DisignApril**: **`@ukituki-ps/april-ui@0.1.10`** / tokens **0.1.10** (см. [`../078-external-DisignApril-april-mobile-shell-bar-refactor/REPORT.md`](../078-external-DisignApril-april-mobile-shell-bar-refactor/REPORT.md)).
+- Потребитель **`onRequestCloseMobileOverlay`** и иных пропов вне опубликованного API DS в этой итерации не внедряет.
+
+## Порядок работ (факт)
+
+1. Поднять диапазон **`@ukituki-ps/april-ui` / `april-tokens`** до **^0.1.10** в `frontend/` и lockfile.
+2. В **`ProfilesWidgetProfileDetailCore`**: при открытом листе версий (**`AprilVaulBottomSheet`**) не монтировать **`AprilMobileShellBar`** детали; синхронизировать нижний padding контента.
+3. Тест: лист версий → нет `data-testid="profile-detail-mobile-shell-bar"`.
+4. Доки: §8.6, чеклист, карточки виджетов, зеркала `docs-site`, ссылка в story **074**.
 
 ## Ручная проверка
-- Узкий viewport, список → деталь → sheet → system back (где применимо).
+
+- Узкий viewport: список → деталь (Vaul) → **Versions** → одна «вершина» UI снизу (лист; без параллельной капсулы детали) → закрыть лист → снова **`AprilMobileShellBar`** детали.
