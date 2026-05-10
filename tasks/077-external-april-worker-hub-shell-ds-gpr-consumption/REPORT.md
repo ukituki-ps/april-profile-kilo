@@ -19,7 +19,8 @@
 
 ## PR / коммиты
 
-- Указать в описании PR **april-worker** после merge: ссылка на PR и короткий changelog (дублирует отчёт **053** в april-worker).
+- Реализация в **april-worker**: коммит [`31a5670`](https://github.com/ukituki-ps/april-worker/commit/31a5670) (ветка [`feature/053-hub-shell-ds-gpr-077`](https://github.com/ukituki-ps/april-worker/tree/feature/053-hub-shell-ds-gpr-077)); сравнение с `develop`: https://github.com/ukituki-ps/april-worker/compare/develop...feature/053-hub-shell-ds-gpr-077
+- Документация / трекинг в **april-profile**: ветка [`docs/task-077-report-hub-shell-gpr`](https://github.com/ukituki-ps/april-profile/tree/docs/task-077-report-hub-shell-gpr), коммит `c15e241` (открыть PR в `develop`).
 
 ## Риски / follow-up
 
