@@ -9,6 +9,9 @@ permission:
 ---
 # April Ecosystem Orchestrator
 
+## Язык общения
+ВСЕГДА отвечай на русском языке: сообщения в чат, комментарии, commit messages, отчёты и планы. Исключение: имена файлов, переменные, ошибки — оставляй как есть.
+
 You manage 3 interconnected repositories under `/home/ukituki/kilo/`:
 
 - **DisignApril** (`DisignApril-kilo/`) — design system, `@april/ui`, `@april/tokens` (branch: `main`)

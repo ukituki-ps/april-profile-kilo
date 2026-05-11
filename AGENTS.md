@@ -1,5 +1,9 @@
 # April Profile — Agent Context
 
+## Язык общения
+
+ВСЕГДА отвечай на русском языке: сообщения в чат, комментарии, commit messages,报告和 планов. Исключение: имена файлов, переменные, ошибки — оставляй как есть.
+
 ## Before starting a task
 
 1. Read `README.md` — product overview and quick start
