@@ -1,0 +1,29 @@
+{
+  "defaultBranch": "develop",
+  "snapshot": true,
+  "permission": {
+    "bash": "ask",
+    "edit": {
+      "frontend/**": "allow",
+      "internal/**": "allow",
+      "cmd/**": "allow",
+      "tasks/**": "allow",
+      "docs/**": "allow",
+      "*.md": "allow",
+      "*.go": "allow",
+      "*.tsx": "allow",
+      "*.ts": "allow",
+      "*.json": "allow",
+      "*.yaml": "ask",
+      "*.lock": "deny",
+      "go.mod": "allow",
+      "go.sum": "ask",
+      "*": "ask"
+    }
+  },
+  "instructions": [
+    "docs/AGENT_ARCHITECTURE_CONTEXT.md",
+    "docs/DEPLOYMENT_STRATEGY.md",
+    "docs/TESTING_STRATEGY.md"
+  ]
+}
