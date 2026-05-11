@@ -489,7 +489,6 @@ export function ProfilesWidgetCore({
                 mode="inline"
                 heightMode="fill"
                 mobileLayout={cardListColumnMobileLayout}
-                hideMobileShellBar={isNarrowViewport && profileDetailVaulOpened}
                 view={effectiveCardListView}
                 onViewChange={handleCardListViewChange}
                 selectedItemId={selectedEntityId}

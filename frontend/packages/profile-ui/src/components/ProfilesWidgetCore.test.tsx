@@ -57,31 +57,10 @@ vi.mock("@mantine/hooks", async (importOriginal) => {
 });
 
 vi.mock("@april/ui", async () => {
-  const {
-    AprilIconCheck,
-    AprilIconClose,
-    AprilModal,
-    aprilMobileShellBarContentPaddingBottom,
-    aprilMobileShellBarGhostWhiteBorderActionStyles,
-  } = await vi.importActual<typeof import("@april/ui")>("@april/ui");
+  const { AprilIconCheck, AprilIconClose, AprilModal } = await vi.importActual<typeof import("@april/ui")>("@april/ui");
   const { SegmentedControl } = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
   return {
     AprilModal,
-    AprilMobileShellBar: ({
-      center,
-      leading,
-    }: {
-      center?: ReactNode;
-      leading?: ReactNode;
-    }) => (
-      <div data-testid="profile-detail-mobile-shell-bar">
-        {leading}
-        {center}
-      </div>
-    ),
-    aprilMobileShellBarContentPaddingBottom,
-    aprilMobileShellBarGhostWhiteBorderActionStyles,
-    APRIL_MOBILE_SHELL_BAR_Z_INDEX: 400,
     AprilVaulBottomSheet: ({
       opened,
       children,
@@ -169,7 +148,6 @@ vi.mock("@april/ui", async () => {
     items,
     heightMode,
     mobileLayout,
-    hideMobileShellBar,
     view,
     onSearchChange,
     onReachListEnd,
@@ -183,7 +161,6 @@ vi.mock("@april/ui", async () => {
     items: Array<{ id: string; title: string }>;
     heightMode?: string;
     mobileLayout?: string;
-    hideMobileShellBar?: boolean;
     view?: string;
     selectedItemId?: string | null;
     onSearchChange?: (value: string) => void;
@@ -198,7 +175,6 @@ vi.mock("@april/ui", async () => {
       aria-label="CardListColumn mock"
       data-height-mode={heightMode}
       data-mobile-layout={mobileLayout ?? ""}
-      data-hide-mobile-shell-bar={hideMobileShellBar ? "true" : "false"}
       data-card-list-view={view ?? "list"}
       data-selected-item-id={selectedItemId ?? ""}
     >
@@ -604,7 +580,6 @@ describe("ProfilesWidgetCore", () => {
     await waitFor(() => {
       expect(screen.getByTestId("profiles-widget-profile-overlay-sheet")).toBeInTheDocument();
     });
-    expect(screen.getByLabelText("CardListColumn mock")).toHaveAttribute("data-hide-mobile-shell-bar", "true");
     const sheet = screen.getByTestId("profiles-widget-profile-overlay-sheet");
     expect(within(sheet).getByTestId("profiles-widget-detail-column")).toBeInTheDocument();
 
@@ -612,7 +587,6 @@ describe("ProfilesWidgetCore", () => {
     await waitFor(() => {
       expect(screen.queryByTestId("profiles-widget-profile-overlay-sheet")).not.toBeInTheDocument();
     });
-    expect(screen.getByLabelText("CardListColumn mock")).toHaveAttribute("data-hide-mobile-shell-bar", "false");
   });
 
   it("opens create flow from Add in grid view inside profile modal", async () => {

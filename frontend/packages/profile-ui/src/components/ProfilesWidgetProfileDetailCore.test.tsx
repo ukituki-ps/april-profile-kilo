@@ -62,31 +62,10 @@ function pickTreeDocumentView(container: HTMLElement) {
 }
 
 vi.mock("@april/ui", async () => {
-  const {
-    AprilIconCheck,
-    AprilIconClose,
-    AprilModal,
-    aprilMobileShellBarContentPaddingBottom,
-    aprilMobileShellBarGhostWhiteBorderActionStyles,
-  } = await vi.importActual<typeof import("@april/ui")>("@april/ui");
+  const { AprilIconCheck, AprilIconClose, AprilModal } = await vi.importActual<typeof import("@april/ui")>("@april/ui");
   const { SegmentedControl } = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
   return {
     AprilModal,
-    AprilMobileShellBar: ({
-      center,
-      leading,
-    }: {
-      center?: ReactNode;
-      leading?: ReactNode;
-    }) => (
-      <div data-testid="profile-detail-mobile-shell-bar">
-        {leading}
-        {center}
-      </div>
-    ),
-    aprilMobileShellBarContentPaddingBottom,
-    aprilMobileShellBarGhostWhiteBorderActionStyles,
-    APRIL_MOBILE_SHELL_BAR_Z_INDEX: 400,
     AprilVaulBottomSheet: ({
       opened,
       children,
@@ -284,35 +263,6 @@ describe("ProfilesWidgetProfileDetailCore", () => {
     expect(await screen.findByLabelText("Profile name")).toBeInTheDocument();
   });
 
-  it("on narrow viewport create uses AprilMobileShellBar instead of AprilModal", async () => {
-    vi.mocked(useMediaQuery).mockReturnValue(true);
-    const provider = buildProvider();
-    const ref = createRef<ProfilesWidgetProfileDetailHandle>();
-    render(
-      <MantineProvider>
-        <>
-          <button type="button" onClick={() => ref.current?.openCreate()}>
-            External create
-          </button>
-          <ProfilesWidgetProfileDetailCore
-            ref={ref}
-            hostContext={hostContext}
-            provider={provider}
-            entityId={null}
-            listItem={null}
-            listItemsForDuplicateCheck={[listRow]}
-          />
-        </>
-      </MantineProvider>,
-    );
-
-    await screen.findByTestId("profiles-widget-detail-column");
-    fireEvent.click(screen.getByRole("button", { name: /External create/i }));
-    expect(await screen.findByLabelText("Profile name")).toBeInTheDocument();
-    expect(await screen.findByTestId("profile-detail-mobile-shell-bar")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Create profile/i })).toBeInTheDocument();
-  });
-
   it("passes normalized code in onError payload", async () => {
     const provider = buildProvider();
     const onError = vi.fn();
@@ -403,33 +353,6 @@ describe("ProfilesWidgetProfileDetailCore", () => {
     await waitFor(() => {
       expect(screen.queryByTestId("profile-detail-version-sheet")).not.toBeInTheDocument();
     });
-
-    hostEl.remove();
-  });
-
-  it("on narrow host grid shows mobile shell with document mode cycle", async () => {
-    vi.mocked(useMediaQuery).mockReturnValue(true);
-    const provider = buildProvider();
-    const hostEl = document.createElement("div");
-    document.body.appendChild(hostEl);
-
-    render(
-      <MantineProvider>
-        <ProfilesWidgetProfileDetailCore
-          hostContext={hostContext}
-          provider={provider}
-          entityId={e1}
-          listItem={listRow}
-          listItemsForDuplicateCheck={[listRow]}
-          hostGridProfileModalChrome
-          gridModalDetailHeaderHostEl={hostEl}
-        />
-      </MantineProvider>,
-    );
-
-    await screen.findByTestId("profiles-widget-detail-column");
-    expect(await screen.findByTestId("profile-detail-mobile-shell-bar")).toBeInTheDocument();
-    expect(screen.getByTestId("draft-json-editor-mode-cycle")).toBeInTheDocument();
 
     hostEl.remove();
   });

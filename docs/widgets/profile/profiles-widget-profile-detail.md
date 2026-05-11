@@ -13,16 +13,12 @@
 
 ### Мобильный тулбар и версии
 
-Порог узкого экрана: **`(max-width: 47.99em)`** (как у **`profiles-widget`** / **`CardListColumn`**).
-
-- **`AprilMobileShellBar`** (`@april/ui`, `position="absolute"`, `withSearch={false}`): на узком экране **основные действия** детали и **create** — в нижней капсуле внутри **`ProfilesWidgetProfileDetailCore`** (стратегия A: панель у **вершины стека** в sheet); **`aprilMobileShellBarContentPaddingBottom()`** на прокручиваемой области; **`center`** — `justify="flex-end"` и порядок DOM по **DS §11** (нормативный контракт `AprilMobileShellBar`). На **широком** экране тулбар в шапке **`AprilModal`** / в строке заголовка standalone-колонки. Сборка со списком и Hub: [`./profiles-widget.md`](./profiles-widget.md); ADR-0006 [`../../adr/0006-mobile-chrome-layers-widget-host.md`](../../adr/0006-mobile-chrome-layers-widget-host.md); DS §8–§11 (`design-system/DisignApril/DESIGN_SYSTEM.md`).
-- **Режимы JSON-документа** (Form / Tree / Source / Schema — по флагу провайдера и схеме): на узком экране — **одна кнопка-карусель** (`DraftJsonEditorToolbar`, `modeControlVariant="cycle"`, осмысленный `aria-label` / tooltip); на широком — сегменты **`AprilGradientSegmentedControl`**.
-- **Версии:** при **`hostGridProfileModalChrome`** (деталь в sheet/modal родителя) — иконка **Versions** в shell открывает **`AprilVaulBottomSheet`** со списком; пока лист открыт, **в shell только действие слоя версий** (закрыть лист), без кнопок детали (норма «один активный контекст» из DS). **`z-index`** листа версий выше **`APRIL_MOBILE_SHELL_BAR_Z_INDEX`**, чтобы лист был поверх нижней панели детали. В **standalone**-сборке без хост-chrome на узком экране по-прежнему **`Select`** версий под заголовком карточки.
+На узком viewport (`(max-width: 47.99em)`) при монтировании в «хром» родителя (**`hostGridProfileModalChrome`**, шапка модалки или bottom sheet) выбор версии переносится: кнопка с иконкой **Versions** открывает **`AprilVaulBottomSheet`** со списком версий; пока лист открыт, **остальные элементы тулбара в шапке не показываются** (норма «один активный контекст»). На широком экране по-прежнему **`Select`** версий в строке.
 
 ## Назначение (две части)
 
 1. **Часть 1 — просмотр и опционально редактирование** выбранного профиля: карточка сущности, версии, сегменты Form / Tree / Source / Schema по текущей спеке. Host может отключить мутации документа и удаление: проп **`documentEditingEnabled`** (по умолчанию `true`) и **`allowProfileDelete`** (по умолчанию `true`).
-2. **Часть 2 — создание профиля** (тип из каталога, имя, начальный документ). На **широком** экране без встроенного create — **`AprilModal`** с действиями в шапке; на **узком** (`(max-width: 47.99em)`) тот же поток **в колонке** с **`AprilMobileShellBar`** (без второй модалки поверх). Открытие **не привязано только к UI части 1**: host вызывает **`ref.openCreate()`** / **`ref.closeCreate()`** на `forwardRef`-виджете (`ProfilesWidgetProfileDetailHandle`).
+2. **Часть 2 — создание профиля** (модалка: тип из каталога, имя, начальный документ). Открытие **не привязано только к UI части 1**: host вызывает **`ref.openCreate()`** / **`ref.closeCreate()`** на `forwardRef`-виджете (`ProfilesWidgetProfileDetailHandle`).
 
 ## Контракт и провайдер
 
@@ -39,7 +35,7 @@
 
 - `@april/profile-ui`, `@april/ui` (≥ **0.1.9**).
 - **`DensityProvider`** в корне виджета детальной карточки.
-- Поле **`document`**: **`EntityTypesDraftJsonEditor`** — **Form** (RJSF при валидной published-схеме) → **Tree** → **Source** → при наличии у провайдера **`getEntityTypePublishedSchema`** — **Schema** (read-only `published_schema` с `GET /v1/entity-types/{id}`). На широком экране — сегменты в тулбаре; на узком — тот же порядок в **карусели** (см. выше).
+- Поле **`document`**: один ряд сегментов **`EntityTypesDraftJsonEditor`**: **Form** (RJSF при валидной published-схеме) → **Tree** → **Source** → при наличии у провайдера **`getEntityTypePublishedSchema`** — **Schema** (read-only `published_schema` с `GET /v1/entity-types/{id}`). Режим просмотра без редактирования — те же сегменты в read-only.
 - **`AprilJsonValidationSummary`** для **`schemaIssues`**. Стек согласован с задачами **057–059**; минимальная клиентская валидация корня документа: `{ "type": "object" }`.
 - Поле **`name`** профиля — отдельный **`TextInput`**; при create значение объединяется с объектом документа.
 - `@tabler/icons-react` для иконок действий в карточке (зависимость пакета).

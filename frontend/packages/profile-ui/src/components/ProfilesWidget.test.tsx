@@ -32,31 +32,10 @@ vi.mock("@mantine/core", async () => {
 });
 
 vi.mock("@april/ui", async () => {
-  const {
-    AprilIconCheck,
-    AprilIconClose,
-    AprilModal,
-    aprilMobileShellBarContentPaddingBottom,
-    aprilMobileShellBarGhostWhiteBorderActionStyles,
-  } = await vi.importActual<typeof import("@april/ui")>("@april/ui");
+  const { AprilIconCheck, AprilIconClose, AprilModal } = await vi.importActual<typeof import("@april/ui")>("@april/ui");
   const { SegmentedControl } = await vi.importActual<typeof import("@mantine/core")>("@mantine/core");
   return {
     AprilModal,
-    AprilMobileShellBar: ({
-      center,
-      leading,
-    }: {
-      center?: ReactNode;
-      leading?: ReactNode;
-    }) => (
-      <div data-testid="profile-detail-mobile-shell-bar">
-        {leading}
-        {center}
-      </div>
-    ),
-    aprilMobileShellBarContentPaddingBottom,
-    aprilMobileShellBarGhostWhiteBorderActionStyles,
-    APRIL_MOBILE_SHELL_BAR_Z_INDEX: 400,
     AprilVaulBottomSheet: ({
       opened,
       children,
