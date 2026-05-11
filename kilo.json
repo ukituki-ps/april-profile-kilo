@@ -3,6 +3,7 @@
   "snapshot": true,
   "permission": {
     "bash": "ask",
+    "external_directory": "allow",
     "edit": {
       "frontend/**": "allow",
       "internal/**": "allow",
