@@ -12,6 +12,10 @@ export default defineConfig({
     alias: {
       react: path.resolve(dirname, "node_modules/react"),
       "react-dom": path.resolve(dirname, "node_modules/react-dom"),
+      /** Подпуть явно: иначе Vite не мапит `mantine-vaul/style.css` на пакет в корне. */
+      "mantine-vaul/style.css": path.resolve(dirname, "node_modules/mantine-vaul/dist/style.css"),
+      /** Единый экземпляр (без pnpm-дерева submodule при `file:` на DS). */
+      "mantine-vaul": path.resolve(dirname, "node_modules/mantine-vaul"),
       "@april/profile-ui": path.resolve(dirname, "packages/profile-ui/src/index.ts"),
     },
   },
@@ -28,7 +32,8 @@ export default defineConfig({
     exclude: ["**/node_modules/**", "**/dist/**", "packages/**"],
     server: {
       deps: {
-        inline: [/@april\/ui/, "mantine-vaul"],
+        /** Только `@april/ui`: `mantine-vaul` из корня `node_modules` (единый React), не исходники из pnpm DS. */
+        inline: [/@april\/ui/],
       },
     },
   },

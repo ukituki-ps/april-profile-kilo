@@ -347,6 +347,7 @@ describe("ProfilesWidgetProfileDetailCore", () => {
     await screen.findByTestId("profiles-widget-detail-column");
     fireEvent.click(await screen.findByRole("button", { name: /Versions/i }));
     expect(await screen.findByTestId("profile-detail-version-sheet")).toBeInTheDocument();
+    expect(screen.queryByTestId("profile-detail-mobile-shell-bar")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Edit profile/i })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /v1/i }));

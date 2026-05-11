@@ -28,7 +28,7 @@ sidebar_position: 10
 
 Канон: `docs/WIDGET_INTEGRATION_CHECKLIST.md` в репозитории `april-profile`. Норматив DS: submodule `design-system/DisignApril/DESIGN_SYSTEM.md` — §8 (стек владельца), §11 (нормативный контракт `AprilMobileShellBar`).
 
-- [ ] **Стек:** при sheet/полноэкранном шаге не оставлять активной нижнюю панель родителя параллельно дочерней (`hideMobileShellBar` и т.п.).
+- [ ] **Стек:** при sheet/полноэкранном шаге не оставлять активной нижнюю панель родителя параллельно дочерней (`hideMobileShellBar` и т.п.); вложенный `AprilVaulBottomSheet` — вершина стека: панель уровня родителя не показывать, пока лист открыт.
 - [ ] **«Назад»:** сначала закрывается верхний слой виджета; глобальный обработчик Hub не перебивает `AprilVaulBottomSheet`.
 - [ ] **Маршруты** master–detail: согласовано отображение глобального dock Hub одновременно с dock виджета.
 - [ ] **`profiles-widget`:** при необходимости — `cardListColumnMobileLayout="off"` (см. `docs/widgets/profile/profiles-widget.md` в репозитории).

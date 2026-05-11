@@ -3,8 +3,11 @@ import {
   AprilIconClose,
   AprilJsonTreeEditor,
   AprilModal,
+  AprilMobileShellBar,
   AprilVaulBottomSheet,
-  APRIL_MOBILE_BOTTOM_SHEET_Z_INDEX,
+  APRIL_MOBILE_SHELL_BAR_Z_INDEX,
+  aprilMobileShellBarContentPaddingBottom,
+  aprilMobileShellBarGhostWhiteBorderActionStyles,
   DensityProvider,
 } from "@april/ui";
 import {
@@ -200,6 +203,8 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
   const requestId = hostContext.telemetry?.requestId;
   const matchesNarrowViewport = useMediaQuery(PROFILE_NARROW_MEDIA_QUERY);
   const compactProfileOverlayChrome = Boolean(matchesNarrowViewport && hostGridProfileModalChrome);
+  /** Нижняя `AprilMobileShellBar` на узком экране (с хост-chrome и без). */
+  const useMobileProfileShell = Boolean(matchesNarrowViewport);
 
   const detailsRequestIdRef = useRef(0);
   const detailsAbortControllerRef = useRef<AbortController | null>(null);
@@ -816,6 +821,9 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
       : extractProfileNameFromDocument(selectedDocument ?? undefined) ?? listPrimaryLabel(selectedItem);
 
   const profileDetailToolbar = useMemo(() => {
+    if (useMobileProfileShell) {
+      return null;
+    }
     if (compactProfileOverlayChrome && versionSheetOpened) {
       return null;
     }
@@ -973,6 +981,7 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
       </Group>
     );
   }, [
+      useMobileProfileShell,
       compactProfileOverlayChrome,
       versionSheetOpened,
       hostGridProfileModalChrome,
@@ -1002,6 +1011,190 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
       handleDelete,
     ],
   );
+
+  const profileDetailMobileShellMainCenter = useMemo(() => {
+    if (!useMobileProfileShell || !selectedItem) {
+      return null;
+    }
+    /** DS §8 mobile shell: вторичное → первичное справа (`justify="flex-end"`), `leading` пустой. */
+    const shellRowStyle = { width: "100%", minWidth: 0 } as const;
+    return (
+      <Group gap={6} justify="flex-end" wrap="nowrap" align="center" style={shellRowStyle}>
+        {compactProfileOverlayChrome ? (
+          <Tooltip label="Versions" withArrow>
+            <ActionIcon
+              variant="default"
+              size="lg"
+              radius="xl"
+              styles={aprilMobileShellBarGhostWhiteBorderActionStyles}
+              aria-label="Versions"
+              disabled={detailsLoading || Object.keys(versionDetailsByNum).length === 0}
+              loading={versionsLoading}
+              onClick={() => setVersionSheetOpened(true)}
+            >
+              <IconVersions size={18} aria-hidden />
+            </ActionIcon>
+          </Tooltip>
+        ) : null}
+        {!detailsLoading && editMode && !historicalView ? (
+          <DraftJsonEditorToolbar
+            mode={editDraftMode}
+            onModeChange={setEditDraftMode}
+            value={editDraftValue}
+            onChange={setEditDraftValue}
+            sourceText={editDraftSourceText}
+            onSourceTextChange={setEditDraftSourceText}
+            readOnly={false}
+            compact={false}
+            withFormMode={profileEditorWithForm}
+            withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+            modeControlVariant="cycle"
+            cycleActionForMobileShell
+          />
+        ) : null}
+        {!detailsLoading && (!editMode || historicalView) ? (
+          <DraftJsonEditorToolbar
+            mode={viewDocumentMode}
+            onModeChange={setViewDocumentMode}
+            value={selectedDocument ?? {}}
+            onChange={() => {}}
+            sourceText={viewDocumentSourceText}
+            onSourceTextChange={setViewDocumentSourceText}
+            readOnly
+            compact={false}
+            withFormMode={profileEditorWithForm}
+            withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+            modeControlVariant="cycle"
+            cycleActionForMobileShell
+          />
+        ) : null}
+        {documentEditingEnabled && !historicalView && !editMode ? (
+          <Tooltip label="Edit profile">
+            <ActionIcon
+              variant="default"
+              size="lg"
+              radius="xl"
+              styles={aprilMobileShellBarGhostWhiteBorderActionStyles}
+              aria-label="Edit profile"
+              onClick={() => {
+                setEditMode(true);
+                if (selectedDocument) {
+                  setEditDraftValue(structuredClone(selectedDocument));
+                  setEditDraftSourceText(JSON.stringify(selectedDocument, null, 2));
+                  setEditDraftMode("form");
+                }
+                setEditApiIssues(null);
+              }}
+            >
+              <IconEdit size={18} aria-hidden />
+            </ActionIcon>
+          </Tooltip>
+        ) : null}
+        {allowProfileDelete ? (
+          <Tooltip label="Delete profile">
+            <ActionIcon
+              color="red"
+              variant="default"
+              size="lg"
+              radius="xl"
+              styles={aprilMobileShellBarGhostWhiteBorderActionStyles}
+              aria-label="Delete profile"
+              loading={busyEntityId === entityId}
+              onClick={() => {
+                if (entityId) {
+                  void handleDelete(entityId);
+                }
+              }}
+            >
+              <IconTrash size={18} aria-hidden />
+            </ActionIcon>
+          </Tooltip>
+        ) : null}
+        {documentEditingEnabled && historicalView ? (
+          <Tooltip label="Save snapshot as new version (+1)">
+            <ActionIcon
+              variant="default"
+              size="lg"
+              radius="xl"
+              styles={aprilMobileShellBarGhostWhiteBorderActionStyles}
+              aria-label="Save snapshot as new version (+1)"
+              onClick={() => {
+                void handleSaveHistoricalAsNew();
+              }}
+              loading={busyEntityId === entityId}
+            >
+              <IconSparkles size={18} aria-hidden />
+            </ActionIcon>
+          </Tooltip>
+        ) : null}
+        {documentEditingEnabled && !historicalView && editMode ? (
+          <>
+            <Tooltip label="Cancel editing">
+              <ActionIcon
+                variant="default"
+                size="lg"
+                radius="xl"
+                styles={aprilMobileShellBarGhostWhiteBorderActionStyles}
+                aria-label="Cancel editing"
+                onClick={() => {
+                  setEditMode(false);
+                  if (selectedDocument) {
+                    setEditDraftValue(structuredClone(selectedDocument));
+                    setEditDraftSourceText(JSON.stringify(selectedDocument, null, 2));
+                    setEditDraftMode("form");
+                  }
+                  setEditApiIssues(null);
+                }}
+              >
+                <IconX size={18} aria-hidden />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Save changes">
+              <ActionIcon
+                variant="default"
+                size="lg"
+                radius="xl"
+                styles={aprilMobileShellBarGhostWhiteBorderActionStyles}
+                aria-label="Save changes"
+                disabled={!editDraftSaveOk}
+                onClick={() => {
+                  void handleUpdate();
+                }}
+                loading={busyEntityId === entityId}
+              >
+                <IconDeviceFloppy size={18} aria-hidden />
+              </ActionIcon>
+            </Tooltip>
+          </>
+        ) : null}
+      </Group>
+    );
+  }, [
+    useMobileProfileShell,
+    selectedItem,
+    compactProfileOverlayChrome,
+    detailsLoading,
+    versionDetailsByNum,
+    versionsLoading,
+    editMode,
+    historicalView,
+    editDraftMode,
+    editDraftValue,
+    editDraftSourceText,
+    profileEditorWithForm,
+    provider,
+    viewDocumentMode,
+    viewDocumentSourceText,
+    selectedDocument,
+    documentEditingEnabled,
+    allowProfileDelete,
+    entityId,
+    busyEntityId,
+    editDraftSaveOk,
+    handleSaveHistoricalAsNew,
+    handleUpdate,
+    handleDelete,
+  ]);
 
   useEffect(() => {
     if (!hostGridProfileModalChrome || !selectedItem) {
@@ -1107,24 +1300,26 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
     </>
   );
 
-  /** В grid-модалке переключатель режимов JSON — в шапке справа, как у детали профиля. */
+  /** В grid-модалке переключатель режимов JSON — в шапке справа, как у детали профиля (на узком — в {@link AprilMobileShellBar}). */
   const createProfileHeaderActions =
     embedCreateFlowInline && createModalOpened ? (
-      <Group gap="xs" wrap="nowrap" align="center" justify="flex-end">
-        <DraftJsonEditorToolbar
-          mode={createDraftMode}
-          onModeChange={setCreateDraftMode}
-          value={createDraftValue}
-          onChange={setCreateDraftValue}
-          sourceText={createDraftSourceText}
-          onSourceTextChange={setCreateDraftSourceText}
-          readOnly={false}
-          compact={false}
-          withFormMode={createEditorWithForm}
-          withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
-        />
-        {createProfileHeaderIconButtons}
-      </Group>
+      useMobileProfileShell ? null : (
+        <Group gap="xs" wrap="nowrap" align="center" justify="flex-end">
+          <DraftJsonEditorToolbar
+            mode={createDraftMode}
+            onModeChange={setCreateDraftMode}
+            value={createDraftValue}
+            onChange={setCreateDraftValue}
+            sourceText={createDraftSourceText}
+            onSourceTextChange={setCreateDraftSourceText}
+            readOnly={false}
+            compact={false}
+            withFormMode={createEditorWithForm}
+            withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+          />
+          {createProfileHeaderIconButtons}
+        </Group>
+      )
     ) : (
       createProfileHeaderIconButtons
     );
@@ -1173,11 +1368,15 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
               {renderPublishedSchemaPanel(createPublishedSchema)}
             </Box>
           }
-          hideModeToolbar={embedCreateFlowInline && createModalOpened}
+          hideModeToolbar={createModalOpened && (embedCreateFlowInline || useMobileProfileShell)}
         />
       </Box>
     </Stack>
   );
+
+  /** Create в колонке + нижний shell (узкий экран без embed и встроенный create в grid/sheet). Без AprilModal. */
+  const showMobileInlineCreateChrome =
+    createModalOpened && (embedCreateFlowInline || (useMobileProfileShell && !embedCreateFlowInline));
 
   return (
     <DensityProvider>
@@ -1200,21 +1399,122 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
           gap="sm"
           style={{ flex: "1 1 0%", minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}
         >
-          {selectedItem ? (
+          {showMobileInlineCreateChrome ? (
+            <Box
+              style={{
+                flex: 1,
+                minHeight: 0,
+                minWidth: 0,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+                position: "relative",
+              }}
+            >
+              {gridModalDetailHeaderHostEl && createProfileHeaderActions
+                ? createPortal(createProfileHeaderActions, gridModalDetailHeaderHostEl)
+                : null}
+              <Box
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  overflow: "auto",
+                  paddingBottom:
+                    useMobileProfileShell && !versionSheetOpened
+                      ? aprilMobileShellBarContentPaddingBottom()
+                      : undefined,
+                }}
+              >
+                {createProfileEditorStack}
+              </Box>
+              {useMobileProfileShell ? (
+                <AprilMobileShellBar
+                  position="absolute"
+                  withSearch={false}
+                  center={
+                    <Group gap={6} wrap="nowrap" justify="flex-end" style={{ width: "100%", minWidth: 0 }}>
+                      <Tooltip label="Cancel" withArrow>
+                        <ActionIcon
+                          variant="default"
+                          size="lg"
+                          radius="xl"
+                          styles={aprilMobileShellBarGhostWhiteBorderActionStyles}
+                          onClick={() => setCreateModalOpened(false)}
+                          aria-label="Cancel"
+                          title="Cancel"
+                        >
+                          <AprilIconClose size={20} aria-hidden />
+                        </ActionIcon>
+                      </Tooltip>
+                      <DraftJsonEditorToolbar
+                        mode={createDraftMode}
+                        onModeChange={setCreateDraftMode}
+                        value={createDraftValue}
+                        onChange={setCreateDraftValue}
+                        sourceText={createDraftSourceText}
+                        onSourceTextChange={setCreateDraftSourceText}
+                        readOnly={false}
+                        compact={false}
+                        withFormMode={createEditorWithForm}
+                        withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+                        modeControlVariant="cycle"
+                        cycleActionForMobileShell
+                      />
+                      <Tooltip label="Create profile" withArrow>
+                        <ActionIcon
+                          variant="default"
+                          size="lg"
+                          radius="xl"
+                          styles={aprilMobileShellBarGhostWhiteBorderActionStyles}
+                          disabled={!createDraftSaveOk}
+                          loading={busyEntityId === "create"}
+                          onClick={() => void handleCreate()}
+                          aria-label="Create profile"
+                          title="Create profile"
+                        >
+                          <AprilIconCheck size={20} aria-hidden />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
+                  }
+                />
+              ) : null}
+            </Box>
+          ) : selectedItem ? (
             <>
               {hostGridProfileModalChrome && gridModalDetailHeaderHostEl && profileDetailToolbar
                 ? createPortal(profileDetailToolbar, gridModalDetailHeaderHostEl)
                 : null}
               {!hostGridProfileModalChrome ? (
                 <Box style={{ flexShrink: 0 }}>
-                  <Group justify="space-between" align="flex-start" wrap="wrap" gap="sm">
-                    <Stack gap={4} style={{ flex: "1 1 200px", minWidth: 0 }}>
+                  {useMobileProfileShell ? (
+                    <Stack gap="xs" style={{ minWidth: 0 }}>
                       <Title order={5} lineClamp={1}>
                         {displayNameForCard}
                       </Title>
+                      <Select
+                        aria-label="Version"
+                        size="xs"
+                        w="100%"
+                        maw={280}
+                        disabled={detailsLoading || Object.keys(versionDetailsByNum).length === 0}
+                        data={versionSelectData}
+                        value={viewedVersion !== null ? String(viewedVersion) : null}
+                        onChange={onSelectVersion}
+                        rightSection={versionsLoading ? <Loader size="xs" /> : undefined}
+                        comboboxProps={{ withinPortal: false }}
+                      />
                     </Stack>
-                    {profileDetailToolbar}
-                  </Group>
+                  ) : (
+                    <Group justify="space-between" align="flex-start" wrap="wrap" gap="sm">
+                      <Stack gap={4} style={{ flex: "1 1 200px", minWidth: 0 }}>
+                        <Title order={5} lineClamp={1}>
+                          {displayNameForCard}
+                        </Title>
+                      </Stack>
+                      {profileDetailToolbar}
+                    </Group>
+                  )}
                 </Box>
               ) : null}
               {historicalView ? (
@@ -1225,85 +1525,120 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
               ) : null}
               {detailsErrorMessage ? <Alert color="red">{detailsErrorMessage}</Alert> : null}
               {detailsLoading ? (
-                <Box style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <Box
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    paddingBottom:
+                      useMobileProfileShell && selectedItem && !versionSheetOpened
+                        ? aprilMobileShellBarContentPaddingBottom()
+                        : undefined,
+                  }}
+                >
                   <Loader size="sm" />
                   <Text size="sm">Loading selected profile...</Text>
                 </Box>
               ) : (
-                <Box style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", minWidth: 0 }}>
-                  {documentEditingEnabled && editMode && !historicalView ? (
-                    <Box
-                      data-testid="profiles-widget-edit-document"
-                      style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
-                    >
-                      <EntityTypesDraftJsonEditor
-                        key={`edit-doc-${entityId}-${selectedItem?.entityTypeId ?? ""}`}
-                        mode={editDraftMode}
-                        onModeChange={setEditDraftMode}
-                        value={editDraftValue}
-                        onChange={setEditDraftValue}
-                        sourceText={editDraftSourceText}
-                        onSourceTextChange={setEditDraftSourceText}
-                        rootName="profile_document"
-                        serverValidationItems={editApiIssues ?? undefined}
-                        withFormMode={profileEditorWithForm}
-                        rjsfSchema={
-                          publishedSchemaOkForForm(profilePublishedSchema) ? profilePublishedSchema.data : undefined
-                        }
-                        withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
-                        schemaPanel={
-                          <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-                            {renderPublishedSchemaPanel(profilePublishedSchema)}
-                          </Box>
-                        }
-                        hideModeToolbar
-                      />
-                    </Box>
-                  ) : (
-                    <Box
-                      data-testid="profiles-widget-view-document"
-                      style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}
-                    >
-                      <EntityTypesDraftJsonEditor
-                        key={`view-doc-${entityId}-${viewedVersion ?? ""}-${selectedItem?.entityTypeId ?? ""}`}
-                        mode={viewDocumentMode}
-                        onModeChange={setViewDocumentMode}
-                        value={selectedDocument ?? {}}
-                        onChange={() => {}}
-                        sourceText={viewDocumentSourceText}
-                        onSourceTextChange={setViewDocumentSourceText}
-                        readOnly
-                        rootName="profile_document"
-                        withFormMode={profileEditorWithForm}
-                        rjsfSchema={
-                          publishedSchemaOkForForm(profilePublishedSchema) ? profilePublishedSchema.data : undefined
-                        }
-                        withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
-                        schemaPanel={
-                          <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-                            {renderPublishedSchemaPanel(profilePublishedSchema)}
-                          </Box>
-                        }
-                        hideModeToolbar
-                      />
-                    </Box>
-                  )}
+                <Box
+                  style={{
+                    flex: 1,
+                    minHeight: 0,
+                    minWidth: 0,
+                    position: "relative",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <Box
+                    style={{
+                      flex: 1,
+                      minHeight: 0,
+                      overflow: "auto",
+                      paddingBottom:
+                        useMobileProfileShell && selectedItem && !versionSheetOpened
+                          ? aprilMobileShellBarContentPaddingBottom()
+                          : undefined,
+                    }}
+                  >
+                    {documentEditingEnabled && editMode && !historicalView ? (
+                      <Box
+                        data-testid="profiles-widget-edit-document"
+                        style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+                      >
+                        <EntityTypesDraftJsonEditor
+                          key={`edit-doc-${entityId}-${selectedItem?.entityTypeId ?? ""}`}
+                          mode={editDraftMode}
+                          onModeChange={setEditDraftMode}
+                          value={editDraftValue}
+                          onChange={setEditDraftValue}
+                          sourceText={editDraftSourceText}
+                          onSourceTextChange={setEditDraftSourceText}
+                          rootName="profile_document"
+                          serverValidationItems={editApiIssues ?? undefined}
+                          withFormMode={profileEditorWithForm}
+                          rjsfSchema={
+                            publishedSchemaOkForForm(profilePublishedSchema) ? profilePublishedSchema.data : undefined
+                          }
+                          withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+                          schemaPanel={
+                            <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+                              {renderPublishedSchemaPanel(profilePublishedSchema)}
+                            </Box>
+                          }
+                          hideModeToolbar
+                        />
+                      </Box>
+                    ) : (
+                      <Box
+                        data-testid="profiles-widget-view-document"
+                        style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}
+                      >
+                        <EntityTypesDraftJsonEditor
+                          key={`view-doc-${entityId}-${viewedVersion ?? ""}-${selectedItem?.entityTypeId ?? ""}`}
+                          mode={viewDocumentMode}
+                          onModeChange={setViewDocumentMode}
+                          value={selectedDocument ?? {}}
+                          onChange={() => {}}
+                          sourceText={viewDocumentSourceText}
+                          onSourceTextChange={setViewDocumentSourceText}
+                          readOnly
+                          rootName="profile_document"
+                          withFormMode={profileEditorWithForm}
+                          rjsfSchema={
+                            publishedSchemaOkForForm(profilePublishedSchema) ? profilePublishedSchema.data : undefined
+                          }
+                          withSchemaPanel={Boolean(provider.getEntityTypePublishedSchema)}
+                          schemaPanel={
+                            <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+                              {renderPublishedSchemaPanel(profilePublishedSchema)}
+                            </Box>
+                          }
+                          hideModeToolbar
+                        />
+                      </Box>
+                    )}
+                  </Box>
+                  {/**
+                   * Стратегия A (ADR-0006): пока открыт вложенный лист версий, нижняя панель детали не монтируется —
+                   * один активный контекст; закрытие — шапка/жесты {@link AprilVaulBottomSheet}.
+                   */}
+                  {useMobileProfileShell && selectedItem && !versionSheetOpened ? (
+                    <AprilMobileShellBar
+                      position="absolute"
+                      withSearch={false}
+                      center={profileDetailMobileShellMainCenter}
+                    />
+                  ) : null}
                 </Box>
               )}
             </>
-          ) : embedCreateFlowInline && createModalOpened ? (
-            <Box style={{ flex: 1, minHeight: 0, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              {gridModalDetailHeaderHostEl
-                ? createPortal(createProfileHeaderActions, gridModalDetailHeaderHostEl)
-                : null}
-              <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>{createProfileEditorStack}</Box>
-            </Box>
           ) : (
             <Alert color="gray">No profile selected (entityId is null).</Alert>
           )}
         </Stack>
       <AprilModal
-        opened={createModalOpened && !embedCreateFlowInline}
+        opened={createModalOpened && !embedCreateFlowInline && !useMobileProfileShell}
         onClose={() => setCreateModalOpened(false)}
         centered
         size="md"
@@ -1316,8 +1651,8 @@ export const ProfilesWidgetProfileDetailCore = forwardRef<
         opened={compactProfileOverlayChrome && versionSheetOpened}
         onClose={() => setVersionSheetOpened(false)}
         headerTitle="Versions"
-        zIndex={APRIL_MOBILE_BOTTOM_SHEET_Z_INDEX + 25}
-        overlayZIndex={APRIL_MOBILE_BOTTOM_SHEET_Z_INDEX + 24}
+        zIndex={APRIL_MOBILE_SHELL_BAR_Z_INDEX + 40}
+        overlayZIndex={APRIL_MOBILE_SHELL_BAR_Z_INDEX + 39}
       >
         <Stack gap="xs">
           {versionSelectData.length === 0 ? (

@@ -23,10 +23,11 @@
   },
   "dependencies": {
     "@april/profile-ui": "file:./packages/profile-ui",
-    "@april/tokens": "npm:@ukituki-ps/april-tokens@^0.1.9",
-    "@april/ui": "npm:@ukituki-ps/april-ui@^0.1.9",
+    "@april/tokens": "file:../design-system/DisignApril/packages/tokens",
+    "@april/ui": "file:../design-system/DisignApril/packages/ui",
     "@emotion/react": "^11.14.0",
     "@mantine/core": "^7.17.8",
+    "mantine-vaul": "^0.5.6",
     "@xyflow/react": "^12.10.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

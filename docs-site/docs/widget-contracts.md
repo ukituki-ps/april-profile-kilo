@@ -152,7 +152,7 @@ sidebar_position: 6
 
 **Норматив:** submodule `design-system/DisignApril/DESIGN_SYSTEM.md` — §8 Mobile (стратегия A, стек владельца), §11 **«Нормативный контракт `AprilMobileShellBar`»** (MUST/MUST NOT, пропсы). Отклонения без ADR — блокер для публичных shell.
 
-**Стратегия A:** одна видимая нижняя капсула на ветку контента у нижнего края; вершина стека владеет панелью; родитель использует `hideMobileShellBar` у `CardListColumn` и т.п. Глобальный dock Hub — отдельный слой; чеклист — [интеграция виджетов](/docs/widget-integration-checklist). **«Назад»:** сначала модальность виджета, затем навигация host по intent.
+**Стратегия A:** одна видимая нижняя капсула на ветку контента у нижнего края; вершина стека владеет панелью; родитель использует `hideMobileShellBar` у `CardListColumn` и т.п. Вложенный `AprilVaulBottomSheet` (например версии в `profiles-widget-profile-detail`) — панель уровня родителя не показывается, пока лист открыт. Глобальный dock Hub — отдельный слой; чеклист — [интеграция виджетов](/docs/widget-integration-checklist). **«Назад»:** сначала модальность виджета, затем навигация host по intent.
 
 **Поставка:** lockfile shell должен содержать актуальный `@april/ui` с контрактными пропами.
 
