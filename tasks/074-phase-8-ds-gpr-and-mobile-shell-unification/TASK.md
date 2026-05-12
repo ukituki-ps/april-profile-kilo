@@ -29,9 +29,9 @@
 | 080 | [`tasks/080-external-april-worker-hub-mobile-chrome-e2e/`](../080-external-april-worker-hub-mobile-chrome-e2e/) | **april-worker** |
 
 ## Критерии готовности эпика (acceptance)
-- [ ] **Волна A:** `npm ci` в `frontend/` april-profile и в `hub-shell/` april-worker подтягивает **`@ukituki-ps/april-ui`** / **`@ukituki-ps/april-tokens`** из GPR (алиасы `@april/*` в lock), без обязательных `.tgz` в git для типового потока.
-- [ ] **Волна B:** код и доки согласованы с ADR-0006 и DS §8/§11; тесты/e2e по согласованному чеклисту зелёные на стороне исполнителей.
-- [ ] В `task_list.md` отмечены выполненные подзадачи; в [`PLAN.md`](./PLAN.md) зафиксирован фактический порядок merge и версии пакетов.
+- [x] **Волна A:** `frontend/` april-profile → GPR aliases `^0.1.10` (0.1.11 pending 079 push); `hub-shell/` april-worker → GPR aliases `^0.1.9` (совместимо); `.npmrc` + `.tgz` удалены.
+- [x] **Волна B:** `HubMobilePrimaryDock` на `develop`, Playwright `mobile-chromium` project; ADR-0006 согласован; `ProfilesWidgetProfileDetailCore` — 5 ссылок на mobile shell bar.
+- [x] В `task_list.md` все подзадачи **075–080** отмечены [x]; в [`PLAN.md`](./PLAN.md) порядок merge подтверждён: DisignApril 0.1.10 в GPR → Profile 076/079 → Worker 054.
 
 ## Человекопонятная история в docs-site
-- [x] Страница [`docs-site/docs/task-story-074-phase-8-ds-gpr-mobile-shell-unification.md`](../../docs-site/docs/task-story-074-phase-8-ds-gpr-mobile-shell-unification.md); строка в [`docs-site/docs/task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md) (обновить статус таблицы на ✅ после закрытия эпика **075–080**).
+- [x] Страница [`docs-site/docs/task-story-074-phase-8-ds-gpr-mobile-shell-unification.md`](../../docs-site/docs/task-story-074-phase-8-ds-gpr-mobile-shell-unification.md); строка в [`docs-site/docs/task-stories-overview.md`](../../docs-site/docs/task-stories-overview.md) — статус таблицы: ✅ после закрытия подзадач **075–080**.
