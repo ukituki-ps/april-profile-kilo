@@ -28,6 +28,24 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Debug — verify npmrc and GPR access
+        working-directory: frontend
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
+        run: |
+          set -ex
+          echo "=== .npmrc contents ==="
+          cat .npmrc
+          echo "=== NODE_AUTH_TOKEN length ==="
+          echo "${#NODE_AUTH_TOKEN}"
+          echo "=== npm cache location ==="
+          npm config get cache
+          # Clean any stale cache that may hold ETARGET for 0.1.12
+          npm cache clean --force
+          echo "=== Test GPR read ==="
+          npm view @ukituki-ps/april-tokens version --json 2>&1 || true
+          npm view @ukituki-ps/april-ui version --json 2>&1 || true
+
       - name: Regenerate lockfile
         working-directory: frontend
         env:
@@ -36,7 +54,7 @@ jobs:
           set -ex
           rm -f package-lock.json
           # GPR_READ_TOKEN is a PAT with read:packages scope — can read DisignApril-kilo GPR
-          npm install --no-audit --no-fund
+          npm install --no-audit --no-fund --loglevel=verbose 2>&1
           echo "=== Resolved DS versions ======"
           grep '@april/' package-lock.json | grep version | head -10
 
