@@ -1,6 +1,5 @@
 # ONE-SHOT: regenerate frontend/package-lock.json for DS ^0.1.12
 # .npmrc in frontend/ already has scope @ukituki-ps → GPR mapping.
-# Do NOT use registry-url in setup-node.
 name: oneshot-lockfile-regen-0112
 
 on:
@@ -17,7 +16,7 @@ permissions:
 jobs:
   regenerate:
     runs-on: [self-hosted, ci, profile]
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,24 +27,6 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Debug — verify npmrc and GPR access
-        working-directory: frontend
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GPR_READ_TOKEN }}
-        run: |
-          set -ex
-          echo "=== .npmrc contents ==="
-          cat .npmrc
-          echo "=== NODE_AUTH_TOKEN length ==="
-          echo "${#NODE_AUTH_TOKEN}"
-          echo "=== npm cache location ==="
-          npm config get cache
-          # Clean any stale cache that may hold ETARGET for 0.1.12
-          npm cache clean --force
-          echo "=== Test GPR read ==="
-          npm view @ukituki-ps/april-tokens version --json 2>&1 || true
-          npm view @ukituki-ps/april-ui version --json 2>&1 || true
-
       - name: Regenerate lockfile
         working-directory: frontend
         env:
@@ -53,24 +34,38 @@ jobs:
         run: |
           set -ex
           rm -f package-lock.json
-          # GPR_READ_TOKEN is a PAT with read:packages scope — can read DisignApril-kilo GPR
-          npm install --no-audit --no-fund --loglevel=verbose 2>&1
+          npm cache clean --force
+          # Try normal install first, fall back to legacy-peer-deps if needed
+          if ! npm install --no-audit --no-fund 2>&1; then
+            echo "Retrying with --legacy-peer-deps..."
+            npm install --no-audit --no-fund --legacy-peer-deps 2>&1
+          fi
           echo "=== Resolved DS versions ======"
-          grep '@april/' package-lock.json | grep version | head -10
+          grep '@april/\|@ukituki-ps' package-lock.json | grep version | head -10
 
       - name: Verify contains 0.1.12
         working-directory: frontend
         run: |
+          set -ex
           if ! grep -q '0\.1\.12' package-lock.json; then
             echo "FAIL: no 0.1.12 in lockfile"
-            grep '@april/ui' package-lock.json | head -5
+            grep '@april/\|@ukituki-ps' package-lock.json | grep version | head || true
             exit 1
           fi
           echo "OK: DS ^0.1.12 resolved"
 
+      - name: Upload npm log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-debug-logs
+          path: /home/ukituki/.npm/_logs/*.log
+          retention-days: 2
+
       - name: Commit lockfile to develop
         working-directory: frontend
         run: |
+          set -ex
           git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/ukituki-ps/april-profile-kilo.git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
