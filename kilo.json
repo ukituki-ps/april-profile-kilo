@@ -2,7 +2,7 @@
   "defaultBranch": "develop",
   "snapshot": true,
   "permission": {
-    "bash": "ask",
+    "bash": "allow",
     "external_directory": "allow",
     "edit": {
       "frontend/**": "allow",
@@ -19,7 +19,7 @@
       "*.lock": "deny",
       "go.mod": "allow",
       "go.sum": "ask",
-      "*": "ask"
+      "*": "allow"
     }
   },
   "instructions": [
